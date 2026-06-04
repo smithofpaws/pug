@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://bmhi3738or7h"]
+
+[ext_resource type="Script" uid="uid://kc6qnaiosuct" path="res://scenes/main.gd" id="1_8afwg"]
+[ext_resource type="PackedScene" uid="uid://8oc0hi0sd5ge" path="res://scenes/BarraPrincipal.tscn" id="2_k47iy"]
+
+[node name="Main" type="ReferenceRect" unique_id=750148180]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8afwg")
+
+[node name="BarraPrincipal" parent="." unique_id=250734652 instance=ExtResource("2_k47iy")]
+layout_mode = 1
+anchors_preset = -1
+anchor_bottom = 0.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 30.0
+
+[node name="Modulo" type="ReferenceRect" parent="." unique_id=124949099]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 35.0
+offset_right = -5.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[connection signal="mensagem_texto" from="BarraPrincipal" to="." method="_on_barra_principal_mensagem_texto"]
+[connection signal="modulo_selecionado" from="BarraPrincipal" to="." method="_on_barra_principal_modulo_selecionado"]

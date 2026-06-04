@@ -1,0 +1,92 @@
+[gd_scene format=3 uid="uid://8oc0hi0sd5ge"]
+
+[ext_resource type="Script" uid="uid://do8leoecbj6gl" path="res://scenes/barraprincipal.gd" id="1_4u12t"]
+[ext_resource type="Texture2D" uid="uid://b6asj8r88vlwr" path="res://imagens/house.png" id="2_qpm3m"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="4_seletor"]
+[ext_resource type="PackedScene" path="res://scenes/Complementares/JanelaConfiguracoes/JanelaConfiguracoes.tscn" id="5_config"]
+
+[node name="BarraPrincipal" type="ReferenceRect" unique_id=24831825]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4u12t")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1813149971]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="HBoxContainer" unique_id=328344579]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("2_qpm3m")
+icon_alignment = 1
+expand_icon = true
+
+[node name="VSeparator" type="VSeparator" parent="HBoxContainer" unique_id=1179097151]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer" unique_id=1821551375]
+layout_mode = 2
+text = "Módulo: "
+
+[node name="SeletorModulos" parent="HBoxContainer" unique_id=1560897539 instance=ExtResource("4_seletor")]
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Módulo"
+
+[node name="VSeparator2" type="VSeparator" parent="HBoxContainer" unique_id=978290277]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="HBoxContainer" unique_id=859516645]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSeparator4" type="VSeparator" parent="HBoxContainer" unique_id=1051313214]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="HBoxContainer" unique_id=537302848]
+layout_mode = 2
+text = "Diretórios: "
+
+[node name="DirSaida" type="Button" parent="HBoxContainer" unique_id=20336475]
+layout_mode = 2
+focus_mode = 0
+text = "Saída"
+
+[node name="DirExportacoes" type="Button" parent="HBoxContainer" unique_id=20336476]
+layout_mode = 2
+focus_mode = 0
+text = "Exportações"
+
+[node name="VSeparator3" type="VSeparator" parent="HBoxContainer" unique_id=1587916971]
+layout_mode = 2
+
+[node name="BotaoConfiguracoes" type="Button" parent="HBoxContainer" unique_id=775656461]
+layout_mode = 2
+focus_mode = 0
+text = "Configurações"
+
+[node name="VSeparator5" type="VSeparator" parent="HBoxContainer" unique_id=775656462]
+layout_mode = 2
+
+[node name="BotaoAjuda" type="Button" parent="HBoxContainer" unique_id=775656463]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "?"
+
+[node name="JanelaConfiguracoes" parent="." unique_id=1887762836 instance=ExtResource("5_config")]
+
+[connection signal="button_up" from="HBoxContainer/Button" to="." method="_on_button_button_up"]
+[connection signal="opcao_selecionada" from="HBoxContainer/SeletorModulos" to="." method="_on_seletor_modulos_opcao_selecionada"]
+[connection signal="button_up" from="HBoxContainer/DirSaida" to="." method="_on_dir_saida_button_up"]
+[connection signal="button_up" from="HBoxContainer/DirExportacoes" to="." method="_on_dir_exportacoes_button_up"]
+[connection signal="button_up" from="HBoxContainer/BotaoConfiguracoes" to="." method="_on_botao_configuracoes_button_up"]
+[connection signal="button_up" from="HBoxContainer/BotaoAjuda" to="." method="_on_botao_ajuda_button_up"]

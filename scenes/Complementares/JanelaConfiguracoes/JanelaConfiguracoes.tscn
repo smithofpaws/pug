@@ -1,0 +1,460 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/Complementares/JanelaConfiguracoes/janela_configuracoes.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="2_seletor"]
+[ext_resource type="PackedScene" path="res://scenes/Complementares/SeletorHorariosLiberados/SeletorHorariosLiberados.tscn" id="3_horarios"]
+
+[node name="JanelaConfiguracoes" type="AcceptDialog"]
+title = "Configurações"
+size = Vector2i(560, 470)
+script = ExtResource("1_script")
+
+[node name="TabContainer" type="TabContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+use_hidden_tabs_for_min_size = true
+
+[node name="PlanejamentoOferta" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="JanelaAfinidade" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/JanelaAfinidade"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Janela de afinidade:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/PlanejamentoOferta/JanelaAfinidade"]
+layout_mode = 2
+min_value = 0.0
+max_value = 60.0
+value = 12.0
+suffix = " anos"
+
+[node name="ChMinimo" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/ChMinimo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Carga horária mínima:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/PlanejamentoOferta/ChMinimo"]
+layout_mode = 2
+min_value = 0.0
+max_value = 60.0
+value = 8.0
+suffix = " h"
+
+[node name="ChIdeal" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/ChIdeal"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Carga horária ideal:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/PlanejamentoOferta/ChIdeal"]
+layout_mode = 2
+min_value = 0.0
+max_value = 60.0
+value = 12.0
+suffix = " h"
+
+[node name="ChMaximo" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/ChMaximo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Carga horária máxima:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/PlanejamentoOferta/ChMaximo"]
+layout_mode = 2
+min_value = 0.0
+max_value = 60.0
+value = 20.0
+suffix = " h"
+
+[node name="HorasPorCredito" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/HorasPorCredito"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Horas por crédito:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/PlanejamentoOferta/HorasPorCredito"]
+layout_mode = 2
+min_value = 1.0
+max_value = 30.0
+value = 15.0
+suffix = " h"
+
+[node name="CondicoesRodape" type="HBoxContainer" parent="TabContainer/PlanejamentoOferta"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/PlanejamentoOferta/CondicoesRodape"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Condições no rodapé da grade:"
+
+[node name="Seletor" parent="TabContainer/PlanejamentoOferta/CondicoesRodape" instance=ExtResource("2_seletor")]
+custom_minimum_size = Vector2(200, 30)
+layout_mode = 2
+texto_padrao = "Condições"
+
+[node name="LimitesChoque" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TrancamentoTotal" type="HBoxContainer" parent="TabContainer/LimitesChoque"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/LimitesChoque/TrancamentoTotal"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Limite de trancamentos (total):"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/LimitesChoque/TrancamentoTotal"]
+layout_mode = 2
+min_value = 0.0
+max_value = 20.0
+value = 6.0
+
+[node name="TrancamentoConsecutivo" type="HBoxContainer" parent="TabContainer/LimitesChoque"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/LimitesChoque/TrancamentoConsecutivo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Limite de trancamentos (consecutivo):"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/LimitesChoque/TrancamentoConsecutivo"]
+layout_mode = 2
+min_value = 0.0
+max_value = 20.0
+value = 3.0
+
+[node name="LimiarChoque" type="HBoxContainer" parent="TabContainer/LimitesChoque"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/LimitesChoque/LimiarChoque"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Limiar de choque:"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/LimitesChoque/LimiarChoque"]
+layout_mode = 2
+min_value = 0.0
+max_value = 100.0
+value = 75.0
+suffix = "%"
+
+[node name="Geral" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PPCPrincipal" type="HBoxContainer" parent="TabContainer/Geral"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Geral/PPCPrincipal"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PPC principal:"
+
+[node name="OptionButton" type="OptionButton" parent="TabContainer/Geral/PPCPrincipal"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Interface" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EscalaContainer" type="HBoxContainer" parent="TabContainer/Interface"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Interface/EscalaContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Escala da interface:"
+
+[node name="BotaoMenos" type="Button" parent="TabContainer/Interface/EscalaContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="ValorEscala" type="Label" parent="TabContainer/Interface/EscalaContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+text = "1.0"
+horizontal_alignment = 1
+
+[node name="BotaoMais" type="Button" parent="TabContainer/Interface/EscalaContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "+"
+
+[node name="FonteContainer" type="HBoxContainer" parent="TabContainer/Interface"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Interface/FonteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Tamanho da fonte:"
+
+[node name="BotaoFonteMenos" type="Button" parent="TabContainer/Interface/FonteContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="ValorFonte" type="Label" parent="TabContainer/Interface/FonteContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+text = "16"
+horizontal_alignment = 1
+
+[node name="BotaoFonteMais" type="Button" parent="TabContainer/Interface/FonteContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "+"
+
+[node name="FonteGradeContainer" type="HBoxContainer" parent="TabContainer/Interface"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Interface/FonteGradeContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Fonte das grades:"
+
+[node name="BotaoFonteGradeMenos" type="Button" parent="TabContainer/Interface/FonteGradeContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="ValorFonteGrade" type="Label" parent="TabContainer/Interface/FonteGradeContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+text = "12"
+horizontal_alignment = 1
+
+[node name="BotaoFonteGradeMais" type="Button" parent="TabContainer/Interface/FonteGradeContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "+"
+
+[node name="TemaContainer" type="HBoxContainer" parent="TabContainer/Interface"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Interface/TemaContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Tema visual:"
+
+[node name="Tema" parent="TabContainer/Interface/TemaContainer" instance=ExtResource("2_seletor")]
+custom_minimum_size = Vector2(200, 30)
+layout_mode = 2
+texto_padrao = "Tema"
+
+[node name="Posicionamento" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PesoPreferencia" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoPreferencia"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: preferência do professor"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoPreferencia"]
+layout_mode = 2
+max_value = 200.0
+value = 1.0
+
+[node name="PesoForaPeriodo" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoForaPeriodo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: fora do período (manhã/tarde)"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoForaPeriodo"]
+layout_mode = 2
+max_value = 200.0
+value = 8.0
+
+[node name="PesoEmergencia" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoEmergencia"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: horário de emergência (07:30)"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoEmergencia"]
+layout_mode = 2
+max_value = 200.0
+value = 20.0
+
+[node name="PesoChoqueProfessor" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoChoqueProfessor"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: choque de professor (modo peso)"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoChoqueProfessor"]
+layout_mode = 2
+max_value = 200.0
+value = 50.0
+
+[node name="PesoChoqueSala" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoChoqueSala"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: choque de sala"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoChoqueSala"]
+layout_mode = 2
+max_value = 200.0
+value = 10.0
+
+[node name="PesoChoqueAluno" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/PesoChoqueAluno"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Peso: choque de alunos (por aluno)"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/PesoChoqueAluno"]
+layout_mode = 2
+max_value = 200.0
+value = 2.0
+
+[node name="BonusMesmoHorario" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/BonusMesmoHorario"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Bônus: mesmo horário em dias diferentes"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/BonusMesmoHorario"]
+layout_mode = 2
+max_value = 200.0
+value = 15.0
+
+[node name="TamanhoBloco" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/TamanhoBloco"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Tamanho do bloco (horas seguidas)"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/TamanhoBloco"]
+layout_mode = 2
+min_value = 1.0
+max_value = 4.0
+value = 2.0
+
+[node name="ProfessorRigido" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/ProfessorRigido"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Choque de professor proíbe alocação"
+
+[node name="CheckButton" type="CheckButton" parent="TabContainer/Posicionamento/ProfessorRigido"]
+layout_mode = 2
+button_pressed = true
+
+[node name="HorariosLiberados" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/HorariosLiberados"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Horários liberados para alocação automática"
+
+[node name="Botao" type="Button" parent="TabContainer/Posicionamento/HorariosLiberados"]
+layout_mode = 2
+focus_mode = 0
+text = "Configurar…"
+
+[node name="SeletorHorariosLiberados" parent="." instance=ExtResource("3_horarios")]
+
+[connection signal="value_changed" from="TabContainer/PlanejamentoOferta/JanelaAfinidade/SpinBox" to="." method="_on_janela_afinidade_changed"]
+[connection signal="value_changed" from="TabContainer/PlanejamentoOferta/ChMinimo/SpinBox" to="." method="_on_ch_minimo_changed"]
+[connection signal="value_changed" from="TabContainer/PlanejamentoOferta/ChIdeal/SpinBox" to="." method="_on_ch_ideal_changed"]
+[connection signal="value_changed" from="TabContainer/PlanejamentoOferta/ChMaximo/SpinBox" to="." method="_on_ch_maximo_changed"]
+[connection signal="value_changed" from="TabContainer/PlanejamentoOferta/HorasPorCredito/SpinBox" to="." method="_on_horas_por_credito_changed"]
+[connection signal="opcao_selecionada" from="TabContainer/PlanejamentoOferta/CondicoesRodape/Seletor" to="." method="_on_situacoes_rodape_alterado"]
+[connection signal="value_changed" from="TabContainer/LimitesChoque/TrancamentoTotal/SpinBox" to="." method="_on_trancamento_total_changed"]
+[connection signal="value_changed" from="TabContainer/LimitesChoque/TrancamentoConsecutivo/SpinBox" to="." method="_on_trancamento_consecutivo_changed"]
+[connection signal="value_changed" from="TabContainer/LimitesChoque/LimiarChoque/SpinBox" to="." method="_on_limiar_choque_changed"]
+[connection signal="item_selected" from="TabContainer/Geral/PPCPrincipal/OptionButton" to="." method="_on_ppc_principal_changed"]
+[connection signal="button_up" from="TabContainer/Interface/EscalaContainer/BotaoMenos" to="." method="_on_escala_menos_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/EscalaContainer/BotaoMais" to="." method="_on_escala_mais_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/FonteContainer/BotaoFonteMenos" to="." method="_on_fonte_menos_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/FonteContainer/BotaoFonteMais" to="." method="_on_fonte_mais_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/FonteGradeContainer/BotaoFonteGradeMenos" to="." method="_on_fonte_grade_menos_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/FonteGradeContainer/BotaoFonteGradeMais" to="." method="_on_fonte_grade_mais_button_up"]
+[connection signal="opcao_selecionada" from="TabContainer/Interface/TemaContainer/Tema" to="." method="_on_tema_selecionado"]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoPreferencia/SpinBox" to="." method="_on_peso_changed" binds= ["preferencia"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoForaPeriodo/SpinBox" to="." method="_on_peso_changed" binds= ["fora_periodo"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoEmergencia/SpinBox" to="." method="_on_peso_changed" binds= ["emergencia"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoChoqueProfessor/SpinBox" to="." method="_on_peso_changed" binds= ["choque_professor"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoChoqueSala/SpinBox" to="." method="_on_peso_changed" binds= ["choque_sala"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/PesoChoqueAluno/SpinBox" to="." method="_on_peso_changed" binds= ["choque_aluno"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/BonusMesmoHorario/SpinBox" to="." method="_on_peso_changed" binds= ["bonus_mesmo_horario"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/TamanhoBloco/SpinBox" to="." method="_on_tamanho_bloco_changed"]
+[connection signal="toggled" from="TabContainer/Posicionamento/ProfessorRigido/CheckButton" to="." method="_on_professor_rigido_toggled"]
+[connection signal="button_up" from="TabContainer/Posicionamento/HorariosLiberados/Botao" to="." method="_on_horarios_liberados_button_up"]

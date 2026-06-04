@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://cbu38fuycrub1"]
+
+[ext_resource type="Script" uid="uid://cmhl7vvn43kje" path="res://scenes/Complementares/GradeCurricular/grade_curricular.gd" id="1_grdcr"]
+[ext_resource type="PackedScene" uid="uid://cwuklmylx3tcu" path="res://scenes/Complementares/Grade/Grade.tscn" id="2_grade"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="3_seletor"]
+
+[node name="GradeCurricular" type="VBoxContainer" unique_id=1009151234]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_grdcr")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=130244812]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="SeletorOpcoes" parent="HBoxContainer" unique_id=844458630 instance=ExtResource("3_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Exibição"
+
+[node name="Grade" parent="." unique_id=397896970 instance=ExtResource("2_grade")]
+layout_mode = 2
+
+[connection signal="opcao_selecionada" from="HBoxContainer/SeletorOpcoes" to="." method="_on_seletor_opcoes_opcao_selecionada"]

@@ -1,0 +1,13 @@
+
+{
+    "name": "GDScript: Launch Project",
+    "type": "godot",
+    "request": "launch",
+    "project": "${workspaceFolder}",
+    "address": "127.0.0.1",
+    "port": 6007,
+    "debug_collisions": false,
+    "debug_paths": false,
+    "debug_navigation": false,
+    "additional_options": "",
+}

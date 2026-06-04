@@ -1,0 +1,52 @@
+[gd_scene load_steps=3 format=3 uid="uid://66rhw8j2rrpu"]
+
+[ext_resource type="Script" uid="uid://1hso0jwiari3" path="res://scenes/Modulos/Trancamentos/trancamentos.gd" id="1_y872h"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="2_hetlp"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="3_seletor"]
+
+[node name="Trancamentos" type="ReferenceRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_y872h")
+
+[node name="Topo" type="ReferenceRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="Topo/HBoxContainer"]
+layout_mode = 2
+text = "Aluno:"
+
+[node name="SeletorListaAlunos" parent="Topo/HBoxContainer" instance=ExtResource("3_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Aluno"
+
+[node name="Principal" type="ReferenceRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Terminal" parent="Principal" instance=ExtResource("2_hetlp")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaAlunos" to="." method="_on_seletor_lista_alunos_opcao_selecionada"]

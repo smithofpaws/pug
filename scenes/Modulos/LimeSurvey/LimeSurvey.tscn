@@ -1,0 +1,172 @@
+[gd_scene format=3 uid="uid://ddjmg3ohf0er7"]
+
+[ext_resource type="Script" uid="uid://pvb3lwftoq03" path="res://scenes/Modulos/LimeSurvey/limesurvey.gd" id="1_b6xqm"]
+[ext_resource type="Texture2D" uid="uid://dnxmpmw5wjqq" path="res://imagens/terminal.png" id="2_baomp"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="2_lvkql"]
+[ext_resource type="Texture2D" uid="uid://2bqfw3hatqud" path="res://imagens/admin.png" id="2_n3vg6"]
+
+[node name="LimeSurvey" type="ReferenceRect" unique_id=1283670354]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_b6xqm")
+
+[node name="Topo" type="ReferenceRect" parent="." unique_id=533591957]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=67144799]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GerarLimeSurvey" type="Button" parent="Topo/HBoxContainer" unique_id=1815760115]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Gerar Limesurvey"
+
+[node name="HSeparator" type="HSeparator" parent="Topo/HBoxContainer" unique_id=1488364372]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSeparator" type="VSeparator" parent="Topo/HBoxContainer" unique_id=707972547]
+layout_mode = 2
+
+[node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=124052641]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+focus_mode = 0
+icon = ExtResource("2_baomp")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffAdmin" type="Button" parent="Topo/HBoxContainer" unique_id=482222354]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+focus_mode = 0
+icon = ExtResource("2_n3vg6")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Principal" type="ReferenceRect" parent="." unique_id=1934421681]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Principal" unique_id=996305033]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="JanelaAdmin" type="VBoxContainer" parent="Principal/HBoxContainer" unique_id=1068021921]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Administrador" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=1378640724]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/Administrador" unique_id=24525707]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Administrador"
+
+[node name="LEAdministrador" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/Administrador" unique_id=1211793564]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Diego Arthur Hartmann"
+
+[node name="DataInicio" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=1170099913]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/DataInicio" unique_id=207988201]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inicio do survey (AAAA-MM-DD HH:MM:SS)"
+
+[node name="LEDataInicio" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/DataInicio" unique_id=1828657121]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "AAAA-MM-DD HH:MM:SS"
+
+[node name="DataExpiracao" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=390176932]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/DataExpiracao" unique_id=1328282372]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Fim do survey (AAAA-MM-DD HH:MM:SS)"
+
+[node name="LEDataExpiracao" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/DataExpiracao" unique_id=1758473695]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "AAAA-MM-DD HH:MM:SS"
+
+[node name="EmailAdmin" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=531926563]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/EmailAdmin" unique_id=1208824613]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "E-mail do administrador"
+
+[node name="LEEmailAdmin" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/EmailAdmin" unique_id=899141630]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "administrador@unipampa.edu.br"
+
+[node name="EmailBounce" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=852626396]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/EmailBounce" unique_id=217586258]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Bounce e-mail"
+
+[node name="LEEmailBounce" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/EmailBounce" unique_id=2139988112]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "administrador@unipampa.edu.br"
+
+[node name="Semestre" type="HBoxContainer" parent="Principal/HBoxContainer/JanelaAdmin" unique_id=2010841156]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Principal/HBoxContainer/JanelaAdmin/Semestre" unique_id=1790530908]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Semestre (AAAA/N)"
+
+[node name="LESemestre" type="LineEdit" parent="Principal/HBoxContainer/JanelaAdmin/Semestre" unique_id=97559213]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1986/0"
+
+[node name="Terminal" parent="Principal/HBoxContainer" unique_id=2102237559 instance=ExtResource("2_lvkql")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[connection signal="button_up" from="Topo/HBoxContainer/GerarLimeSurvey" to="." method="_on_gerar_lime_survey_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffAdmin" to="." method="_on_on_off_admin_button_up"]

@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://b5ayb0oq0wf87"]
+
+[ext_resource type="Script" uid="uid://gsxci2rkal7g" path="res://scenes/Modulos/CalculadorCR/calculadorcr.gd" id="1_58hwq"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="1_e0bn6"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="2_seletor"]
+
+[node name="CalculadorCR" type="ReferenceRect" unique_id=1325992136]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_58hwq")
+
+[node name="Topo" type="ReferenceRect" parent="." unique_id=36836183]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=1517602990]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelVar2" type="Label" parent="Topo/HBoxContainer" unique_id=1832183989]
+layout_mode = 2
+text = "Análise:"
+
+[node name="SeletorMetodoAnalise" parent="Topo/HBoxContainer" unique_id=759489665 instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Análise"
+
+[node name="VSeparator2" type="VSeparator" parent="Topo/HBoxContainer" unique_id=542787282]
+layout_mode = 2
+
+[node name="LabelVar1" type="Label" parent="Topo/HBoxContainer" unique_id=197293326]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Aluno:"
+
+[node name="SeletorListaAlunos" parent="Topo/HBoxContainer" unique_id=940251167 instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texto_padrao = "Aluno"
+
+[node name="CalcularCR" type="Button" parent="Topo/HBoxContainer" unique_id=1750066740]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Calcular CR"
+
+[node name="VSeparator" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1750688140]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Topo/HBoxContainer" unique_id=938532001]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Principal" type="ReferenceRect" parent="." unique_id=425608512]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Principal" unique_id=553377632]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Terminal" parent="Principal/HBoxContainer" unique_id=1876144929 instance=ExtResource("1_e0bn6")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorMetodoAnalise" to="." method="_on_seletor_metodo_analise_opcao_selecionada"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaAlunos" to="." method="_on_seletor_lista_alunos_opcao_selecionada"]
+[connection signal="button_up" from="Topo/HBoxContainer/CalcularCR" to="." method="_on_calcular_cr_button_up"]

@@ -1,0 +1,12 @@
+# Godot 4+ specific ignores
+.godot/
+
+# Backups locais comprimidos (o Git e o historico canonico)
+.backup/
+
+# Artefatos de build de utilitarios externos (PyInstaller)
+externo/**/build/
+externo/**/dist/
+
+# Estado de usuario (overrides de configuracao)
+config_usuario.json

@@ -1,0 +1,1 @@
+Siga estritamente as regras de @AGENTS.md como se fosse seu arquivo CLAUDE.md

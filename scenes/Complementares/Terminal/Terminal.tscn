@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://hfr04nwubwo6"]
+
+[ext_resource type="Script" uid="uid://c2xkx6y2dcks3" path="res://scenes/Complementares/Terminal/terminal.gd" id="1_g7gsw"]
+
+[node name="Terminal" type="ReferenceRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+script = ExtResource("1_g7gsw")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.196078, 0.196078, 0.196078, 1)
+
+[node name="TextEdit" type="RichTextLabel" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+bbcode_enabled = true
+selection_enabled = true

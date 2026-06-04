@@ -1,0 +1,110 @@
+[gd_resource type="Theme" load_steps=10 format=3]
+
+[sub_resource type="StyleBoxFlat" id="panel_bg"]
+bg_color = Color(0.231, 0.259, 0.322, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+
+[sub_resource type="StyleBoxFlat" id="window_bg"]
+bg_color = Color(0.180, 0.204, 0.251, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+
+[sub_resource type="StyleBoxFlat" id="button_normal"]
+bg_color = Color(0.263, 0.294, 0.369, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.369, 0.506, 0.675, 1)
+
+[sub_resource type="StyleBoxFlat" id="button_hover"]
+bg_color = Color(0.298, 0.337, 0.416, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.533, 0.753, 0.816, 1)
+
+[sub_resource type="StyleBoxFlat" id="button_pressed"]
+bg_color = Color(0.180, 0.204, 0.251, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.533, 0.753, 0.816, 1)
+
+[sub_resource type="StyleBoxFlat" id="line_edit_bg"]
+bg_color = Color(0.231, 0.259, 0.322, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.369, 0.506, 0.675, 1)
+
+[sub_resource type="StyleBoxFlat" id="line_edit_focus"]
+bg_color = Color(0.263, 0.294, 0.369, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.533, 0.753, 0.816, 1)
+
+[sub_resource type="StyleBoxFlat" id="scroll_grabber"]
+bg_color = Color(0.298, 0.337, 0.416, 1)
+
+[sub_resource type="StyleBoxFlat" id="scroll_grabber_hover"]
+bg_color = Color(0.349, 0.392, 0.475, 1)
+
+[resource]
+Button/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+Button/colors/font_focus_color = Color(0.655, 0.820, 0.859, 1)
+Button/colors/font_hover_color = Color(0.655, 0.820, 0.859, 1)
+Button/colors/font_pressed_color = Color(0.439, 0.694, 0.765, 1)
+Button/colors/icon_normal_color = Color(0.533, 0.753, 0.816, 1)
+Button/colors/icon_focus_color = Color(0.655, 0.820, 0.859, 1)
+Button/colors/icon_hover_color = Color(0.655, 0.820, 0.859, 1)
+Button/colors/icon_pressed_color = Color(0.439, 0.694, 0.765, 1)
+Button/styles/normal = SubResource("button_normal")
+Button/styles/hover = SubResource("button_hover")
+Button/styles/pressed = SubResource("button_pressed")
+Button/styles/focus = SubResource("button_hover")
+Label/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+LineEdit/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+LineEdit/styles/normal = SubResource("line_edit_bg")
+LineEdit/styles/focus = SubResource("line_edit_focus")
+MenuButton/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+MenuButton/styles/normal = SubResource("button_normal")
+MenuButton/styles/hover = SubResource("button_hover")
+MenuButton/styles/pressed = SubResource("button_pressed")
+MenuButton/styles/focus = SubResource("button_hover")
+OptionButton/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+OptionButton/styles/normal = SubResource("button_normal")
+OptionButton/styles/hover = SubResource("button_hover")
+OptionButton/styles/pressed = SubResource("button_pressed")
+OptionButton/styles/focus = SubResource("button_hover")
+PopupMenu/colors/font_color = Color(0.533, 0.753, 0.816, 1)
+PopupMenu/colors/font_hover_color = Color(1, 1, 1, 1)
+PopupMenu/colors/font_disabled_color = Color(0.4, 0.4, 0.4, 1)
+PopupMenu/colors/font_accelerator_color = Color(0.55, 0.55, 0.55, 1)
+PanelContainer/styles/panel = SubResource("panel_bg")
+Panel/styles/panel = SubResource("panel_bg")
+TextEdit/font_color = Color(0.533, 0.753, 0.816, 1)
+TextEdit/styles/normal = SubResource("line_edit_bg")
+TextEdit/styles/focus = SubResource("line_edit_focus")
+RichTextLabel/default_color = Color(0.533, 0.753, 0.816, 1)
+VSeparator/colors/separator = Color(0.369, 0.506, 0.675, 1)
+HSeparator/colors/separator = Color(0.369, 0.506, 0.675, 1)
+VScrollBar/styles/grabber = SubResource("scroll_grabber")
+VScrollBar/styles/grabber_highlight = SubResource("scroll_grabber_hover")
+VScrollBar/styles/grabber_pressed = SubResource("scroll_grabber_hover")
+HScrollBar/styles/grabber = SubResource("scroll_grabber")
+HScrollBar/styles/grabber_highlight = SubResource("scroll_grabber_hover")
+HScrollBar/styles/grabber_pressed = SubResource("scroll_grabber_hover")
+TabContainer/styles/panel = SubResource("panel_bg")
+PopupMenu/styles/panel = SubResource("panel_bg")
+Window/styles/panel = SubResource("window_bg")

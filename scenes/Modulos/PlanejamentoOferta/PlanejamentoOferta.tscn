@@ -1,0 +1,139 @@
+[gd_scene format=3 uid="uid://dku3xd14hoy16"]
+
+[ext_resource type="Script" uid="uid://di3cfpegaqjp8" path="res://scenes/Modulos/PlanejamentoOferta/planejamentooferta.gd" id="1_plof"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="2_seletor"]
+[ext_resource type="Texture2D" uid="uid://ckcyxwbq88w5k" path="res://imagens/verticallist.png" id="3_verticallist"]
+[ext_resource type="Texture2D" uid="uid://dnxmpmw5wjqq" path="res://imagens/terminal.png" id="4_terminalimg"]
+[ext_resource type="Texture2D" uid="uid://ckjuad1jfim0b" path="res://imagens/diagram.png" id="5_diagram"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="6_terminal"]
+[ext_resource type="PackedScene" uid="uid://bpdisccomp01" path="res://scenes/Complementares/PainelDisciplinas/PainelDisciplinas.tscn" id="7_pdisc"]
+[ext_resource type="PackedScene" uid="uid://bhh5h23mkeccm" path="res://scenes/Complementares/PainelAtribuicoes/PainelAtribuicoes.tscn" id="8_patrib"]
+[ext_resource type="PackedScene" uid="uid://bto7y00isquyk" path="res://scenes/Complementares/StatusBar/StatusBar.tscn" id="9_statusbar"]
+
+[node name="PlanejamentoOferta" type="ReferenceRect" unique_id=938415152]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_plof")
+
+[node name="Topo" type="ReferenceRect" parent="." unique_id=12838667]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=266672429]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SeletorImportar" parent="Topo/HBoxContainer" unique_id=1195787602 instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Arquivo"
+
+[node name="VSeparator2" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1501751159]
+layout_mode = 2
+
+[node name="SeletorAcoes" parent="Topo/HBoxContainer" unique_id=2094080101 instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Ações"
+
+[node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1096592180]
+layout_mode = 2
+
+[node name="SemestrePlanejamento" type="Label" parent="Topo/HBoxContainer" unique_id=1389366683]
+layout_mode = 2
+text = "Semestre em planejamento:"
+
+[node name="FiltroSemestreEdicao" parent="Topo/HBoxContainer" unique_id=148811001 instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Semestre"
+
+[node name="VSeparator5" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1614899180]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Topo/HBoxContainer" unique_id=1814763982]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSeparator" type="VSeparator" parent="Topo/HBoxContainer" unique_id=985841504]
+layout_mode = 2
+
+[node name="OnOffPainel" type="Button" parent="Topo/HBoxContainer" unique_id=953388137]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("3_verticallist")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffAtribuicoes" type="Button" parent="Topo/HBoxContainer" unique_id=587123400]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("5_diagram")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1467264049]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("4_terminalimg")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffGrade" type="Button" parent="Topo/HBoxContainer" unique_id=1918495471]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("5_diagram")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Principal" type="ReferenceRect" parent="." unique_id=627223927]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HSplitContainer" type="HSplitContainer" parent="Principal" unique_id=1109713520]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offsets = PackedInt32Array(0, 0)
+
+[node name="PainelDisciplinas" parent="Principal/HSplitContainer" unique_id=1174829000 instance=ExtResource("7_pdisc")]
+layout_mode = 2
+
+[node name="PainelAtribuicoes" parent="Principal/HSplitContainer" unique_id=-1109567074 instance=ExtResource("8_patrib")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Terminal" parent="Principal/HSplitContainer" unique_id=569279706 instance=ExtResource("6_terminal")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="StatusBar" parent="." unique_id=1127215127 instance=ExtResource("9_statusbar")]
+unique_name_in_owner = true
+
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffPainel" to="." method="_on_on_off_painel_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffAtribuicoes" to="." method="_on_on_off_atribuicoes_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]

@@ -1,0 +1,32 @@
+{
+	"planejamento_oferta": {
+		"janela_afinidade": "Define o tamanho da [b]janela deslizante[/b] (em anos) usada no cálculo de afinidade professor/disciplina.\n\nO ano mais recente vale o tamanho da janela em pontos e decai 1 ponto por ano, com peso mínimo 1.\nExemplo com janela 5:\n  2026 = peso 5, 2025 = peso 4, ..., 2022 = peso 1, 2021 e anteriores = peso 1.",
+		"ch_minimo": "Carga horária semanal [b]mínima[/b] considerada aceitável para um professor.\n\nNo módulo de Planejamento de Oferta, é usada para destacar professores com carga abaixo do mínimo na barra de status.",
+		"ch_ideal": "Carga horária semanal [b]ideal[/b] esperada para um professor.\n\nProfessores acima desse valor aparecem em destaque [b]amarelo[/b]; acima do máximo, em [b]vermelho[/b].",
+		"ch_maximo": "Carga horária semanal [b]máxima[/b] permitida para um professor.\n\nAcima desse valor, o professor fica em destaque [b]vermelho[/b] na barra de status.",
+		"horas_por_credito": "Fator de conversão de [b]horas-aula para créditos[/b].\n\nCada crédito equivale a esta quantidade de horas. Usado para exibir a carga horária das disciplinas na interface de planejamento.",
+		"situacoes_rodape": "Define quais [b]situações[/b] (matriculado agora, matriculável, corequisito matriculável, seAprovado, corequisito seAprovado) aparecem como [b]números coloridos[/b] na base de cada disciplina da grade, no módulo de Planejamento de Oferta.\n\nCada condição [b]engloba alunos com e sem aproveitamento[/b] num único número, usando a cor da respectiva situação. A alteração passa a valer ao [b]reabrir[/b] o módulo."
+	},
+	"trancamento": {
+		"limite_total": "Número máximo de [b]trancamentos totais[/b] permitidos ao aluno [b]durante todo o curso[/b].\n\nAlunos que excedem este limite são sinalizados no módulo de Trancamentos.",
+		"limite_consecutivo": "Número máximo de [b]trancamentos consecutivos[/b] permitidos.\n\nSe o aluno trancar este número de semestres [b]seguidos[/b] sem matrícula, é sinalizado no módulo de Trancamentos."
+	},
+	"choque": {
+		"limiar_presenca": "Percentual mínimo de [b]presença simultânea[/b] entre duas disciplinas para considerá-las [b]conflitantes[/b] (choque de horário).\n\nQuanto maior o valor, mais flexível — exige mais sobreposição de horários para sinalizar choque.\nValores comuns:\n  75% = pelo menos 3/4 dos horários coincidem\n  50% = metade dos horários coincidem"
+	},
+	"geral": {
+		"ppc_principal": "[b]Projeto Pedagógico de Curso[/b] padrão do programa.\n\nAo definir um PPC principal, os filtros de curso dos módulos [b]Planejamento de Oferta[/b] e [b]Planejamento de Horário[/b] são pré-selecionados automaticamente ao abri-los.\n\nOs módulos [b]Situação de Disciplinas[/b] e [b]Exportadores[/b] também herdam a seleção de grade do PPC."
+	},
+	"posicionamento": {
+		"preferencia": "Quanto cada [b]preferência de horário[/b] do professor pesa na escolha do slot.\n\nA preferência vai de [b]1[/b] (horário desejado) a [b]5[/b] (indesejado); o valor é multiplicado por este peso e somado ao custo. Horários que o professor não marcou são [b]proibidos[/b].\n\nAumente para respeitar mais as preferências; diminua para priorizar evitar choques.",
+		"fora_periodo": "Penalidade por alocar a disciplina [b]fora do seu turno[/b] (manhã ou tarde, definido pela alternância dos semestres da oferta).\n\nNão impede o uso de outro turno — apenas o torna menos atraente. Cursos noturnos caem na noite naturalmente, pois é o único turno que seus professores liberam.",
+		"emergencia": "Penalidade por usar um [b]horário de emergência[/b] (ex.: 07:30), reservado para quando não há alternativa.\n\nUm valor alto faz o algoritmo recorrer a esses horários apenas em último caso.",
+		"choque_professor": "Penalidade por colocar o [b]mesmo professor[/b] em duas disciplinas no mesmo horário.\n\nSó tem efeito quando a opção [b]Choque de professor proíbe alocação[/b] está [b]desmarcada[/b]; com a proibição ligada (padrão), esse choque nunca é criado e este peso é ignorado.",
+		"choque_sala": "Penalidade por colocar duas disciplinas na [b]mesma sala[/b] no mesmo horário.\n\nNo posicionamento automático as salas ainda não são definidas, então costuma agir apenas contra alocações já existentes com sala atribuída.",
+		"choque_aluno": "Penalidade [b]por aluno[/b] que cursaria as duas disciplinas sobrepostas.\n\nÉ o que afasta disciplinas concorridas. Depende do [b]hist.csv[/b] carregado e das condições marcadas em [b]Condições choque[/b]; sem esses dados, vale zero.",
+		"bonus_mesmo_horario": "[b]Bônus[/b] (desconto no custo) quando os blocos de uma disciplina ficam no [b]mesmo horário em dias diferentes[/b] (ex.: terça e quinta às 08:30).\n\nValores maiores deixam as grades mais regulares e previsíveis.",
+		"tamanho_bloco": "Quantas [b]horas seguidas[/b] formam um bloco de aula.\n\nCom bloco [b]2[/b], uma disciplina de 4 aulas vira [b]2+2[/b] em dois dias distintos; as aulas de uma disciplina nunca passam deste tamanho no mesmo dia.",
+		"professor_rigido": "Quando [b]marcado[/b], o mesmo professor [b]nunca[/b] é alocado em duas disciplinas no mesmo horário. Se não houver horário livre para ele, a disciplina fica pendente e é listada no relatório.\n\nQuando [b]desmarcado[/b], o conflito vira apenas uma penalidade (ver [b]Peso: choque de professor[/b]).",
+		"horarios_liberados": "Abre uma grade onde você escolhe [b]quais horários[/b] (dia × hora) ficam liberados para o [b]posicionamento automático[/b].\n\nA seleção [b]combina[/b] com os períodos: só são usados horários marcados que também estejam dentro dos períodos (manhã/tarde/noite) — por isso horários fora deles aparecem esmaecidos.\n\nGrade vazia = sem restrição (usa todos os períodos, como antes)."
+	}
+}

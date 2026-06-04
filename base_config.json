@@ -1,0 +1,384 @@
+{
+	"diretorios": {
+		"dados": "dados",
+		"exportacoes": "exportacoes"
+	},
+	"interface": {
+		"escala": 1.0,
+		"escala_min": 0.5,
+		"escala_max": 3.0,
+		"escala_passo": 0.1,
+		"tamanho_fonte": 16.0,
+		"tamanho_fonte_min": 10.0,
+		"tamanho_fonte_max": 32.0,
+		"tamanho_fonte_passo": 1.0,
+		"tamanho_fonte_grade_offset": -2.0,
+		"tamanho_fonte_grade_min": 8.0,
+		"tamanho_fonte_grade_max": 32.0,
+		"tema": "nord",
+		"tamanho_janela": {
+			"largura": 1573,
+			"altura": 836
+		},
+		"largura_padrao_seletor": 250.0
+	},
+	"modulos": {
+		"principal": {
+			"nome": "Principal",
+			"arquivos": []
+		},
+		"calculador_cr": {
+			"nome": "Calculador de CR",
+			"arquivos": [
+				"hist.csv"
+			]
+		},
+		"avaliacao_limesurvey": {
+			"nome": "Avaliação Limesurvey",
+			"arquivos": [
+				"hist.csv",
+				"email.csv"
+			],
+			"diretorios": [
+				"surveys"
+			],
+			"enabled": false
+		},
+		"situacao_alunos": {
+			"nome": "Situação de alunos",
+			"arquivos": [
+				"hist.csv",
+				"horarios.txt",
+				"horarios.ini"
+			]
+		},
+		"situacao_disciplinas": {
+			"nome": "Situação de disciplinas",
+			"arquivos": [
+				"hist.csv"
+			]
+		},
+		"trancamento": {
+			"nome": "Trancamento",
+			"arquivos": [
+				"hist.csv"
+			],
+			"limites": {
+				"total": 4.0,
+				"consecutivo": 2.0
+			},
+			"enabled": false
+		},
+		"matricula_irregular": {
+			"nome": "Matrícula irregular",
+			"arquivos": [
+				"hist.csv"
+			],
+			"enabled": true
+		},
+		"planejamento_horario": {
+			"nome": "Planejamento de horário",
+			"arquivos": [],
+			"diretorios": [],
+			"enabled": true
+		},
+		"planejamento_oferta": {
+			"nome": "Planejamento de oferta",
+			"arquivos": [],
+			"enabled": true
+		},
+		"exportadores": {
+			"nome": "Exportadores",
+			"arquivos": [
+				"hist.csv",
+				"horarios.txt",
+				"horarios.ini"
+			],
+			"enabled": true
+		}
+	},
+	"histfile": {
+		"versao": 4.0,
+		"ano": 5.0,
+		"cargahoraria": 13.0,
+		"cod_curso": 2.0,
+		"codigocurriculo": 10.0,
+		"matricula": 0.0,
+		"mediafinal": 7.0,
+		"nomeativcurricular": 11.0,
+		"nomedoaluno": 1.0,
+		"professor": 21.0,
+		"semestre": 6.0,
+		"situacao": 9.0,
+		"codturma": 20.0,
+		"estcurricular": 14.0
+	},
+	"mailfile": {
+		"nomedoaluno": 1.0,
+		"emailpessoal": 2.0,
+		"emailinst": 3.0,
+		"matricula": 0.0
+	},
+	"horarios_txt": {
+		"linha": 0.0,
+		"professor": 1.0,
+		"sala": 2.0,
+		"semestre": 3.0,
+		"horario": 4.0,
+		"dia": 5.0,
+		"disciplina": 6.0,
+		"tipo": 7.0,
+		"turma": 8.0,
+		"vagas": 9.0,
+		"p": 10.0,
+		"s": 11.0,
+		"t": 12.0
+	},
+	"condicoes": [
+		"matriculado_agora",
+		"matriculado_agora_aproveitamento",
+		"matricula_irregular",
+		"matricula_irregular_aproveitamento",
+		"matriculavel",
+		"matriculavel_aproveitamento",
+		"corequisito_matriculavel",
+		"corequisito_matriculavel_aproveitamento",
+		"seaprovado",
+		"seaprovado_aproveitamento",
+		"corequisito_seaprovado",
+		"corequisito_seaprovado_aproveitamento"
+	],
+	"delimitadores": {
+		"csv_entrada": [
+			";",
+			","
+		],
+		"csv_saida": ";",
+		"planejamento": [
+			";",
+			"/"
+		],
+		"ini": "=",
+		"html": "'"
+	},
+	"planejamento": {
+		"semestre": 1.0,
+		"codigo": 2.0,
+		"ch_total": 3.0,
+		"cabecalho_profs": "matr"
+	},
+	"choque": {
+		"limiar_presenca": 0.75
+	},
+	"formatos_arquivos": {
+		"horarios.txt": "*.txt ; Arquivos de horario",
+		"horarios.ini": "*.ini ; Arquivos INI",
+		"hist.csv": "*.csv ; Arquivos CSV",
+		"email.csv": "*.csv ; Arquivos CSV",
+		"planejamento.csv": "*.csv ; Arquivos CSV"
+	},
+	"grupos_complementares": {
+		"ensino": "grupo i",
+		"pesquisa": "grupo ii",
+		"extensao": "grupo iii",
+		"cultura": "grupo iv"
+	},
+	"efeitos": {
+		"destaque": "shake"
+	},
+	"formatos_grade": {
+		"rotulos": [
+			"Somente código",
+			"Código + nome reduzido",
+			"Completo",
+			"Nome completo",
+			"Nome reduzido",
+			"Esferas"
+		],
+		"valores": [
+			"somente_codigo",
+			"codigo_nome_reduzido",
+			"completo",
+			"nome_completo",
+			"nome_reduzido",
+			"esferas"
+		]
+	},
+	"planejamento_oferta": {
+		"janela_afinidade": 15.0,
+		"ch_minimo": 8.0,
+		"ch_ideal": 12.0,
+		"ch_maximo": 20.0,
+		"horas_por_credito": 15.0
+	},
+	"posicionamento_auto": {
+		"periodos": {
+			"manha": ["08:30", "11:30"],
+			"tarde": ["13:30", "17:30"],
+			"noite": ["18:30", "21:30"]
+		},
+		"horarios_emergencia": ["07:30"],
+		"tamanho_bloco": 2.0,
+		"choque_professor_rigido": true,
+		"horarios_liberados": [],
+		"pesos": {
+			"preferencia": 1.0,
+			"fora_periodo": 8.0,
+			"emergencia": 20.0,
+			"choque_professor": 50.0,
+			"choque_sala": 10.0,
+			"choque_aluno": 2.0,
+			"bonus_mesmo_horario": 15.0
+		}
+	},
+	"cursos": {
+		"alec": {
+			"nome": "Engenharia Civil",
+			"prefixos_semestre": [
+				"ec"
+			],
+			"turmas": [
+				20.0,
+				21.0
+			],
+			"grades": [
+				"alec_2010",
+				"alec_2023"
+			]
+		},
+		"alcc": {
+			"nome": "Ciência da Computação",
+			"prefixos_semestre": [
+				"cc"
+			],
+			"turmas": [
+				70.0
+			],
+			"grades": [
+				"alcc_0000"
+			]
+		},
+		"alea": {
+			"nome": "Engenharia Agrícola",
+			"prefixos_semestre": [
+				"ea"
+			],
+			"turmas": [
+				40.0
+			],
+			"grades": [
+				"alea_0000"
+			]
+		},
+		"alee": {
+			"nome": "Engenharia Elétrica",
+			"prefixos_semestre": [
+				"ee"
+			],
+			"turmas": [
+				30.0
+			],
+			"grades": [
+				"alee_0000"
+			]
+		},
+		"alet": {
+			"nome": "Engenharia de Telecomunicações",
+			"prefixos_semestre": [
+				"et"
+			],
+			"turmas": [
+				60.0
+			],
+			"grades": [
+				"alet_0000"
+			]
+		},
+		"alem": {
+			"nome": "Engenharia Mecânica",
+			"prefixos_semestre": [
+				"em"
+			],
+			"turmas": [
+				80.0
+			],
+			"grades": [
+				"alem_0000"
+			]
+		},
+		"ales": {
+			"nome": "Engenharia de Software",
+			"prefixos_semestre": [
+				"es"
+			],
+			"turmas": [
+				10.0
+			],
+			"grades": [
+				"ales_0000"
+			]
+		},
+		"ppeng": {
+			"nome": "Programa de Pós-Graduação em Engenharia",
+			"prefixos_semestre": [
+				"ppeng"
+			],
+			"turmas": [
+				51.0
+			],
+			"grades": [
+				"ppeng_0000"
+			]
+		},
+		"ppgee": {
+			"nome": "Programa de Pós-Graduação em Engenharia Elétrica",
+			"prefixos_semestre": [
+				"ppgee"
+			],
+			"turmas": [
+				50.0,
+				53.0
+			],
+			"grades": [
+				"ppgee_0000"
+			]
+		},
+		"ppges": {
+			"nome": "Programa de Pós-Graduação em Engenharia de Software",
+			"prefixos_semestre": [
+				"ppges"
+			],
+			"turmas": [
+				52.0
+			],
+			"grades": [
+				"ppges_0000"
+			]
+		}
+	},
+	"dias_semana": [
+		"Segunda",
+		"Terça",
+		"Quarta",
+		"Quinta",
+		"Sexta",
+		"Sábado"
+	],
+	"horarios_aula": [
+		"07:30",
+		"08:30",
+		"09:30",
+		"10:30",
+		"11:30",
+		"12:30",
+		"13:30",
+		"14:30",
+		"15:30",
+		"16:30",
+		"17:30",
+		"18:30",
+		"19:30",
+		"20:30",
+		"21:30"
+	]
+}

@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://bjpg7fb8lr74c"]
+
+[ext_resource type="Script" uid="uid://bbfjlg4y8banv" path="res://scenes/TelaPrincipal/tela_principal.gd" id="1_cm2tq"]
+[ext_resource type="PackedScene" uid="uid://bvy06pn834blr" path="res://scenes/TelaPrincipal/VerificadorArquivos/VerificadorArquivos.tscn" id="2_lo5v0"]
+
+[node name="Principal" type="ReferenceRect" unique_id=566644281]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_cm2tq")
+
+[node name="Label" type="Label" parent="." unique_id=1997178765]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+autowrap_mode = 2
+
+[node name="VerificadordeArquivos" parent="." unique_id=1904711372 instance=ExtResource("2_lo5v0")]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_top = 1.0
+offset_left = -500.0
+offset_top = -200.0
+grow_horizontal = 0
+grow_vertical = 0

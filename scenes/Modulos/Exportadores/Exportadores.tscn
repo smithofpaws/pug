@@ -1,0 +1,171 @@
+[gd_scene format=3 uid="uid://b28dvi2ilnts2"]
+
+[ext_resource type="Script" uid="uid://cdth8f3b4fuva" path="res://scenes/Modulos/Exportadores/exportadores.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dnxmpmw5wjqq" path="res://imagens/terminal.png" id="2_terminal_icon"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="3_terminal"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="4_seletor"]
+
+[node name="Exportadores" type="ReferenceRect" unique_id=1168663880]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Topo" type="ReferenceRect" parent="." unique_id=1118974245]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=1805223503]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelExportar" type="Label" parent="Topo/HBoxContainer" unique_id=1254174223]
+layout_mode = 2
+text = "Exportar:"
+
+[node name="SeletorTipoExportacao" parent="Topo/HBoxContainer" unique_id=110096248 instance=ExtResource("4_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Exportar"
+
+[node name="VSeparator2" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1914177474]
+layout_mode = 2
+
+[node name="SeletorVersaoGrade" parent="Topo/HBoxContainer" unique_id=192333085 instance=ExtResource("4_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Versão da grade"
+
+[node name="VSeparator" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1819925218]
+layout_mode = 2
+
+[node name="LabelGrade" type="Label" parent="Topo/HBoxContainer" unique_id=354036173]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Grade:"
+
+[node name="SeletorListaGrades" parent="Topo/HBoxContainer" unique_id=2094080101 instance=ExtResource("4_seletor")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texto_padrao = "Grade"
+
+[node name="VSeparator6" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1815579017]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Topo/HBoxContainer" unique_id=140125538]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1631972833]
+layout_mode = 2
+
+[node name="ExportarButton" type="Button" parent="Topo/HBoxContainer" unique_id=550114207]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Exportar"
+
+[node name="VSeparator5" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1292464993]
+layout_mode = 2
+
+[node name="SelecionarEmentaButton" type="Button" parent="Topo/HBoxContainer" unique_id=1723445553]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Selecionar ementa…"
+
+[node name="LoteEmentasButton" type="Button" parent="Topo/HBoxContainer" unique_id=816278449]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Lote de ementas"
+
+[node name="BaixarRelatorio5104Button" type="Button" parent="Topo/HBoxContainer" unique_id=633100208]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Baixar relatório 5104"
+
+[node name="Validar5104Button" type="Button" parent="Topo/HBoxContainer" unique_id=846302458]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Selecionar CSV 5104…"
+
+[node name="SeletorCondicoesChoque" parent="Topo/HBoxContainer" unique_id=1913602103 instance=ExtResource("4_seletor")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texto_padrao = "Condições"
+
+[node name="SeletorAluno" parent="Topo/HBoxContainer" unique_id=1812034906 instance=ExtResource("4_seletor")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texto_padrao = "Aluno"
+
+[node name="VSeparator3" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1393465303]
+layout_mode = 2
+
+[node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1315001936]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("2_terminal_icon")
+icon_alignment = 1
+expand_icon = true
+
+[node name="EmentaFileDialog" type="FileDialog" parent="." unique_id=701173906]
+unique_name_in_owner = true
+title = "Open a File"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.txt ; Arquivo de ementa")
+
+[node name="LoteEmentasFileDialog" type="FileDialog" parent="." unique_id=1052305356]
+unique_name_in_owner = true
+title = "Open a Directory"
+file_mode = 2
+access = 2
+
+[node name="Validar5104FileDialog" type="FileDialog" parent="." unique_id=1359349556]
+unique_name_in_owner = true
+title = "Open a File"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.csv ; Arquivo CSV")
+
+[node name="Principal" type="ReferenceRect" parent="." unique_id=1145412505]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+
+[node name="Terminal" parent="Principal" unique_id=1714802059 instance=ExtResource("3_terminal")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorTipoExportacao" to="." method="_on_seletor_tipo_exportacao_opcao_selecionada"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorVersaoGrade" to="." method="_on_seletor_versao_grade_opcao_selecionada"]
+[connection signal="button_up" from="Topo/HBoxContainer/ExportarButton" to="." method="_on_exportar_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/SelecionarEmentaButton" to="." method="_on_selecionar_ementa_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/LoteEmentasButton" to="." method="_on_lote_ementas_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/BaixarRelatorio5104Button" to="." method="_on_baixar_relatorio_5104_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/Validar5104Button" to="." method="_on_validar_5104_button_up"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaGrades" to="." method="_on_seletor_lista_grades_opcao_selecionada"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorCondicoesChoque" to="." method="_on_condicoes_choque_selecionada"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorAluno" to="." method="_on_seletor_aluno_opcao_selecionada"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
+[connection signal="file_selected" from="EmentaFileDialog" to="." method="_on_ementa_file_selected"]
+[connection signal="dir_selected" from="LoteEmentasFileDialog" to="." method="_on_lote_ementas_dir_selected"]
+[connection signal="file_selected" from="Validar5104FileDialog" to="." method="_on_validar_5104_file_selected"]

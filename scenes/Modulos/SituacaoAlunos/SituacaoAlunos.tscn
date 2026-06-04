@@ -1,0 +1,155 @@
+[gd_scene format=3 uid="uid://csw5dwrcddt4r"]
+
+[ext_resource type="Script" uid="uid://lrnqu48ph0d0" path="res://scenes/Modulos/SituacaoAlunos/situacao_alunos.gd" id="1_823l2"]
+[ext_resource type="Texture2D" uid="uid://dnxmpmw5wjqq" path="res://imagens/terminal.png" id="2_51wdq"]
+[ext_resource type="Texture2D" uid="uid://d0wxvbni1aey4" path="res://imagens/grid.png" id="3_klai2"]
+[ext_resource type="Texture2D" uid="uid://ckjuad1jfim0b" path="res://imagens/diagram.png" id="4_1taqb"]
+[ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="5_3yk6m"]
+[ext_resource type="Script" uid="uid://cawut727fxrnl" path="res://scenes/Modulos/SituacaoAlunos/Complementos/horarios.gd" id="6_57ohl"]
+[ext_resource type="PackedScene" uid="uid://cwuklmylx3tcu" path="res://scenes/Complementares/Grade/Grade.tscn" id="6_p6u1k"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="7_w88nm"]
+[ext_resource type="PackedScene" uid="uid://cbu38fuycrub1" path="res://scenes/Complementares/GradeCurricular/GradeCurricular.tscn" id="9_lfwnx"]
+
+[node name="SituacaoAlunos" type="ReferenceRect" unique_id=688920018]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_823l2")
+
+[node name="Topo" type="ReferenceRect" parent="." unique_id=334098023]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_bottom = 30.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=497035257]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelAluno" type="Label" parent="Topo/HBoxContainer" unique_id=764379743]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Aluno:"
+
+[node name="SeletorListaAlunos" parent="Topo/HBoxContainer" unique_id=1856665458 instance=ExtResource("7_w88nm")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Aluno"
+
+[node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=2052931679]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Topo/HBoxContainer" unique_id=1544539097]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSeparator7" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1018505392]
+layout_mode = 2
+
+[node name="Exportar" type="Button" parent="Topo/HBoxContainer" unique_id=1961516023]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+text = "Exportar"
+icon_alignment = 1
+expand_icon = true
+
+[node name="VSeparator6" type="VSeparator" parent="Topo/HBoxContainer" unique_id=989608177]
+layout_mode = 2
+
+[node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1567213729]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("2_51wdq")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffHorarios" type="Button" parent="Topo/HBoxContainer" unique_id=1437418238]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("3_klai2")
+icon_alignment = 1
+expand_icon = true
+
+[node name="OnOffGrade" type="Button" parent="Topo/HBoxContainer" unique_id=1753044782]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("4_1taqb")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Principal" type="ReferenceRect" parent="." unique_id=1339626467]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 35.0
+
+[node name="HSplitContainer" type="HSplitContainer" parent="Principal" unique_id=689833482]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Terminal" parent="Principal/HSplitContainer" unique_id=144455606 instance=ExtResource("5_3yk6m")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Horarios" type="VBoxContainer" parent="Principal/HSplitContainer" unique_id=1173484576]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+script = ExtResource("6_57ohl")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Principal/HSplitContainer/Horarios" unique_id=813913860]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="SeletorCondicoes" parent="Principal/HSplitContainer/Horarios/HBoxContainer" unique_id=211377847 instance=ExtResource("7_w88nm")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Condições"
+
+[node name="SeletorOpcoes" parent="Principal/HSplitContainer/Horarios/HBoxContainer" unique_id=70627718 instance=ExtResource("7_w88nm")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Opções"
+
+[node name="GradeHorarios" parent="Principal/HSplitContainer/Horarios" unique_id=215329869 instance=ExtResource("6_p6u1k")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="GradeCurricular" parent="Principal/HSplitContainer" unique_id=1319417700 instance=ExtResource("9_lfwnx")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaAlunos" to="." method="_on_seletor_lista_alunos_opcao_selecionada"]
+[connection signal="pressed" from="Topo/HBoxContainer/Exportar" to="." method="_on_exportar_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffHorarios" to="." method="_on_on_off_horarios_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffGrade" to="." method="_on_on_off_grade_button_up"]
+[connection signal="listacondicoes_alterada" from="Principal/HSplitContainer/Horarios" to="." method="_on_horarios_listacondicoes_alterada"]
+[connection signal="listaopcoes_alterada" from="Principal/HSplitContainer/Horarios" to="." method="_on_horarios_listaopcoes_alterada"]
+[connection signal="opcao_selecionada" from="Principal/HSplitContainer/Horarios/HBoxContainer/SeletorCondicoes" to="Principal/HSplitContainer/Horarios" method="_on_seletor_condicoes_opcao_selecionada"]
+[connection signal="opcao_selecionada" from="Principal/HSplitContainer/Horarios/HBoxContainer/SeletorOpcoes" to="Principal/HSplitContainer/Horarios" method="_on_seletor_opcoes_opcao_selecionada"]
+[connection signal="listaopcoes_alterada" from="Principal/HSplitContainer/GradeCurricular" to="." method="_on_grade_curricular_listaopcoes_alterada"]

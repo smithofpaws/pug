@@ -1,0 +1,558 @@
+{
+    "al0363": {
+        "nome": "Cálculo I",
+        "semestre": "1",
+        "ch": "90",
+        "posicao_grade": [1, 0]
+    },
+    "al0002": {
+        "nome": "Geometria Analítica",
+        "semestre": "1",
+        "ch": "60",
+        "posicao_grade": [1, 1]
+    },
+    "al0003": {
+        "nome": "Física I",
+        "semestre": "1",
+        "ch": "75",
+        "posicao_grade": [1, 2]
+    },
+    "al0465": {
+        "nome": "Introdução à Engenharia Mecânica",
+        "semestre": "1",
+        "ch": "30",
+        "posicao_grade": [1, 3]
+    },
+    "al0007": {
+        "nome": "Desenho Técnico",
+        "semestre": "1",
+        "ch": "30",
+        "posicao_grade": [1, 4]
+    },
+    "al0366": {
+        "nome": "Química Geral e Experimental",
+        "semestre": "1",
+        "ch": "45",
+        "posicao_grade": [1, 5]
+    },
+    "al0005": {
+        "nome": "Algoritmos e Programação",
+        "semestre": "1",
+        "ch": "60",
+        "posicao_grade": [1, 6]
+    },
+    "al0006": {
+        "nome": "Eletrotécnica",
+        "semestre": "2",
+        "ch": "45",
+        "posicao_grade": [2, 0]
+    },
+    "al0009": {
+        "nome": "Álgebra Linear",
+        "semestre": "2",
+        "ch": "60",
+        "posicao_grade": [2, 1]
+    },
+    "al0010": {
+        "nome": "Cálculo II",
+        "prerequisito0": "al0363",
+        "semestre": "2",
+        "ch": "60",
+        "posicao_grade": [2, 2]
+    },
+    "al0011": {
+        "nome": "Física II",
+        "prerequisito0": "al0363",
+        "semestre": "2",
+        "ch": "75",
+        "posicao_grade": [2, 3]
+    },
+    "al0033": {
+        "nome": "Desenho Mecânico I",
+        "prerequisito0": "al0007",
+        "semestre": "2",
+        "ch": "30",
+        "posicao_grade": [2, 4]
+    },
+    "al0175": {
+        "nome": "Ciência e Engenharia de Materiais",
+        "prerequisito0": "al0366",
+        "semestre": "2",
+        "ch": "60",
+        "posicao_grade": [2, 5]
+    },
+    "al0015": {
+        "nome": "Mecânica Geral",
+        "prerequisito0": "al0002",
+        "prerequisito1": "al0003",
+        "semestre": "2",
+        "ch": "60",
+        "posicao_grade": [2, 6]
+    },
+    "al0075": {
+        "nome": "Termodinâmica I",
+        "prerequisito0": "al0010",
+        "prerequisito1": "al0011",
+        "semestre": "3",
+        "ch": "60",
+        "posicao_grade": [3, 0]
+    },
+    "al0192": {
+        "nome": "Desenho Mecânico Computacional",
+        "prerequisito0": "al0033",
+        "semestre": "3",
+        "ch": "60",
+        "posicao_grade": [3, 1]
+    },
+    "al0019": {
+        "nome": "Equações Diferenciais I",
+        "prerequisito0": "al0009",
+        "prerequisito1": "al0010",
+        "semestre": "3",
+        "ch": "60",
+        "posicao_grade": [3, 2]
+    },
+    "al0020": {
+        "nome": "Cálculo III",
+        "prerequisito0": "al0010",
+        "semestre": "3",
+        "ch": "60",
+        "posicao_grade": [3, 3]
+    },
+    "al0021": {
+        "nome": "Física III",
+        "prerequisito0": "al0010",
+        "semestre": "3",
+        "ch": "75",
+        "posicao_grade": [3, 4]
+    },
+    "al0375": {
+        "nome": "Resistência dos Materiais I",
+        "prerequisito0": "al0015",
+        "semestre": "3",
+        "ch": "60",
+        "posicao_grade": [3, 5]
+    },
+    "al0474": {
+        "nome": "Oficina de Práticas Mecânicas",
+        "cargarequisito": "20",
+        "semestre": "3",
+        "ch": "30",
+        "posicao_grade": [3, 6]
+    },
+    "al0022": {
+        "nome": "Probabilidade e Estatística",
+        "prerequisito0": "al0010",
+        "semestre": "4",
+        "ch": "60",
+        "posicao_grade": [4, 0]
+    },
+    "al0034": {
+        "nome": "Metrologia",
+        "prerequisito0": "al0033",
+        "semestre": "4",
+        "ch": "30",
+        "posicao_grade": [4, 1]
+    },
+    "al0037": {
+        "nome": "Cálculo Numérico",
+        "prerequisito0": "al0010",
+        "prerequisito1": "al0005",
+        "semestre": "4",
+        "ch": "60",
+        "posicao_grade": [4, 2]
+    },
+    "al0053": {
+        "nome": "Máquinas Operatrizes",
+        "prerequisito0": "al0033",
+        "semestre": "4",
+        "ch": "45",
+        "posicao_grade": [4, 3]
+    },
+    "al0054": {
+        "nome": "Laboratório de Metalografia e Ensaios Mecânicos",
+        "prerequisito0": "al0175",
+        "semestre": "4",
+        "ch": "30",
+        "posicao_grade": [4, 4]
+    },
+    "al0078": {
+        "nome": "Mecânica dos Fluidos",
+        "prerequisito0": "al0011",
+        "prerequisito1": "al0019",
+        "semestre": "4",
+        "ch": "60",
+        "posicao_grade": [4, 5]
+    },
+    "al0381": {
+        "nome": "Resistência dos Materiais II",
+        "prerequisito0": "al0375",
+        "semestre": "4",
+        "ch": "60",
+        "posicao_grade": [4, 6]
+    },
+    "al0466": {
+        "nome": "Termodinâmica Aplicada",
+        "prerequisito0": "al0075",
+        "semestre": "4",
+        "ch": "60",
+        "posicao_grade": [4, 7]
+    },
+    "al0055": {
+        "nome": "Dinâmica",
+        "prerequisito0": "al0015",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 0]
+    },
+    "al0074": {
+        "nome": "Mecanismos",
+        "prerequisito0": "al0015",
+        "prerequisito1": "al0010",
+        "semestre": "5",
+        "ch": "30",
+        "posicao_grade": [5, 1]
+    },
+    "al0076": {
+        "nome": "Usinagem",
+        "prerequisito0": "al0053",
+        "prerequisito1": "al0175",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 2]
+    },
+    "al0098": {
+        "nome": "Transferência de Calor e Massa",
+        "prerequisito0": "al0078",
+        "prerequisito1": "al0020",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 3]
+    },
+    "al0136": {
+        "nome": "Máquinas de Fluido",
+        "prerequisito0": "al0078",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 4]
+    },
+    "al0176": {
+        "nome": "Tratamentos Térmicos e Superficiais",
+        "prerequisito0": "al0054",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 5]
+    },
+    "al0467": {
+        "nome": "Mecânica da Fratura e Fadiga",
+        "prerequisito0": "al0381",
+        "semestre": "5",
+        "ch": "60",
+        "posicao_grade": [5, 6]
+    },
+    "al0118": {
+        "nome": "Conformação Mecânica",
+        "prerequisito0": "al0375",
+        "prerequisito1": "al0176",
+        "semestre": "6",
+        "ch": "60",
+        "posicao_grade": [6, 0]
+    },
+    "al0194": {
+        "nome": "Vibrações de Sistemas Mecânicos",
+        "prerequisito0": "al0055",
+        "prerequisito1": "al0019",
+        "semestre": "6",
+        "ch": "60",
+        "posicao_grade": [6, 1]
+    },
+    "al0196": {
+        "nome": "Sistemas de Produção",
+        "prerequisito0": "al0053",
+        "semestre": "6",
+        "ch": "60",
+        "posicao_grade": [6, 2]
+    },
+    "al0221": {
+        "nome": "Tópicos de Máquinas Elétricas",
+        "prerequisito0": "al0006",
+        "prerequisito1": "al0021",
+        "semestre": "6",
+        "ch": "30",
+        "posicao_grade": [6, 3]
+    },
+    "al0380": {
+        "nome": "Introdução à Engenharia Econômica",
+        "prerequisito0": "al0022",
+        "semestre": "6",
+        "ch": "45",
+        "posicao_grade": [6, 4]
+    },
+    "al0471": {
+        "nome": "Refrigeração e Ar Condicionado",
+        "prerequisito0": "al0466",
+        "prerequisito1": "al0098",
+        "semestre": "6",
+        "ch": "60",
+        "posicao_grade": [6, 5]
+    },
+    "al0096": {
+        "nome": "Elementos de Máquinas I",
+        "prerequisito0": "al0176",
+        "prerequisito1": "al0467",
+        "semestre": "6",
+        "ch": "60",
+        "posicao_grade": [6, 6]
+    },
+    "al0117": {
+        "nome": "Elementos de Máquinas II",
+        "prerequisito0": "al0381",
+        "semestre": "7",
+        "ch": "60",
+        "posicao_grade": [7, 0]
+    },
+    "al0099": {
+        "nome": "Sistemas Hidráulicos e Pneumáticos",
+        "prerequisito0": "al0078",
+        "prerequisito1": "al0221",
+        "semestre": "7",
+        "ch": "60",
+        "posicao_grade": [7, 1]
+    },
+    "al0468": {
+        "nome": "Manufatura Assistida por Computador",
+        "prerequisito0": "al0192",
+        "prerequisito1": "al0076",
+        "semestre": "7",
+        "ch": "60",
+        "posicao_grade": [7, 2]
+    },
+    "al0469": {
+        "nome": "Soldagem",
+        "prerequisito0": "al0176",
+        "semestre": "7",
+        "ch": "60",
+        "posicao_grade": [7, 3]
+    },
+    "al0470": {
+        "nome": "Metodologia de Projeto de Produto",
+        "prerequisito0": "al0118",
+        "semestre": "7",
+        "ch": "60",
+        "posicao_grade": [7, 4]
+    },
+    "al0142": {
+        "nome": "Legislação, Ética e Exercício Profissional de Engenharia",
+        "prerequisito0": "al0465",
+        "semestre": "8",
+        "ch": "30",
+        "posicao_grade": [8, 0]
+    },
+    "al0215": {
+        "nome": "Controle de Sistemas Mecânicos",
+        "prerequisito0": "al0194",
+        "semestre": "8",
+        "ch": "60",
+        "posicao_grade": [8, 1]
+    },
+    "al0394": {
+        "nome": "Administração",
+        "prerequisito0": "al0380",
+        "semestre": "8",
+        "ch": "30",
+        "posicao_grade": [8, 2]
+    },
+    "al0472": {
+        "nome": "Fundição",
+        "prerequisito0": "al0176",
+        "semestre": "8",
+        "ch": "60",
+        "posicao_grade": [8, 3]
+    },
+    "al0473": {
+        "nome": "Projeto Integrado I",
+        "prerequisito0": "al0470",
+        "prerequisito1": "al0117",
+        "semestre": "8",
+        "ch": "150",
+        "posicao_grade": [8, 4]
+    },
+    "al0116": {
+        "nome": "Sistemas e Gestão de Qualidade",
+        "prerequisito0": "al0034",
+        "prerequisito1": "al0196",
+        "semestre": "9",
+        "ch": "60",
+        "posicao_grade": [9, 0]
+    },
+    "al0241": {
+        "nome": "Trabalho de Conclusão de Curso I",
+        "cargarequisito": "160",
+        "semestre": "9",
+        "ignorahora": "true",
+        "ch": "30",
+        "posicao_grade": [9, 1]
+    },
+    "al0390": {
+        "nome": "Fundamentos da Gestão Ambiental (EC)",
+        "semestre": "9",
+        "ch": "30",
+        "posicao_grade": [9, 2]
+    },
+    "al0475": {
+        "nome": "Projeto Integrado II",
+        "prerequisito0": "al0473",
+        "semestre": "9",
+        "ch": "150",
+        "posicao_grade": [9, 3]
+    },
+    "al0368": {
+        "nome": "Segurança e Saúde no Trabalho",
+        "semestre": "9",
+        "ch": "30",
+        "posicao_grade": [9, 4]
+    },
+    "al0242": {
+        "nome": "Estágio Supervisionado",
+        "cargarequisito": "222",
+        "semestre": "10",
+        "ignorahora": "true",
+        "ch": "300",
+        "posicao_grade": [10, 0]
+    },
+    "al0159": {
+        "nome": "Trabalho de Conclusão de Curso II",
+        "prerequisito0": "al0241",
+        "semestre": "10",
+        "ignorahora": "true",
+        "ch": "30",
+        "posicao_grade": [10, 1]
+    },
+    "al0056": {
+        "nome": "Sistemas Hidráulicos e Térmicos",
+        "prerequisito0": "al0011",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2210": {
+        "nome": "Análise Experimental de Tensões",
+        "prerequisito0": "al0381",
+        "semestre": "0",
+        "ch": "30",
+        "nucleo": "cccg"
+    },
+    "al2121": {
+        "nome": "Introdução à Dinâmica Veicular",
+        "prerequisito0": "al0055",
+        "prerequisito1": "al0117",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2073": {
+        "nome": "Corrosão",
+        "prerequisito0": "al0054",
+        "semestre": "0",
+        "ch": "30",
+        "nucleo": "cccg"
+    },
+    "al2074": {
+        "nome": "Materiais Poliméricos e Compósitos",
+        "prerequisito0": "al0175",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2153": {
+        "nome": "Ferros Fundidos e Ligas Leves",
+        "prerequisito0": "al0176",
+        "semestre": "0",
+        "ch": "30",
+        "nucleo": "cccg"
+    },
+    "al2154": {
+        "nome": "Tecnologia de Materiais Cerâmicos e Revestimentos",
+        "prerequisito0": "al0054",
+        "semestre": "0",
+        "ch": "30",
+        "nucleo": "cccg"
+    },
+    "al2043": {
+        "nome": "Introdução à Robótica",
+        "prerequisito0": "al0009",
+        "prerequisito1": "al0010",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al0024": {
+        "nome": "Circuitos Elétricos I",
+        "prerequisito0": "al0010",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2190": {
+        "nome": "Manutenção Mecânica",
+        "prerequisito0": "al0136",
+        "prerequisito1": "al0099",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2115": {
+        "nome": "Projeto de Sistemas de Controle",
+        "prerequisito0": "al0215",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al0036": {
+        "nome": "Equações Diferenciais II",
+        "prerequisito0": "al0019",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2062": {
+        "nome": "Introdução à Programação com MATLAB",
+        "prerequisito0": "al0005",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2113": {
+        "nome": "Linguagem Brasileira de Sinais - LIBRAS",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2148": {
+        "nome": "Linguagem Brasileira de Sinais II – LIBRAS II",
+        "prerequisito0": "al2113",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2144": {
+        "nome": "Relações Étnico Raciais",
+        "semestre": "0",
+        "ch": "30",
+        "nucleo": "cccg"
+    },
+    "al0119": {
+        "nome": "Custos de Produção",
+        "prerequisito0": "al0196",
+        "prerequisito1": "al0019",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
+    "al2091": {
+        "nome": "Português Instrumental",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    }
+}

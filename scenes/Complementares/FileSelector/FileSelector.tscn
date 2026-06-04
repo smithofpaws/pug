@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://buud16s2e5uib"]
+
+[ext_resource type="Texture2D" uid="uid://c1sjpg447dc6i" path="res://imagens/folder-input.png" id="1_bgq8j"]
+[ext_resource type="Script" uid="uid://dwnmon2csne4q" path="res://scenes/Complementares/FileSelector/file_selector.gd" id="1_pvlwl"]
+
+[node name="FileSelector" type="ReferenceRect" unique_id=1456774927]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_pvlwl")
+
+[node name="Status" type="ColorRect" parent="." unique_id=1669379869]
+layout_mode = 1
+anchors_preset = -1
+anchor_bottom = 1.0
+offset_right = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BotaoPasta" type="Button" parent="." unique_id=693297359]
+layout_mode = 1
+anchors_preset = -1
+anchor_bottom = 1.0
+offset_left = 35.0
+offset_right = 75.0
+icon = ExtResource("1_bgq8j")
+icon_alignment = 1
+
+[node name="ReferenceRect" type="ReferenceRect" parent="." unique_id=1456719743]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+
+[node name="BotaoSite" type="Button" parent="ReferenceRect" unique_id=1576140030]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Botão"
+
+[node name="Text" type="Label" parent="ReferenceRect" unique_id=743881205]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.8
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="FileDialog" type="FileDialog" parent="." unique_id=680123037]
+title = "Abrir arquivo"
+ok_button_text = "Abrir"
+file_mode = 0
+access = 2
+
+[connection signal="button_up" from="BotaoPasta" to="." method="_on_botao_pasta_button_up"]
+[connection signal="button_up" from="ReferenceRect/BotaoSite" to="." method="_on_botao_site_button_up"]
+[connection signal="dir_selected" from="FileDialog" to="." method="_on_file_dialog_dir_selected"]
+[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
+[connection signal="files_selected" from="FileDialog" to="." method="_on_file_dialog_files_selected"]
