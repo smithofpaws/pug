@@ -18,6 +18,13 @@ script = ExtResource("1_grdcr")
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 
+[node name="SeletorGrade" parent="HBoxContainer" instance=ExtResource("3_seletor")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+texto_padrao = "Grade"
+
 [node name="SeletorOpcoes" parent="HBoxContainer" unique_id=844458630 instance=ExtResource("3_seletor")]
 unique_name_in_owner = true
 layout_mode = 2
