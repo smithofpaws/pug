@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://bxpainelatrib0s"]
+[gd_scene load_steps=3 format=3 uid="uid://bxpainelatrib0s"]
 
 [ext_resource type="Script" uid="uid://bxpainelatrib0g" path="res://scenes/Complementares/PainelAtribuicoes/painel_atribuicoes.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="2_seletor"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_info"]
 font_size = 16
@@ -19,6 +20,20 @@ unique_name_in_owner = true
 layout_mode = 2
 text = ""
 label_settings = SubResource("LabelSettings_info")
+
+[node name="LinhaCurso" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LabelCurso" type="Label" parent="LinhaCurso"]
+layout_mode = 2
+text = "Curso: "
+
+[node name="SeletorCurso" parent="LinhaCurso" instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+texto_padrao = "Curso"
 
 [node name="InfoSemestre" type="Label" parent="."]
 unique_name_in_owner = true

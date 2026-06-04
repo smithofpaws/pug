@@ -25,10 +25,12 @@ const TerminalRef := preload("res://scenes/Complementares/Terminal/terminal.gd")
 # Nos da cena, resolvidos uma unica vez.
 @onready var _seletor_importar: SeletorAvancado = $"%SeletorImportar"
 @onready var _seletor_acoes: SeletorAvancado = $"%SeletorAcoes"
+@onready var _seletor_exportar: SeletorAvancado = $"%SeletorExportar"
 @onready var _painel_disciplinas: PainelDisciplinas = $"%PainelDisciplinas"
 @onready var _painel_atribuicoes: PainelAtribuicoes = $"%PainelAtribuicoes"
 @onready var _terminal: TerminalRef = $"%Terminal"
 @onready var _status_bar: StatusBar = $"%StatusBar"
+@onready var _grade_curricular: GradeCurricular = $"%GradeCurricular"
 
 #region Dados injetados pelo main
 
@@ -121,18 +123,26 @@ var _historico_discentes: Dictionary = {}
 # Disciplina atualmente selecionada no painel de atribuicoes.
 var _disciplina_selecionada: String = ""
 
+# Grade curricular atualmente desenhada na GradeCurricular (chave <cod_curso>_<versao>).
+var _grade_oferta_ativa: String = ""
+
+# Forma de apresentacao das celulas da GradeCurricular (espelha o default "nome_reduzido" do componente).
+var _forma_apresentacao_grade: String = "nome_reduzido"
+
+# Cache das contagens de demanda do rodape, por "<grade>|<curso>" (curso vazio = "*", demanda global).
+# O hist.csv nao muda durante a sessao, entao a contagem so depende da grade exibida e do curso filtrado.
+var _cache_contagens: Dictionary = {}
+
 
 func _ready() -> void:
 	var grades_ordenadas: Array = grades_disciplinas_curriculos.keys()
 	grades_ordenadas.sort()
 	_seletor_importar.lista_itens = {
-		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Salvar planejamento.json"],
-		"Locais_retorno": ["abrir_json", "abrir_csv", "salvar_json"],
+		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv"],
+		"Locais_retorno": ["abrir_json", "abrir_csv"],
 		"Grades": grades_ordenadas,
 		"Importar": ["planejamento.csv"],
 		"Importar_retorno": ["importar_csv"],
-		"Exportar": ["planejamento.csv", "alteracoes.md"],
-		"Exportar_retorno": ["exportar_csv", "exportar_alteracoes"],
 	}
 	_seletor_importar.opcao_selecionada.connect(_on_importar_opcao_selecionada)
 
@@ -156,6 +166,12 @@ func _ready() -> void:
 	}
 	_seletor_acoes.opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
+	_seletor_exportar.lista_itens = {
+		"_Exportar": ["Salvar planejamento (.json)", "Planilha (.csv)", "Alterações (.md)"],
+		"_Exportar_retorno": ["exportar_json", "exportar_csv", "exportar_alteracoes"],
+	}
+	_seletor_exportar.opcao_selecionada.connect(_on_exportar_opcao_selecionada)
+
 	_status_bar.definir_segmentos({
 		"carga": "Profs: --",
 		"pendentes": "Pendentes: 0",
@@ -164,7 +180,7 @@ func _ready() -> void:
 
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	var altura_seletor: int = 30
-	for seletor: SeletorAvancado in [_seletor_importar, _seletor_acoes, $"%FiltroSemestreEdicao"]:
+	for seletor: SeletorAvancado in [_seletor_importar, _seletor_acoes, _seletor_exportar, $"%FiltroSemestreEdicao"]:
 		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
 
 	# Planejamento de Oferta opera em creditos (a coluna "CH" do planejamento.csv eh creditos);
@@ -174,7 +190,8 @@ func _ready() -> void:
 	_painel_disciplinas.card_removido.connect(_on_card_removido)
 
 	_painel_atribuicoes.atribuicao_alterada.connect(_on_atribuicao_alterada)
-	_painel_atribuicoes.configurar([] as Array[String], "cr")
+	_painel_atribuicoes.curso_alterado.connect(_on_curso_disciplina_alterado)
+	_painel_atribuicoes.configurar([] as Array[String], "cr", cursos)
 
 	# Re-renderiza o painel de atribuicoes quando o filtro de curso muda, para que o
 	# destaque de "professores do curso atual" acompanhe a selecao.
@@ -209,6 +226,18 @@ func _ready() -> void:
 	_inicializar_lista_professores()
 	_afinidade.configurar(historico_professores, cursos, equivalencias, int(config_oferta.get("janela_afinidade", 15)))
 	_relatorios.configurar(_terminal, _afinidade, analise_historico, grades_disciplinas_curriculos, condicoes, config_oferta, cursos, equivalencias)
+
+	# Grade curricular (toggle via OnOffGrade): seletor de grade embutido + forma de apresentacao.
+	_grade_curricular.lista_grades = grades_ordenadas
+	_grade_curricular.grade_alterada.connect(_on_grade_oferta_alterada)
+	_grade_curricular.listaopcoes_alterada.connect(_on_grade_oferta_forma_alterada)
+	# Pre-seleciona o PPC principal, se valido; senao a primeira grade disponivel.
+	var grade_inicial: String = GV.configuracao_base.get("ppc_principal", "")
+	if grade_inicial.is_empty() or not grades_disciplinas_curriculos.has(grade_inicial):
+		grade_inicial = str(grades_ordenadas[0]) if grades_ordenadas.size() > 0 else ""
+	if not grade_inicial.is_empty():
+		_grade_oferta_ativa = grade_inicial
+		_grade_curricular.selecionar_grade(grade_inicial)
 
 
 # Escreve uma linha no terminal com o token de cor informado.
@@ -293,6 +322,7 @@ func _on_semestre_edicao_selecionado(_retorno: String, lista_selecionada: Array[
 func _on_filtro_curso_alterado(_filtros: Dictionary) -> void:
 	if not _disciplina_selecionada.is_empty():
 		_exibir_disciplina_selecionada()
+	_refresh_grade_se_visivel()
 
 
 func _atualizar_status_bar() -> void:
@@ -404,6 +434,8 @@ func _sincronizar_cards_alocacoes() -> void:
 		# Define o excedente antes de ch_alocada (cujo setter recalcula o visual).
 		card.ch_extra = maxi(0, ch_alocada - ch_total)
 		card.ch_alocada = ch_alocada
+	# Apos sincronizar os cards (import de CSV/JSON), atualiza o contorno de inseridas na grade.
+	_refresh_grade_se_visivel()
 
 
 # Indexa os cards do painel por "codigo|semestre" (ambos minusculos) para lookup O(1).
@@ -476,6 +508,43 @@ func _semestre_com_prefixo_do_curso(grade_nome: String, sem_grade: String) -> St
 	return prefixo
 
 
+# Troca o prefixo de [param sem] (semestre prefixado, ex.: "EC04") para o do [param novo_cod_curso],
+# preservando o numero do semestre. Quando o curso novo nao tem prefixos definidos, devolve sem alteracao.
+func _trocar_prefixo_semestre(sem: String, novo_cod_curso: String) -> String:
+	var prefixos_novos: Array = cursos.get(novo_cod_curso, {}).get("prefixos_semestre", [])
+	if prefixos_novos.is_empty():
+		return sem
+	var novo_prefixo: String = str(prefixos_novos[0])
+	var cod_atual: String = _afinidade.prefixo_para_curso(sem)
+	if cod_atual.is_empty():
+		return novo_prefixo + sem
+	var prefixos_atuais: Array = cursos[cod_atual].get("prefixos_semestre", [])
+	for p in prefixos_atuais:
+		var p_str: String = str(p)
+		if sem.to_upper().begins_with(p_str.to_upper()):
+			return novo_prefixo + sem.substr(p_str.length())
+	return novo_prefixo + sem
+
+
+# Handler do signal [signal PainelAtribuicoes.curso_alterado]: troca o prefixo no semestre
+# da disciplina selecionada, propaga ao card e refaz os filtros.
+func _on_curso_disciplina_alterado(novo_cod_curso: String) -> void:
+	if _disciplina_selecionada.is_empty() or not _alocacoes.has(_disciplina_selecionada):
+		return
+	var dados: Dictionary = _alocacoes[_disciplina_selecionada]
+	var sem_antigo: String = dados["semestre"]
+	var sem_novo: String = _trocar_prefixo_semestre(sem_antigo, novo_cod_curso)
+	if sem_novo == sem_antigo:
+		return
+	var card: CardDisciplina = _buscar_card(dados["codigo"], sem_antigo)
+	dados["semestre"] = sem_novo
+	if card != null:
+		card.semestre = sem_novo
+	_painel_disciplinas.atualizar_filtros()
+	# Re-renderiza atribuicoes para refletir o novo semestre no Label e manter a selecao do OptCurso.
+	_exibir_disciplina_selecionada()
+
+
 #region Importacao
 
 func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
@@ -483,16 +552,20 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 		_abrir_janela_selecao_cursos()
 	elif retorno == "abrir_json":
 		_importar_planejamento_json_salvo()
-	elif retorno == "salvar_json":
-		_exportar_planejamento_json()
 	elif retorno == "importar_csv":
 		_converter_planejamento_csv()
+	elif grades_disciplinas_curriculos.has(retorno):
+		_abrir_janela_selecao_grade(retorno)
+
+
+# Handler do seletor Exportar dedicado no topo.
+func _on_exportar_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
+	if retorno == "exportar_json":
+		_exportar_planejamento_json()
 	elif retorno == "exportar_csv":
 		_exportar_planejamento_csv()
 	elif retorno == "exportar_alteracoes":
 		_exportar_alteracoes()
-	elif grades_disciplinas_curriculos.has(retorno):
-		_abrir_janela_selecao_grade(retorno)
 
 
 # Abre um dialogo para selecionar um arquivo CSV, converte-o para UTF-8
@@ -862,6 +935,7 @@ func _on_disciplinas_grade_selecionadas(grade_nome: String, codigos: Array) -> v
 			inseridas += 1
 	_log("Inseridas %d disciplina(s) da grade %s." % [inseridas, grade_nome], "sucesso", true, true)
 	_atualizar_status_bar()
+	_refresh_grade_se_visivel()
 
 
 func _inserir_disciplina_da_grade(grade_nome: String, codigo: String) -> bool:
@@ -1267,6 +1341,7 @@ func _on_card_removido(chave: String) -> void:
 		_disciplina_selecionada = ""
 		_painel_atribuicoes.limpar()
 	_atualizar_status_bar()
+	_refresh_grade_se_visivel()
 
 
 func _exibir_disciplina_selecionada() -> void:
@@ -1319,7 +1394,8 @@ func _exibir_disciplina_selecionada() -> void:
 		dados["ch_total"],
 		dados["professores"],
 		afinidade,
-		_calcular_profs_destacar()
+		_calcular_profs_destacar(),
+		_afinidade.prefixo_para_curso(dados["semestre"])
 	)
 	_painel_atribuicoes.definir_ch_por_prof(_calcular_carga_por_prof())
 	_painel_atribuicoes.bloquear_edicao(false)
@@ -1391,5 +1467,105 @@ func _on_on_off_atribuicoes_button_up() -> void:
 
 func _on_on_off_terminal_button_up() -> void:
 	_terminal.visible = not _terminal.is_visible_in_tree()
+
+
+func _on_on_off_grade_button_up() -> void:
+	_grade_curricular.visible = not _grade_curricular.is_visible_in_tree()
+	if _grade_curricular.visible:
+		_atualizar_grade_oferta()
+
+#endregion
+
+#region Grade curricular
+
+# Handler do seletor de grade embutido na GradeCurricular: troca a grade desenhada.
+func _on_grade_oferta_alterada(grade_nome: String) -> void:
+	_grade_oferta_ativa = grade_nome
+	if _grade_curricular.visible:
+		_atualizar_grade_oferta()
+
+
+# Handler da forma de apresentacao das celulas (SeletorOpcoes da GradeCurricular).
+func _on_grade_oferta_forma_alterada(opcao: String) -> void:
+	_forma_apresentacao_grade = opcao
+	if _grade_curricular.visible:
+		_atualizar_grade_oferta()
+
+
+# Re-renderiza a grade quando ela esta visivel (chamado apos mudancas nos cards do painel).
+func _refresh_grade_se_visivel() -> void:
+	if _grade_curricular and _grade_curricular.is_visible_in_tree():
+		_atualizar_grade_oferta()
+
+
+# Monta e envia a matriz da grade curricular em analise. Colore o rodape de cada celula com a contagem
+# de discentes por situacao (demanda, carregada sob demanda do hist.csv) e contorna as disciplinas ja
+# inseridas no PainelDisciplinas, facilitando ver o que falta adicionar a oferta.
+func _atualizar_grade_oferta() -> void:
+	if _grade_oferta_ativa.is_empty() or not grades_disciplinas_curriculos.has(_grade_oferta_ativa):
+		return
+	var grade: Dictionary = grades_disciplinas_curriculos[_grade_oferta_ativa]
+	# Normaliza para condicoes-base (cada base engloba sua variante "_aproveitamento" na contagem);
+	# tambem absorve overrides antigos que tenham variantes salvas.
+	var situacoes_rodape: Array = _normalizar_situacoes_rodape(config_oferta.get("situacoes_rodape", \
+		["matriculado_agora", "matriculavel", "seaprovado"]))
+	var contagens: Dictionary = _contagens_demanda(grade, situacoes_rodape, _painel_disciplinas.filtro_curso)
+	var vazio_cursaveis: Dictionary = {}
+	var vazio_cursadas: Array[String] = []
+	var sem_destaque: Array[String] = []
+	var codigos_inseridos: Array[String] = _painel_disciplinas.codigos_presentes()
+	_grade_curricular.dados = analise_grades.montar_grade_curricular(
+		grade, vazio_cursaveis, vazio_cursadas, {}, _forma_apresentacao_grade,
+		sem_destaque, {}, contagens, situacoes_rodape, codigos_inseridos,
+		PaletaSemantica.cor("selecao"))
+
+
+# Contagem de discentes por situacao para cada disciplina da grade exibida.
+# Com curso selecionado, considera todos os alunos do curso (de qualquer grade) reavaliados contra a
+# grade exibida — assim quem e de outra grade entra desde que consiga cursar por aproveitamento.
+# Sem curso, usa a demanda global (cada aluno avaliado contra a propria grade, casamento por codigo).
+# Resultado cacheado por grade+curso (o hist.csv nao muda durante a sessao).
+func _contagens_demanda(grade: Dictionary, situacoes_rodape: Array, filtro_curso: String) -> Dictionary:
+	if situacoes_rodape.is_empty():
+		return {}
+	var chave_cache: String = _grade_oferta_ativa + "|" + (filtro_curso if not filtro_curso.is_empty() else "*")
+	if _cache_contagens.has(chave_cache):
+		return _cache_contagens[chave_cache]
+	# Degrada silenciosamente sem hist.csv (a grade ainda mostra contorno de inseridas, sem numeros).
+	if not _carregar_dados_discentes(false):
+		return {}
+	# Base de condicoes a contar: global (todos, grade propria) ou so o curso (reavaliado contra a grade exibida).
+	var base_condicoes: Dictionary = _condicoes_discentes
+	if not filtro_curso.is_empty():
+		var lista_alunos_curso: Array[Array] = []
+		for matricula in _historico_discentes.keys():
+			var grade_aluno: String = analise_historico.detectar_versao_grade(matricula, _historico_discentes)
+			if _curso_da_grade(grade_aluno) == filtro_curso:
+				lista_alunos_curso.append([matricula, ""])
+		base_condicoes = analise_historico.condicoes_discentes(lista_alunos_curso, _historico_discentes, \
+			condicoes, grades_disciplinas_curriculos, equivalencias, _grade_oferta_ativa)
+	var contagens: Dictionary = {}
+	for codigo in grade.keys():
+		var disc_cond: Dictionary = analise_historico.discentes_disciplina(codigo, base_condicoes, condicoes)
+		var counts: Dictionary = {}
+		for sit in situacoes_rodape:
+			# Cada base engloba alunos com e sem aproveitamento (a variante "_aproveitamento" usa codigos
+			# distintos, entao nao ha risco de contar o mesmo aluno duas vezes para a mesma celula).
+			counts[sit] = (disc_cond.get(sit, []) as Array).size() \
+				+ (disc_cond.get(sit + "_aproveitamento", []) as Array).size()
+		contagens[str(codigo).to_lower()] = counts
+	_cache_contagens[chave_cache] = contagens
+	return contagens
+
+
+# Reduz uma lista de situacoes do rodape as condicoes-base, removendo o sufixo "_aproveitamento" e
+# deduplicando (preserva a ordem). A ordem resultante define a ordem dos numeros no rodape.
+func _normalizar_situacoes_rodape(lista: Array) -> Array:
+	var bases: Array = []
+	for s in lista:
+		var base: String = str(s).trim_suffix("_aproveitamento")
+		if base not in bases:
+			bases.append(base)
+	return bases
 
 #endregion

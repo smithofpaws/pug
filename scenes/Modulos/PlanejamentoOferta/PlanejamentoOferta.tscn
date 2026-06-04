@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://bpdisccomp01" path="res://scenes/Complementares/PainelDisciplinas/PainelDisciplinas.tscn" id="7_pdisc"]
 [ext_resource type="PackedScene" uid="uid://bhh5h23mkeccm" path="res://scenes/Complementares/PainelAtribuicoes/PainelAtribuicoes.tscn" id="8_patrib"]
 [ext_resource type="PackedScene" uid="uid://bto7y00isquyk" path="res://scenes/Complementares/StatusBar/StatusBar.tscn" id="9_statusbar"]
+[ext_resource type="PackedScene" uid="uid://cbu38fuycrub1" path="res://scenes/Complementares/GradeCurricular/GradeCurricular.tscn" id="10_grade"]
 
 [node name="PlanejamentoOferta" type="ReferenceRect" unique_id=938415152]
 anchors_preset = 15
@@ -44,6 +45,14 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 texto_padrao = "Ações"
+
+[node name="VSeparator3" type="VSeparator" parent="Topo/HBoxContainer"]
+layout_mode = 2
+
+[node name="SeletorExportar" parent="Topo/HBoxContainer" instance=ExtResource("2_seletor")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Exportar"
 
 [node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1096592180]
 layout_mode = 2
@@ -131,9 +140,15 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="GradeCurricular" parent="Principal/HSplitContainer" instance=ExtResource("10_grade")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
 [node name="StatusBar" parent="." unique_id=1127215127 instance=ExtResource("9_statusbar")]
 unique_name_in_owner = true
 
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffPainel" to="." method="_on_on_off_painel_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffAtribuicoes" to="." method="_on_on_off_atribuicoes_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
+[connection signal="button_up" from="Topo/HBoxContainer/OnOffGrade" to="." method="_on_on_off_grade_button_up"]

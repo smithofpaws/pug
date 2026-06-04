@@ -209,7 +209,19 @@
 		"ch_minimo": 8.0,
 		"ch_ideal": 12.0,
 		"ch_maximo": 20.0,
-		"horas_por_credito": 15.0
+		"horas_por_credito": 15.0,
+		"condicoes_rodape_disponiveis": [
+			"matriculado_agora",
+			"matriculavel",
+			"corequisito_matriculavel",
+			"seaprovado",
+			"corequisito_seaprovado"
+		],
+		"situacoes_rodape": [
+			"matriculado_agora",
+			"matriculavel",
+			"seaprovado"
+		]
 	},
 	"posicionamento_auto": {
 		"periodos": {

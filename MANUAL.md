@@ -200,15 +200,19 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
 - **Locais**
   - **Abrir planejamento.json** — retoma um planejamento salvo anteriormente pelo próprio programa (formato `.json`).
   - **Abrir planejamento.csv** — carrega o `planejamento.csv` do diretório de saída como ponto de partida (oferta anterior, por exemplo).
-  - **Salvar planejamento.json** — salva o estado atual em formato `.json` para retomar depois.
 - **Grades** — usa a grade de um curso como sugestão de disciplinas a ofertar.
 - **Importar**
   - **planejamento.csv** — seleciona um `planejamento.csv` externo, converte para UTF-8 e o salva no diretório de saída.
-- **Exportar**
-  - **planejamento.csv** — gera um arquivo `.csv` compatível com o Planejamento de Horário.
-  - **alteracoes.md** — gera um Markdown com a diferença entre o planejamento importado (base) e o estado atual editado, organizado em disciplinas adicionadas, removidas e alteradas. Serve de guia do que ajustar na planilha de planejamento online. O estado inicial usado como base é o da última importação; ele é preservado dentro do `planejamento.json` ao salvar, sobrevivendo a fechar e reabrir.
 
-Ao abrir/importar **com um planejamento já carregado na tela**, um diálogo pergunta se deseja **mesclar** os dados com o que já está na tela ou **substituir** completamente. Em ambos os casos, **o registro de alterações usado em `alteracoes.md` é redefinido**: a base de comparação passa a ser o estado resultante da importação. Se ainda precisar das diferenças acumuladas até então, **exporte `alteracoes.md` antes** de mesclar ou substituir. (Ao **substituir** abrindo um `planejamento.json` salvo pelo programa, o registro de alterações guardado naquele arquivo é restaurado — ver acima.)
+#### Botão Exportar
+
+As saídas ficam reunidas no botão **Exportar**, separado do **Arquivo**:
+
+- **Salvar planejamento (.json)** — salva o estado atual em formato `.json` para retomar depois.
+- **Planilha (.csv)** — gera um arquivo `.csv` compatível com o Planejamento de Horário.
+- **Alterações (.md)** — gera um Markdown com a diferença entre o planejamento importado (base) e o estado atual editado, organizado em disciplinas adicionadas, removidas e alteradas. Serve de guia do que ajustar na planilha de planejamento online. O estado inicial usado como base é o da última importação; ele é preservado dentro do `planejamento.json` ao salvar, sobrevivendo a fechar e reabrir.
+
+Ao abrir/importar **com um planejamento já carregado na tela**, um diálogo pergunta se deseja **mesclar** os dados com o que já está na tela ou **substituir** completamente. Em ambos os casos, **o registro de alterações usado em `Exportar › Alterações (.md)` é redefinido**: a base de comparação passa a ser o estado resultante da importação. Se ainda precisar das diferenças acumuladas até então, **exporte as alterações antes** de mesclar ou substituir. (Ao **substituir** abrindo um `planejamento.json` salvo pelo programa, o registro de alterações guardado naquele arquivo é restaurado — ver acima.)
 
 #### Painel de disciplinas
 
@@ -218,6 +222,7 @@ Exibe os cards das disciplinas do currículo. Filtros em cascata permitem visual
 
 Ao clicar em uma disciplina, o painel lateral mostra:
 
+- **Curso** — seletor que indica a qual curso a disciplina pertence. Trocar o curso reescreve o prefixo do semestre da disciplina (ex.: de `EC04` para `EM04`), reposicionando-a no filtro do curso correspondente — útil para disciplinas compartilhadas entre cursos.
 - **Professores disponíveis** — com menu suspenso para selecionar um ou mais por disciplina.
 - **Afinidade** — professores com histórico de oferta desta disciplina aparecem destacados no topo, com percentual de afinidade calculado automaticamente.
 - **Carga horária** — exibe a carga total semanal de cada professor alocado, com indicação visual de status: verde (dentro do ideal), amarelo (abaixo do ideal) e vermelho (acima do máximo ou abaixo do mínimo).
@@ -230,7 +235,16 @@ Ao clicar em uma disciplina, o painel lateral mostra:
 - **Sugerir oferta** — propõe automaticamente quais disciplinas oferecer, com base na demanda levantada e na afinidade dos professores.
 - **Verificar erro de afinidade** — valida a integridade dos dados históricos de afinidade.
 
-> As operações de salvar (`.json`) e exportar (`.csv`) ficam no menu **Arquivo**, descrito acima.
+#### Grade curricular
+
+O botão de **grade curricular** (ícone na barra superior) abre, ao lado do terminal, a grade do curso em análise. Cada célula é uma disciplina e mostra no rodapé a **contagem de demanda** por situação (quantos discentes estão matriculados, podem se matricular ou se matriculariam caso aprovados) — útil para decidir o que ofertar. As disciplinas **já inseridas na oferta** aparecem contornadas, facilitando ver o que ainda falta adicionar.
+
+- Os seletores embutidos na grade permitem trocar a **grade exibida** e a **forma de apresentação** das células.
+- Com um **curso filtrado** no painel de disciplinas, a contagem considera todos os alunos do curso reavaliados contra a grade exibida (inclui quem cursa por aproveitamento); sem filtro, usa a demanda global.
+- A contagem depende do `hist.csv`; sem ele a grade aparece sem os números (só o contorno das inseridas).
+- Quais situações aparecem no rodapé é configurável em **Configurações › Planejamento de Oferta**.
+
+> As saídas (`.json`, `.csv`, `.md`) ficam no botão **Exportar**, descrito acima.
 
 ---
 
