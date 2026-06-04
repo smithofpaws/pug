@@ -10,3 +10,30 @@ externo/**/dist/
 
 # Estado de usuario (overrides de configuracao)
 config_usuario.json
+
+# ============================================================================
+# Dados pessoais e externos — NAO versionar (protecao LGPD)
+# ============================================================================
+# dados/: dados importados pelo usuario (hist.csv, email.csv, planejamento.csv,
+# horarios.txt, preferencias de horario...). Contem dados pessoais de alunos e
+# professores. Mantemos a pasta e o marcador .gdignore; ignoramos o conteudo.
+/dados/*
+!/dados/.gdignore
+
+# Tokens de participantes do LimeSurvey (gerados; vinculam-se a alunos).
+arquivos/limesurvey/survey_tokens.lst
+
+# ============================================================================
+# Saidas geradas pelo programa (regeneraveis — o programa recria a pasta)
+# ============================================================================
+/exportacoes/
+
+# ============================================================================
+# Lixo de sistema operacional / OneDrive
+# ============================================================================
+desktop.ini
+Thumbs.db
+ehthumbs.db
+.DS_Store
+~$*
+*.tmp
