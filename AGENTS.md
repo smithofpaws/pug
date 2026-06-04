@@ -19,6 +19,30 @@ Instruções para o assistente ao trabalhar neste projeto.
   - `dados/`: dados externos importados pelo usuário (hist.csv, planejamento.csv, horarios.txt). Têm lógica própria de origem e são convertidos na leitura — não misturar os formatos destes arquivos com as convenções de `arquivos/`.
   - `exportacoes/`: saídas geradas pelo programa. Pasta na raiz do projeto, configurável em `base_config.json:diretorios.exportacoes`.
 
+## Controle de versão (git) e múltiplos computadores
+
+O projeto é usado em 3 computadores e vive numa pasta do **OneDrive**. O **git é o histórico
+canônico — não o OneDrive**. Editar em duas máquinas em paralelo via OneDrive já causou
+divergência séria no passado.
+
+- **Antes de trocar de máquina:** commitar e sincronizar. Não editar em dois PCs ao mesmo tempo.
+- **Quando houver remoto (GitHub):** usar `pull` ao começar e `push` ao terminar, em vez de
+  depender da sincronia do OneDrive para levar o histórico entre as máquinas.
+- **Git não está no PATH das sessões:** usar `C:\Program Files\Git\cmd\git.exe`.
+- **Backups locais** ficam em `.backup/` (gitignored); o OneDrive os replica.
+
+### Dados pessoais fora do git (LGPD)
+
+O repositório guarda **código**, não dados pessoais. Já gitignorados, **nunca commitar**:
+
+- `dados/` — dados importados (hist.csv, email.csv, planejamento.csv, preferências de horário).
+  Contêm dados de alunos/professores. Exceção versionada: `dados/.gdignore` (marcador do Godot).
+- `exportacoes/` — saídas geradas (regeneráveis; o programa recria a pasta).
+- `arquivos/limesurvey/survey_tokens.lst` — tokens de participantes.
+
+`arquivos/` (grades, cargas, equivalências) **é** versionado. Antes de qualquer `push`/commit,
+conferir `git status` para garantir que nenhum CSV de `dados/` ou token entrou.
+
 ## Ferramentas
 
 - Godot 4.x com GL Compatibility
