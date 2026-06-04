@@ -15,8 +15,9 @@ Documento de retomada. Lê de cima pra baixo. **Nada do projeto original foi per
 - **Foto de segurança (início da recuperação):** `C:\Users\diego\Recovery_GD4\snapshot_raw\`
   → o projeto como estava ao começar, incluindo os `-DiegoVirt`. Rede de segurança.
 
-**Regra de ouro:** o trabalho de hoje está no projeto OneDrive; o de ontem está no `.7z` +
-`backup_yesterday`. Os dois existem. Pode descansar tranquilo.
+**Regra de ouro:** o trabalho de hoje está no projeto OneDrive **e agora versionado no git**
+(commits `ab1b238` + `6e5568c`); o de ontem está no `.7z` + `backup_yesterday`. Os dois existem.
+Pode descansar tranquilo.
 
 ---
 
@@ -55,14 +56,23 @@ usando o backup como referência. Nada se perde — só a grade ainda não está
 - **Projeto oficial limpo:** 19 arquivos `-DiegoVirt` removidos; projeto validado (carrega
   sem erros no `--editor --quit`).
 - Memórias registradas (port da grade + lição OneDrive/git).
+- **Git instalado e versionado** (04/06): Git 2.54.0 via winget; 1º commit `ab1b238`
+  (estado limpo, 250 arquivos) + commit `6e5568c` (correção do bug da seta). Repo travado.
+- **Bug da seta corrigido** (04/06): nó `SeletorGrade` restaurado no `GradeCurricular.tscn`
+  (causa real abaixo, seção 6). Falta só a confirmação visual no app.
+- **OneDrive reativado** (04/06): esta máquina é a fonte da verdade; sem novos conflitos aqui.
 
 ---
 
 ## 5. Tarefas PENDENTES
 
-### 5.1. 🐞 Bug da seta de requisitos (em análise — ver seção 6)
-Clicar (esq/dir) numa célula da grade curricular no **Situação de Alunos** deveria mostrar a
-seta de pré-requisitos. **Funciona no backup de ontem, quebrou no projeto atual.**
+### 5.1. ✅ Bug da seta de requisitos — RESOLVIDO (04/06, ver seção 6)
+Clicar (esq/dir) numa célula da grade curricular no **Situação de Alunos** não mostrava a
+seta de pré-requisitos. **Causa:** o `GradeCurricular.tscn` de hoje perdeu o nó `SeletorGrade`,
+que o `grade_curricular.gd:46` referencia incondicionalmente no `_ready()` — sem o nó o `_ready`
+abortava antes de conectar `celula_clicada` (linhas 50-51). Nó restaurado no commit `6e5568c`.
+**Pendente apenas a confirmação visual** (abrir app → Situação de Alunos → selecionar discente →
+clicar numa célula → a seta deve aparecer).
 
 ### 5.2. 🔧 Portar a feature de grade curricular (escopo levantado)
 Já está no local: o componente **`grade_curricular.gd`** (idêntico). Falta:
@@ -83,22 +93,43 @@ Já está no local: o componente **`grade_curricular.gd`** (idêntico). Falta:
 - **Risco:** os `.tscn` (IDs de `ext_resource`/nós). Verificar **carregando o módulo de
   verdade** (não só `--editor --quit`, que NÃO pega módulos carregados via `load()` em runtime).
 
-### 5.3. 🔒 Git: instalar e fazer o 1º commit
-Git não está instalado. Para travar o estado: rodar no prompt da sessão (pede confirmação):
-```
-! winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements
-```
-Depois: ajustar `.gitignore` (já é razoável) e `git add -A && git commit`.
+### 5.3. ✅ Git: instalado e versionado (04/06)
+Git 2.54.0 instalado via winget. `git` ainda **não está no PATH desta sessão** — usar o caminho
+completo `C:\Program Files\Git\cmd\git.exe` (ou abrir um terminal novo). Config local do repo:
+`user.name = "Diego Arthur Hartmann"`, `user.email = diego.hartmann@gmail.com`, `core.autocrlf false`.
+Commits: `ab1b238` (estado limpo, 250 arquivos) e `6e5568c` (correção da seta).
+**Próximo passo recomendado:** criar um remoto **privado** no GitHub e dar `push` (backup off-machine).
+Binários grandes versionados (`externo/bin/typst.exe` 36MB etc.) — todos <100MB, cabem no GitHub.
 
-### 5.4. ☁️ Reativar o OneDrive (com cuidado)
-Está pausado 24h nas duas máquinas. Ao religar: **esta máquina é a fonte da verdade**; vão
-aparecer novos `-DiegoVirt` na outra máquina (apagáveis, pois ontem está no backup).
-**Prevenção:** commitar no git com regularidade (idealmente remoto/GitHub); não editar em duas
-máquinas em paralelo sem sincronizar.
+### 5.4. ✅ OneDrive reativado (04/06) — monitorar
+Reativado nesta máquina (a **fonte da verdade**). Sem novos `-DiegoVirt` aqui. **Atenção:** ao
+ligar a outra máquina ("DiegoVirt"), o OneDrive pode gerar `-DiegoVirt` lá — são **apagáveis**
+(o estado bom está nesta máquina + git + backup de ontem). **Prevenção contínua:** commitar no
+git com regularidade e dar `push` pro GitHub; não editar em duas máquinas em paralelo sem sincronizar.
 
 ---
 
-## 6. Análise do bug da seta de requisitos (5.1) — estado da investigação
+## 6. Análise do bug da seta de requisitos (5.1) — ✅ RESOLVIDO
+
+> **CAUSA RAIZ CONFIRMADA (04/06):** o `GradeCurricular.tscn` de hoje **perdeu o nó `SeletorGrade`**.
+> O `grade_curricular.gd:46` faz `$"%SeletorGrade".opcao_selecionada.connect(...)`
+> **incondicionalmente** no `_ready()`. Sem o nó, isso vira acesso a `null` → erro de runtime →
+> o `_ready()` **aborta antes das linhas 50-51**, que conectam `celula_clicada`/`celula_clicada_direita`
+> aos handlers. Resultado: a grade renderiza (o setter `_set_dados` injeta dados direto no `_grade`),
+> mas o **clique não dispara nada** → sem seta. Com script idêntico ao de ontem, a única diferença
+> era o nó ausente — daí "funcionava ontem, quebrou hoje".
+>
+> **A hipótese do `unique_id` (abaixo) estava ERRADA:** o `unique_id=NNN` é um atributo *extra*
+> (não substituiu `unique_name_in_owner = true`, que continua presente), é tolerado pelo Godot
+> (235 ocorrências em 16 `.tscn`, projeto carrega normal) e **não tem relação** com este bug.
+> Fica anotado como anomalia separada a investigar (provável artefato de merge/recuperação).
+>
+> **Correção aplicada:** nó `SeletorGrade` restaurado (oculto, `unique_name_in_owner = true`),
+> commit `6e5568c`. Falta só a confirmação visual no app.
+
+---
+
+**(Histórico da investigação — mantido para referência)**
 
 **Sintoma:** clique esq/dir na grade curricular (módulo Situação de Alunos) não desenha mais a
 seta de pré-requisitos. Funciona no backup de ontem.
@@ -162,7 +193,8 @@ clicável, então pode ser que o `%` funcione e o problema seja outro — **prec
 
 ## 8. Recomendação de ordem ao retomar
 
-1. **Primeiro instalar git + commit** (5.3) — trava o estado atual antes de qualquer mudança.
-2. **Resolver o bug da seta** (5.1/6) — é pequeno e isolado; bom aquecimento.
-3. **Portar a grade** (5.2) — tarefa maior; entrar em plan mode antes.
-4. **Reativar OneDrive** (5.4) por último.
+1. ✅ **Instalar git + commit** (5.3) — feito (`ab1b238`).
+2. ✅ **Resolver o bug da seta** (5.1/6) — feito (`6e5568c`); confirmar visualmente no app.
+3. ✅ **Reativar OneDrive** (5.4) — feito; monitorar a outra máquina.
+4. ⏳ **Portar a grade** (5.2) — tarefa maior; **entrar em plan mode antes**. ← próximo passo.
+5. ⏳ **Push pro GitHub** (privado) — backup off-machine; fazer assim que possível.
