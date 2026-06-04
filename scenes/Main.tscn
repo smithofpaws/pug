@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bmhi3738or7h"]
 
 [ext_resource type="Script" uid="uid://kc6qnaiosuct" path="res://scenes/main.gd" id="1_8afwg"]
-[ext_resource type="PackedScene" uid="uid://8oc0hi0sd5ge" path="res://scenes/BarraPrincipal.tscn" id="2_k47iy"]
+[ext_resource type="PackedScene" uid="uid://8oc0hi0sd5ge" path="res://scenes/barraprincipal.tscn" id="2_k47iy"]
 
 [node name="Main" type="ReferenceRect" unique_id=750148180]
 anchors_preset = 15

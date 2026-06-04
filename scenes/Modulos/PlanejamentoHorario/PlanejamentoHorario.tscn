@@ -71,7 +71,9 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="OnOffPainel" type="Button" parent="Topo/HBoxContainer" unique_id=953388137]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 icon = ExtResource("2_uttic")
@@ -79,7 +81,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1475362013]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 icon = ExtResource("2_m8erm")
@@ -87,7 +91,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffHorarios" type="Button" parent="Topo/HBoxContainer" unique_id=2135306858]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 icon = ExtResource("3_tas3n")

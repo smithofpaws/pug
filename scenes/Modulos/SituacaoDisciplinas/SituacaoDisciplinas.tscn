@@ -83,7 +83,9 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1966333823]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("2_dfbuy")
@@ -92,7 +94,9 @@ expand_icon = true
 size_flags_vertical = 4
 
 [node name="OnOffHorarios" type="Button" parent="Topo/HBoxContainer" unique_id=338982690]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("3_dmhg8")

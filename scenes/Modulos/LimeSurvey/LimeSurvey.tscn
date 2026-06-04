@@ -42,7 +42,9 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=124052641]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 0)
+toggle_mode = true
 layout_mode = 2
 size_flags_horizontal = 8
 focus_mode = 0
@@ -51,7 +53,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffAdmin" type="Button" parent="Topo/HBoxContainer" unique_id=482222354]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 0)
+toggle_mode = true
 layout_mode = 2
 size_flags_horizontal = 8
 focus_mode = 0

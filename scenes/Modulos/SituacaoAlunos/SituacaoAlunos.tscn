@@ -66,7 +66,9 @@ expand_icon = true
 layout_mode = 2
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1567213729]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
@@ -75,7 +77,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffHorarios" type="Button" parent="Topo/HBoxContainer" unique_id=1437418238]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
@@ -84,7 +88,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffGrade" type="Button" parent="Topo/HBoxContainer" unique_id=1753044782]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0

@@ -22,3 +22,14 @@ static func aplicar(grupo: Array, alvo: Control, isolar: bool) -> void:
 	for n in grupo:
 		if is_instance_valid(n):
 			n.visible = true if ja_isolado else (n == alvo)
+
+
+## Sincroniza o estado "pressionado" dos botoes OnOff (toggle_mode) com a visibilidade dos paineis,
+## para que o botao indique se o painel que ele controla esta aberto. [br]
+## [param mapa]: [code]{ Button: Control }[/code] — cada botao mapeado ao painel que ele controla.
+## Usa [method BaseButton.set_pressed_no_signal] para nao reentrar nos handlers de clique.
+static func sincronizar_botoes(mapa: Dictionary) -> void:
+	for botao in mapa:
+		var painel: Control = mapa[botao]
+		if is_instance_valid(botao) and is_instance_valid(painel):
+			botao.set_pressed_no_signal(painel.visible)

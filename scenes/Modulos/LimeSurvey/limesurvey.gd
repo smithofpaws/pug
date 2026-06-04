@@ -27,6 +27,8 @@ func _ready() -> void:
 	$"%LEDataInicio".set_text(str(time["year"])+"-"+mes+"-"+dia+" 00:00:00")
 	$"%LEDataExpiracao".set_text($"%LEDataInicio".get_text())
 	$"%LESemestre".set_text(str(time["year"])+"/"+semestre)
+	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
+	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
 
 func _lista_disciplinas(historico: Dictionary) -> Array:
@@ -212,13 +214,19 @@ func _on_gerar_lime_survey_button_up() -> void:
 			pass
 
 
-# Conjunto de paineis alternaveis pelos botoes OnOff (Shift+clique isola/restaura).
-func _grupo_toggles() -> Array:
-	return [$"%Terminal", $"%JanelaAdmin"]
+# Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
+# e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
+func _mapa_toggles() -> Dictionary:
+	return {$"%OnOffTerminal": $"%Terminal", $"%OnOffAdmin": $"%JanelaAdmin"}
+
+func _toggle(alvo: Control) -> void:
+	var mapa := _mapa_toggles()
+	TogglePaineis.aplicar(mapa.values(), alvo, Input.is_key_pressed(KEY_SHIFT))
+	TogglePaineis.sincronizar_botoes(mapa)
 
 func _on_on_off_terminal_button_up() -> void:
-	TogglePaineis.aplicar(_grupo_toggles(), $"%Terminal", Input.is_key_pressed(KEY_SHIFT))
+	_toggle($"%Terminal")
 
 
 func _on_on_off_admin_button_up() -> void:
-	TogglePaineis.aplicar(_grupo_toggles(), $"%JanelaAdmin", Input.is_key_pressed(KEY_SHIFT))
+	_toggle($"%JanelaAdmin")

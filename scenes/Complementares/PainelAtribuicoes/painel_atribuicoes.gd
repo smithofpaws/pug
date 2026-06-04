@@ -4,11 +4,9 @@ class_name PainelAtribuicoes extends VBoxContainer
 ## Exibe os professores alocados com CH editavel, botao remover e ranking de
 ## afinidade baseado no historico de oferta.
 ## [br]
-## Emite [signal atribuicao_alterada] quando professores/alocacoes mudam, e
-## [signal curso_alterado] quando o usuario escolhe outro curso para a disciplina.
+## Emite [signal atribuicao_alterada] quando professores/alocacoes mudam.
 
 signal atribuicao_alterada()
-signal curso_alterado(cod_curso: String)
 
 var _disciplina_chave: String = ""
 var _disciplina_codigo: String = ""
@@ -35,15 +33,10 @@ var _profs_destacar: Dictionary = {}
 # usada para exibir no lugar da pontuacao na lista de afinidade.
 var _ch_por_prof: Dictionary = {}
 
-# Metadados de cursos (formato [code]base_config.json:cursos[/code]), usados para popular
-# o seletor de curso. Injetado via [method configurar].
-var _cursos: Dictionary = {}
-
 var _bloqueado: bool = false
 
 
 func _ready() -> void:
-	$"%SeletorCurso".opcao_selecionada.connect(_on_seletor_curso_opcao_selecionada)
 	_limpar_exibicao()
 
 
@@ -51,17 +44,12 @@ func _ready() -> void:
 ## [param unidade_ch] é o rótulo da unidade de CH; passe [code]"h"[/code] (default no campo) ou
 ## [code]"cr"[/code] em módulos que operam em créditos (Planejamento de Oferta). Quando vazio,
 ## preserva o valor previamente configurado — útil em chamadas subsequentes que só atualizam
-## a lista de professores sem querer redefinir a unidade. [br]
-## [param cursos] é o dicionário [code]base_config.json:cursos[/code], usado para popular o
-## OptionButton de curso. Quando vazio, preserva o que ja estiver configurado.
-func configurar(todos_professores: Array[String], unidade_ch: String = "", cursos: Dictionary = {}) -> void:
+## a lista de professores sem querer redefinir a unidade.
+func configurar(todos_professores: Array[String], unidade_ch: String = "") -> void:
 	_todos_professores = todos_professores.duplicate()
 	_todos_professores.sort_custom(func(a, b): return a < b)
 	if not unidade_ch.is_empty():
 		_unidade_ch = unidade_ch
-	if not cursos.is_empty():
-		_cursos = cursos
-		_popular_opt_curso()
 
 
 ## Define a carga horaria total alocada a cada professor (nome normalizado → creditos/horas).
@@ -71,33 +59,14 @@ func definir_ch_por_prof(ch: Dictionary) -> void:
 	_atualizar_afinidade()
 
 
-# Preenche o seletor de curso com os itens de [member _cursos] (ordem alfabetica por
-# cod_curso para previsibilidade), usando cod_curso como retorno.
-func _popular_opt_curso() -> void:
-	var cods: Array = _cursos.keys()
-	cods.sort()
-	var cursos_itens: Array[String] = []
-	var cursos_retorno: Array[String] = []
-	for cod in cods:
-		var nome: String = str(_cursos[cod].get("nome", cod))
-		cursos_itens.append(nome)
-		cursos_retorno.append(str(cod))
-	$"%SeletorCurso".lista_itens = {
-		"_cursos*": cursos_itens,
-		"_cursos_retorno": cursos_retorno
-	}
-	$"%SeletorCurso".atualizar_texto_padrao = true
-
-
 ## Exibe os dados de uma disciplina para edicao de atribuicoes.
 ## [param afinidade] e uma lista ordenada de dicionarios { "nome": str, "score": int }. [br]
 ## [param profs_destacar] e um set (Dict com value=true) de nomes ja normalizados; cada entry
 ## da lista de afinidade cujo nome estiver nele recebe um marcador adicional. Vazio = sem
-## destaque extra. [br]
-## [param cod_curso_atual] sincroniza o OptionButton de curso ([code]""[/code] = sem selecao).
+## destaque extra.
 func exibir_disciplina(chave: String, codigo: String, nome: String, semestre: String, \
 		ch_total: int, professores: Dictionary, afinidade: Array[Dictionary], \
-		profs_destacar: Dictionary = {}, cod_curso_atual: String = "") -> void:
+		profs_destacar: Dictionary = {}) -> void:
 	_disciplina_chave = chave
 	_disciplina_codigo = codigo
 	_disciplina_ch_total = ch_total
@@ -107,9 +76,7 @@ func exibir_disciplina(chave: String, codigo: String, nome: String, semestre: St
 	$"%InfoSemestre".text = "Semestre: %s    CH total: %d %s" % [semestre, ch_total, _unidade_ch]
 	$"%InfoDisciplina".visible = true
 	$"%InfoSemestre".visible = true
-	$"%LinhaCurso".visible = true
 	$"%Placeholder".visible = false
-	_selecionar_curso_no_opt(cod_curso_atual)
 	_afinidade_atual = _completar_afinidade(afinidade)
 	_detalhes_por_prof.clear()
 	for e in afinidade:
@@ -147,7 +114,6 @@ func _limpar_exibicao() -> void:
 	$"%InfoDisciplina".visible = false
 	$"%InfoSemestre".text = ""
 	$"%InfoSemestre".visible = false
-	$"%LinhaCurso".visible = false
 	$"%Placeholder".visible = true
 	$"%CHLabel".text = ""
 	for filho in $"%PainelProfessores".get_children():
@@ -155,24 +121,6 @@ func _limpar_exibicao() -> void:
 	for filho in $"%PainelAfinidade".get_children():
 		filho.queue_free()
 	bloquear_edicao(true)
-
-
-# Encontra o item do seletor de curso cujo cod_curso bate com [param cod_curso] e o seleciona.
-# Quando [param cod_curso] e vazio ou nao tem item correspondente, nao faz nada.
-func _selecionar_curso_no_opt(cod_curso: String) -> void:
-	if cod_curso.is_empty() or _cursos.is_empty():
-		return
-	var cods: Array = _cursos.keys()
-	cods.sort()
-	for i in cods.size():
-		if str(cods[i]) == cod_curso:
-			$"%SeletorCurso".selecionar_item(i)
-			return
-
-
-# Reage a escolha do usuario no seletor de curso.
-func _on_seletor_curso_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
-	curso_alterado.emit(retorno)
 
 
 func _on_remover_professor_pressed(prof_nome: String) -> void:

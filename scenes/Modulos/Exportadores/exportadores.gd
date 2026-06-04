@@ -147,6 +147,8 @@ func _ready() -> void:
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	for seletor in [$"%SeletorTipoExportacao", $"%SeletorVersaoGrade", $"%SeletorListaGrades", $"%SeletorCondicoesChoque", $"%SeletorAluno"]:
 		seletor.custom_minimum_size = Vector2(largura_seletor, 30)
+	# Realce inicial do botao OnOff conforme a visibilidade do terminal.
+	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
 # Popula o SeletorCondicoesChoque com as condicoes do base_config.json.
 func _popular_seletor_condicoes() -> void:
@@ -703,5 +705,12 @@ func _formatar_nome_condicao(condicao: String) -> String:
 	return condicao.replacen("_", " ").capitalize()
 
 
+# Mapa botao OnOff -> painel que ele controla. O botao fica "afundado" (toggle_mode) quando o painel
+# esta visivel. Grupo de um unico painel: Shift+clique nao tem efeito pratico.
+func _mapa_toggles() -> Dictionary:
+	return {$"%OnOffTerminal": $"%Terminal"}
+
 func _on_on_off_terminal_button_up() -> void:
-	$"%Terminal".visible = not $"%Terminal".visible
+	var mapa := _mapa_toggles()
+	TogglePaineis.aplicar(mapa.values(), $"%Terminal", Input.is_key_pressed(KEY_SHIFT))
+	TogglePaineis.sincronizar_botoes(mapa)

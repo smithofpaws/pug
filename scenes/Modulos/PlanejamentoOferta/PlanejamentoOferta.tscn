@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://di3cfpegaqjp8" path="res://scenes/Modulos/PlanejamentoOferta/planejamentooferta.gd" id="1_plof"]
 [ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="2_seletor"]
 [ext_resource type="Texture2D" uid="uid://ckcyxwbq88w5k" path="res://imagens/verticallist.png" id="3_verticallist"]
+[ext_resource type="Texture2D" uid="uid://2bqfw3hatqud" path="res://imagens/admin.png" id="4_muxuc"]
 [ext_resource type="Texture2D" uid="uid://dnxmpmw5wjqq" path="res://imagens/terminal.png" id="4_terminalimg"]
 [ext_resource type="Texture2D" uid="uid://ckjuad1jfim0b" path="res://imagens/diagram.png" id="5_diagram"]
 [ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="6_terminal"]
@@ -46,14 +47,6 @@ unique_name_in_owner = true
 layout_mode = 2
 texto_padrao = "Ações"
 
-[node name="VSeparator3" type="VSeparator" parent="Topo/HBoxContainer"]
-layout_mode = 2
-
-[node name="SeletorExportar" parent="Topo/HBoxContainer" instance=ExtResource("2_seletor")]
-unique_name_in_owner = true
-layout_mode = 2
-texto_padrao = "Exportar"
-
 [node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1096592180]
 layout_mode = 2
 
@@ -77,7 +70,9 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="OnOffPainel" type="Button" parent="Topo/HBoxContainer" unique_id=953388137]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 icon = ExtResource("3_verticallist")
@@ -85,15 +80,19 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffAtribuicoes" type="Button" parent="Topo/HBoxContainer" unique_id=587123400]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
-icon = ExtResource("5_diagram")
+icon = ExtResource("4_muxuc")
 icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1467264049]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 icon = ExtResource("4_terminalimg")
@@ -101,7 +100,9 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="OnOffGrade" type="Button" parent="Topo/HBoxContainer" unique_id=1918495471]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
+toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
@@ -140,7 +141,7 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="GradeCurricular" parent="Principal/HSplitContainer" instance=ExtResource("10_grade")]
+[node name="GradeCurricular" parent="Principal/HSplitContainer" unique_id=781204553 instance=ExtResource("10_grade")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

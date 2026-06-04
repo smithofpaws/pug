@@ -165,6 +165,8 @@ func _ready() -> void:
 	var grade_horarios = $"%Horarios".get_node("GradeHorarios")
 	if grade_horarios:
 		grade_horarios.celula_clicada.connect(_on_horarios_celula_clicada)
+	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
+	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
 
 # Roda a análise para a seleção atual.
@@ -517,23 +519,28 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 
 
 #region Sinais
+# Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
+# e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
+func _mapa_toggles() -> Dictionary:
+	return {
+		$"%OnOffTerminal": $"%Terminal",
+		$"%OnOffHorarios": $"%Horarios",
+		$"%OnOffGrade": $"%GradeCurricular",
+	}
+
+func _toggle(alvo: Control) -> void:
+	var mapa := _mapa_toggles()
+	TogglePaineis.aplicar(mapa.values(), alvo, Input.is_key_pressed(KEY_SHIFT))
+	TogglePaineis.sincronizar_botoes(mapa)
+
 func _on_on_off_terminal_button_up() -> void:
-	if $"%Terminal".is_visible_in_tree():
-		$"%Terminal".hide()
-	else:
-		$"%Terminal".show()
+	_toggle($"%Terminal")
 
 func _on_on_off_horarios_button_up() -> void:
-	if $"%Horarios".is_visible_in_tree():
-		$"%Horarios".hide()
-	else:
-		$"%Horarios".show()
+	_toggle($"%Horarios")
 
 func _on_on_off_grade_button_up() -> void:
-	if $"%GradeCurricular".is_visible_in_tree():
-		$"%GradeCurricular".hide()
-	else:
-		$"%GradeCurricular".show()
+	_toggle($"%GradeCurricular")
 
 func _on_seletor_lista_alunos_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
 	_matricula_atual = retorno

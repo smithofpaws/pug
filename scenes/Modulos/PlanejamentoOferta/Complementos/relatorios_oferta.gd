@@ -542,10 +542,14 @@ func detectar_problema_oferta(cards_disciplinas: Dictionary, filtro_curso: Strin
 			if ga != gb:
 				return ga < gb
 			return int(a["semestre_grade"]) < int(b["semestre_grade"]))
+		var grade_atual: String = ""
 		for item in ausentes:
-			_terminal.item("%s - %s (grade %s, semestre %s)" % [
+			if item["grade"] != grade_atual:
+				grade_atual = item["grade"]
+				_terminal.subsecao(grade_atual)
+			_terminal.item("%s - %s (semestre %s)" % [
 				str(item["codigo"]).to_upper(), item["nome"],
-				item["grade"], item["semestre_grade"]])
+				item["semestre_grade"]])
 		_terminal.espaco()
 		_terminal.linha("Total de ausentes: %d" % ausentes.size(), "aviso")
 
@@ -579,10 +583,14 @@ func detectar_problema_oferta(cards_disciplinas: Dictionary, filtro_curso: Strin
 	if semestre_errado.is_empty():
 		_terminal.item("Nenhum.", 0, "sucesso")
 	else:
+		var grade_atual: String = ""
 		for item in semestre_errado:
-			_terminal.item("%s - %s: ofertado %s, esperado %s (grade %s)" % [
+			if item["grade"] != grade_atual:
+				grade_atual = item["grade"]
+				_terminal.subsecao(grade_atual)
+			_terminal.item("%s - %s: ofertado %s, esperado %s" % [
 				str(item["codigo"]).to_upper(), item["nome"],
-				item["sem_atual"], item["sem_esperado"], item["grade"]])
+				item["sem_atual"], item["sem_esperado"]])
 		_terminal.espaco()
 		_terminal.linha("Total com semestre incorreto: %d" % semestre_errado.size(), "aviso")
 

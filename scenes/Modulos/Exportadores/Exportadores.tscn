@@ -117,7 +117,9 @@ texto_padrao = "Aluno"
 layout_mode = 2
 
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1315001936]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 0)
+toggle_mode = true
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("2_terminal_icon")

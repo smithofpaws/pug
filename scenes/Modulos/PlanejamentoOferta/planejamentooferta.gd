@@ -25,11 +25,13 @@ const TerminalRef := preload("res://scenes/Complementares/Terminal/terminal.gd")
 # Nos da cena, resolvidos uma unica vez.
 @onready var _seletor_importar: SeletorAvancado = $"%SeletorImportar"
 @onready var _seletor_acoes: SeletorAvancado = $"%SeletorAcoes"
-@onready var _seletor_exportar: SeletorAvancado = $"%SeletorExportar"
 @onready var _painel_disciplinas: PainelDisciplinas = $"%PainelDisciplinas"
 @onready var _painel_atribuicoes: PainelAtribuicoes = $"%PainelAtribuicoes"
 @onready var _terminal: TerminalRef = $"%Terminal"
 @onready var _status_bar: StatusBar = $"%StatusBar"
+
+## Grade curricular embutida (toggle via OnOffGrade): mostra a grade com celulas pintadas conforme a
+## alocacao e a demanda (quantos discentes podem cursar) no rodape de cada celula.
 @onready var _grade_curricular: GradeCurricular = $"%GradeCurricular"
 
 #region Dados injetados pelo main
@@ -138,39 +140,43 @@ func _ready() -> void:
 	var grades_ordenadas: Array = grades_disciplinas_curriculos.keys()
 	grades_ordenadas.sort()
 	_seletor_importar.lista_itens = {
-		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv"],
-		"Locais_retorno": ["abrir_json", "abrir_csv"],
+		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Salvar planejamento.json"],
+		"Locais_retorno": ["abrir_json", "abrir_csv", "salvar_json"],
 		"Grades": grades_ordenadas,
 		"Importar": ["planejamento.csv"],
 		"Importar_retorno": ["importar_csv"],
+		"Exportar": ["planejamento.csv", "alteracoes.md"],
+		"Exportar_retorno": ["exportar_csv", "exportar_alteracoes"],
 	}
 	_seletor_importar.opcao_selecionada.connect(_on_importar_opcao_selecionada)
 
 	_seletor_acoes.lista_itens = {
-		"_Acoes": [
-			"Determinar demanda",
-			"Determinar demanda (ignorar na oferta)",
-			"Verificar carga horária",
-			"Sugerir oferta",
-			"Verificar erro de afinidade",
-			"Detectar problema na oferta",
+		"Demanda": [
+			"Determinar",
+			"Determinar ignorando oferta",
 		],
-		"_Acoes_retorno": [
+		"Demanda_retorno": [
 			"determinar_demanda",
 			"determinar_demanda_ignorar_oferta",
+		],
+		"Carga horária": [
+			"Verificar",
+		],
+		"Carga horária_retorno": [
 			"verificar_carga_horaria",
+		],
+		"Oferta": [
+			"Sugerir",
+			"Verificar erro de afinidade",
+			"Detectar problemas",
+		],
+		"Oferta_retorno": [
 			"sugerir_oferta",
 			"verificar_erro_afinidade",
 			"detectar_problema_oferta",
 		],
 	}
 	_seletor_acoes.opcao_selecionada.connect(_on_acoes_opcao_selecionada)
-
-	_seletor_exportar.lista_itens = {
-		"_Exportar": ["Salvar planejamento (.json)", "Planilha (.csv)", "Alterações (.md)"],
-		"_Exportar_retorno": ["exportar_json", "exportar_csv", "exportar_alteracoes"],
-	}
-	_seletor_exportar.opcao_selecionada.connect(_on_exportar_opcao_selecionada)
 
 	_status_bar.definir_segmentos({
 		"carga": "Profs: --",
@@ -180,7 +186,7 @@ func _ready() -> void:
 
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	var altura_seletor: int = 30
-	for seletor: SeletorAvancado in [_seletor_importar, _seletor_acoes, _seletor_exportar, $"%FiltroSemestreEdicao"]:
+	for seletor: SeletorAvancado in [_seletor_importar, _seletor_acoes, $"%FiltroSemestreEdicao"]:
 		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
 
 	# Planejamento de Oferta opera em creditos (a coluna "CH" do planejamento.csv eh creditos);
@@ -190,8 +196,7 @@ func _ready() -> void:
 	_painel_disciplinas.card_removido.connect(_on_card_removido)
 
 	_painel_atribuicoes.atribuicao_alterada.connect(_on_atribuicao_alterada)
-	_painel_atribuicoes.curso_alterado.connect(_on_curso_disciplina_alterado)
-	_painel_atribuicoes.configurar([] as Array[String], "cr", cursos)
+	_painel_atribuicoes.configurar([] as Array[String], "cr")
 
 	# Re-renderiza o painel de atribuicoes quando o filtro de curso muda, para que o
 	# destaque de "professores do curso atual" acompanhe a selecao.
@@ -238,6 +243,8 @@ func _ready() -> void:
 	if not grade_inicial.is_empty():
 		_grade_oferta_ativa = grade_inicial
 		_grade_curricular.selecionar_grade(grade_inicial)
+	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
+	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
 
 # Escreve uma linha no terminal com o token de cor informado.
@@ -508,43 +515,6 @@ func _semestre_com_prefixo_do_curso(grade_nome: String, sem_grade: String) -> St
 	return prefixo
 
 
-# Troca o prefixo de [param sem] (semestre prefixado, ex.: "EC04") para o do [param novo_cod_curso],
-# preservando o numero do semestre. Quando o curso novo nao tem prefixos definidos, devolve sem alteracao.
-func _trocar_prefixo_semestre(sem: String, novo_cod_curso: String) -> String:
-	var prefixos_novos: Array = cursos.get(novo_cod_curso, {}).get("prefixos_semestre", [])
-	if prefixos_novos.is_empty():
-		return sem
-	var novo_prefixo: String = str(prefixos_novos[0])
-	var cod_atual: String = _afinidade.prefixo_para_curso(sem)
-	if cod_atual.is_empty():
-		return novo_prefixo + sem
-	var prefixos_atuais: Array = cursos[cod_atual].get("prefixos_semestre", [])
-	for p in prefixos_atuais:
-		var p_str: String = str(p)
-		if sem.to_upper().begins_with(p_str.to_upper()):
-			return novo_prefixo + sem.substr(p_str.length())
-	return novo_prefixo + sem
-
-
-# Handler do signal [signal PainelAtribuicoes.curso_alterado]: troca o prefixo no semestre
-# da disciplina selecionada, propaga ao card e refaz os filtros.
-func _on_curso_disciplina_alterado(novo_cod_curso: String) -> void:
-	if _disciplina_selecionada.is_empty() or not _alocacoes.has(_disciplina_selecionada):
-		return
-	var dados: Dictionary = _alocacoes[_disciplina_selecionada]
-	var sem_antigo: String = dados["semestre"]
-	var sem_novo: String = _trocar_prefixo_semestre(sem_antigo, novo_cod_curso)
-	if sem_novo == sem_antigo:
-		return
-	var card: CardDisciplina = _buscar_card(dados["codigo"], sem_antigo)
-	dados["semestre"] = sem_novo
-	if card != null:
-		card.semestre = sem_novo
-	_painel_disciplinas.atualizar_filtros()
-	# Re-renderiza atribuicoes para refletir o novo semestre no Label e manter a selecao do OptCurso.
-	_exibir_disciplina_selecionada()
-
-
 #region Importacao
 
 func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
@@ -552,20 +522,16 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 		_abrir_janela_selecao_cursos()
 	elif retorno == "abrir_json":
 		_importar_planejamento_json_salvo()
+	elif retorno == "salvar_json":
+		_exportar_planejamento_json()
 	elif retorno == "importar_csv":
 		_converter_planejamento_csv()
-	elif grades_disciplinas_curriculos.has(retorno):
-		_abrir_janela_selecao_grade(retorno)
-
-
-# Handler do seletor Exportar dedicado no topo.
-func _on_exportar_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
-	if retorno == "exportar_json":
-		_exportar_planejamento_json()
 	elif retorno == "exportar_csv":
 		_exportar_planejamento_csv()
 	elif retorno == "exportar_alteracoes":
 		_exportar_alteracoes()
+	elif grades_disciplinas_curriculos.has(retorno):
+		_abrir_janela_selecao_grade(retorno)
 
 
 # Abre um dialogo para selecionar um arquivo CSV, converte-o para UTF-8
@@ -1394,8 +1360,7 @@ func _exibir_disciplina_selecionada() -> void:
 		dados["ch_total"],
 		dados["professores"],
 		afinidade,
-		_calcular_profs_destacar(),
-		_afinidade.prefixo_para_curso(dados["semestre"])
+		_calcular_profs_destacar()
 	)
 	_painel_atribuicoes.definir_ch_por_prof(_calcular_carga_por_prof())
 	_painel_atribuicoes.bloquear_edicao(false)
@@ -1457,24 +1422,41 @@ func _imprimir_planejamento() -> void:
 		_terminal.item(linha)
 
 
+# Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
+# e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
+func _mapa_toggles() -> Dictionary:
+	return {
+		$"%OnOffPainel": _painel_disciplinas,
+		$"%OnOffAtribuicoes": _painel_atribuicoes,
+		$"%OnOffTerminal": _terminal,
+		$"%OnOffGrade": _grade_curricular,
+	}
+
+
+func _toggle_painel(alvo: Control) -> void:
+	var mapa := _mapa_toggles()
+	TogglePaineis.aplicar(mapa.values(), alvo, Input.is_key_pressed(KEY_SHIFT))
+	TogglePaineis.sincronizar_botoes(mapa)
+	_refresh_grade_se_visivel()
+
+
 func _on_on_off_painel_button_up() -> void:
-	_painel_disciplinas.visible = not _painel_disciplinas.is_visible_in_tree()
+	_toggle_painel(_painel_disciplinas)
 
 
 func _on_on_off_atribuicoes_button_up() -> void:
-	_painel_atribuicoes.visible = not _painel_atribuicoes.is_visible_in_tree()
+	_toggle_painel(_painel_atribuicoes)
 
 
 func _on_on_off_terminal_button_up() -> void:
-	_terminal.visible = not _terminal.is_visible_in_tree()
+	_toggle_painel(_terminal)
 
 
 func _on_on_off_grade_button_up() -> void:
-	_grade_curricular.visible = not _grade_curricular.is_visible_in_tree()
-	if _grade_curricular.visible:
-		_atualizar_grade_oferta()
+	_toggle_painel(_grade_curricular)
 
 #endregion
+
 
 #region Grade curricular
 
