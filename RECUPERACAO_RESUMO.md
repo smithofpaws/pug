@@ -74,7 +74,15 @@ abortava antes de conectar `celula_clicada` (linhas 50-51). Nó restaurado no co
 **Pendente apenas a confirmação visual** (abrir app → Situação de Alunos → selecionar discente →
 clicar numa célula → a seta deve aparecer).
 
-### 5.2. 🔧 Portar a feature de grade curricular (escopo levantado)
+### 5.2. ✅ Portar a feature de grade curricular — CONCLUÍDA (04/06, commit `34044de`)
+Portadas **3 features** (escopo escolhido pelo usuário): grade curricular (toggle `OnOffGrade`,
+com demanda no rodapé), seletor de **Curso** no PainelAtribuicoes, e **botão Exportar** dedicado
+(json/csv/alteracoes.md movidos do seletor Importar). Mexeu em 5 arquivos + MANUAL. Verificado com
+`--editor --quit` e harness runtime (instanciou o módulo, todas as refs `%` resolvem).
+**Nota:** o projeto de hoje estava mais avançado que o documento supunha (já tinha a UI de
+Configurações do rodapé e as assinaturas de análise); a pasta `merged/` citada estava vazia, então
+a reconciliação foi feita do zero sobre a base de hoje. Detalhe histórico do escopo abaixo:
+
 Já está no local: o componente **`grade_curricular.gd`** (idêntico). Falta:
 - **Cenas (`.tscn`):**
   - `PlanejamentoOferta.tscn`: nós `SeletorExportar`, `GradeCurricular`, `VSeparator3`
@@ -194,7 +202,8 @@ clicável, então pode ser que o `%` funcione e o problema seja outro — **prec
 ## 8. Recomendação de ordem ao retomar
 
 1. ✅ **Instalar git + commit** (5.3) — feito (`ab1b238`).
-2. ✅ **Resolver o bug da seta** (5.1/6) — feito (`6e5568c`); confirmar visualmente no app.
+2. ✅ **Resolver o bug da seta** (5.1/6) — feito (`6e5568c`); confirmado visualmente.
 3. ✅ **Reativar OneDrive** (5.4) — feito; monitorar a outra máquina.
-4. ⏳ **Portar a grade** (5.2) — tarefa maior; **entrar em plan mode antes**. ← próximo passo.
-5. ⏳ **Push pro GitHub** (privado) — backup off-machine; fazer assim que possível.
+4. ✅ **Portar a grade** (5.2) — feito (`34044de`): grade + Curso + Exportar; verificado runtime.
+   Falta só a confirmação interativa do usuário (demanda com hist.csv, exportações, prefixo por curso).
+5. ⏳ **Push pro GitHub** (privado) — backup off-machine; fazer assim que possível. ← próximo passo.
