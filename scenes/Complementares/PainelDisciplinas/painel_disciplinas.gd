@@ -325,9 +325,7 @@ func popular(planejamento_csv: Dictionary, terminal: Node, limpar_antes: bool = 
 	terminal.text_edit("Painel populado com " + str(chaves_ordenadas.size()) + " disciplinas.", \
 		_cores_terminal.get("sucesso", "green"), true, false)
 	var filtros := popular_filtros()
-	$"%FiltroCurso".lista_itens = filtros["cursos"]
-	$"%FiltroSemestre".lista_itens = filtros["semestres"]
-	$"%FiltroProfessor".lista_itens = filtros["professores"]
+	_aplicar_listas_filtros(filtros)
 	aplicar_filtro()
 	return filtros
 
@@ -374,10 +372,23 @@ func popular_card_extra(codigo: String, nome: String, profs: Array[String], chs:
 ## de [member cards_disciplinas]. Chamado internamente apos [method popular_card_extra] e
 ## exposto para o modulo chamar apos mutacoes externas (ex.: atribuicao de professor).
 func atualizar_filtros() -> void:
-	var filtros := popular_filtros()
+	_aplicar_listas_filtros(popular_filtros())
+
+
+# Aplica as listas dos tres dropdowns. A lista de cursos e sempre completa (todos os cursos
+# presentes nos cards). Semestre e professor respeitam o filtro de curso ativo: quando ha curso
+# filtrado, usam as versoes restritas ([method popular_filtro_semestre]/[method popular_filtro_professor],
+# que tambem incluem semestres das grades). Sem isso, ao popular com um curso ja filtrado (ex.:
+# importacao no Planejamento de Horario com filtro ativo desde o inicio), os dropdowns de
+# semestre/professor exibiriam itens de todos os cursos ate o usuario reativar o filtro de curso.
+func _aplicar_listas_filtros(filtros: Dictionary) -> void:
 	$"%FiltroCurso".lista_itens = filtros["cursos"]
-	$"%FiltroSemestre".lista_itens = filtros["semestres"]
-	$"%FiltroProfessor".lista_itens = filtros["professores"]
+	if filtro_curso.is_empty():
+		$"%FiltroSemestre".lista_itens = filtros["semestres"]
+		$"%FiltroProfessor".lista_itens = filtros["professores"]
+	else:
+		$"%FiltroSemestre".lista_itens = popular_filtro_semestre()
+		$"%FiltroProfessor".lista_itens = popular_filtro_professor()
 
 
 ## Remove todos os cards do painel e reseta os filtros.
