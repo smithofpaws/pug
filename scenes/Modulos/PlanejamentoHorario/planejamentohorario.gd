@@ -1587,10 +1587,9 @@ func _importar_planejamento_json() -> void:
 				"professor": nomes,
 				"ch": chs,
 				# Espelha o caminho CSV (file_handling.gd): oferta = celula de semestre da
-				# disciplina. O JSON nao traz oferta combinada entre cursos, entao oferta ==
-				# semestre. Antes vinha "1" hardcoded, que poluia o filtro de semestre com um
-				# fantasma "1" e fazia aplicar_filtro casar com todos os cards.
-				"oferta": semestre,
+				# disciplina, preservando o compartilhamento entre cursos (ex.: "EM02;ECExtra").
+				# JSONs antigos sem o campo caem no semestre (oferta == semestre = sem compartilhar).
+				"oferta": str(disc.get("oferta", semestre)),
 				"ch_disciplina": str(ch_total),
 			}
 
@@ -1701,6 +1700,53 @@ func _cards_para_posicionar() -> Dictionary:
 			resultado[chave] = card
 	return resultado
 
+# Disciplinas pendentes compartilhadas entre cursos distintos (oferta reunindo semestres de mais de
+# um curso, ex.: "EC01;EM01"). Cada código aparece uma única vez, com a oferta entre parênteses para
+# contexto. Usada para avisar o usuário antes do posicionamento automático.
+func _compartilhadas_entre_cursos_pendentes(cards_alvo: Dictionary) -> Array[String]:
+	var achadas: Array[String] = []
+	var vistos: Dictionary = {}
+	for chave in cards_alvo:
+		var card: CardDisciplina = cards_alvo[chave]
+		if card.ch_total <= 0 or card.ch_alocada >= card.ch_total:
+			continue
+		if not _oferta_cruza_cursos(card.oferta):
+			continue
+		var cod: String = card.codigo.to_lower()
+		if vistos.has(cod):
+			continue
+		vistos[cod] = true
+		achadas.append("• %s — %s (%s)" % [card.codigo.to_upper(), card.nome, card.oferta.to_upper()])
+	return achadas
+
+# Verdadeiro quando a string de oferta reúne semestres de mais de um curso (ex.: "EC01;EM01").
+# Espelha os separadores aceitos por CardDisciplina (";", "/", "-").
+func _oferta_cruza_cursos(oferta: String) -> bool:
+	var s: String = oferta.strip_edges()
+	if s.is_empty():
+		return false
+	var partes: PackedStringArray = PackedStringArray([s])
+	for delim in [";", "/", "-"]:
+		if s.contains(delim):
+			partes = s.split(delim)
+			break
+	var cursos_vistos: Dictionary = {}
+	for parte in partes:
+		var cod: String = _curso_de_semestre(parte.strip_edges())
+		if not cod.is_empty():
+			cursos_vistos[cod] = true
+	return cursos_vistos.size() > 1
+
+# Identifica o cod_curso de um rótulo de semestre (ex.: "EC01" → "alec") pelos prefixos em cursos.
+# Retorna "" quando nenhum prefixo casa. Primeiro prefixo casado vence (como no painel).
+func _curso_de_semestre(sem: String) -> String:
+	var sem_upper: String = sem.to_upper().strip_edges()
+	for cod in cursos.keys():
+		for prefixo in cursos[cod].get("prefixos_semestre", []):
+			if sem_upper.begins_with(str(prefixo).to_upper()):
+				return cod
+	return ""
+
 # Abre o diálogo de configuração do posicionamento automático, se houver disciplinas pendentes
 # (restritas ao curso filtrado, quando há filtro ativo).
 func _abrir_config_posicionamento() -> void:
@@ -1718,7 +1764,18 @@ func _abrir_config_posicionamento() -> void:
 		$"%Terminal".text_edit("Nenhuma disciplina pendente%s para posicionar. Importe um planejamento primeiro." % sufixo, \
 			"aviso", true, true)
 		return
-	_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic)
+	# Disciplinas pendentes compartilhadas entre cursos: posicioná-las é uma decisão conjunta dos
+	# cursos envolvidos, então avisamos e deixamos o usuário optar por fazê-lo manualmente antes.
+	var compartilhadas: Array[String] = _compartilhadas_entre_cursos_pendentes(cards_alvo)
+	if compartilhadas.is_empty():
+		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic)
+		return
+	var texto: String = "As seguintes disciplinas pendentes são compartilhadas entre cursos:\n\n%s\n\n" % "\n".join(compartilhadas) \
+		+ "Como o horário delas é uma decisão conjunta dos cursos envolvidos, você pode preferir " \
+		+ "posicioná-las manualmente antes. Deseja posicionar automaticamente mesmo assim?"
+	Dialogos.confirmar(self, "Disciplinas compartilhadas entre cursos", texto, \
+		func(): _config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic), \
+		"Posicionar mesmo assim", "Cancelar", 520)
 
 # Roda o posicionador com a configuração escolhida (turno inicial e sábado) e aplica o plano na
 # grade. As preferências de cada professor são lidas dos CSVs; o choque de alunos vem do Callable.

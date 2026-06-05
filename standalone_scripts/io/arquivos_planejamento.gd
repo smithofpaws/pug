@@ -453,6 +453,9 @@ func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
 		var disc: Dictionary = {
 			"codigo": dados.get("codigo", ""),
 			"semestre": dados.get("semestre", ""),
+			# Preserva a oferta combinada entre cursos (ex.: "EM02;ECExtra") no round-trip; cai no
+			# semestre quando a disciplina nao e compartilhada.
+			"oferta": dados.get("oferta", dados.get("semestre", "")),
 			"professores": professores_json,
 			"ch_disciplina": int(dados.get("ch_disciplina", "0")),
 			"alocacoes": [],

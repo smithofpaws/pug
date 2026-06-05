@@ -303,6 +303,22 @@ layout_mode = 2
 max_value = 200.0
 value = 1.0
 
+[node name="ExpoentePreferencia" type="HBoxContainer" parent="TabContainer/Posicionamento"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Posicionamento/ExpoentePreferencia"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Expoente: preferência do professor"
+
+[node name="SpinBox" type="SpinBox" parent="TabContainer/Posicionamento/ExpoentePreferencia"]
+layout_mode = 2
+min_value = 1.0
+max_value = 4.0
+step = 0.5
+value = 2.0
+
 [node name="PesoForaPeriodo" type="HBoxContainer" parent="TabContainer/Posicionamento"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -449,6 +465,7 @@ text = "Configurar…"
 [connection signal="button_up" from="TabContainer/Interface/FonteGradeContainer/BotaoFonteGradeMais" to="." method="_on_fonte_grade_mais_button_up"]
 [connection signal="opcao_selecionada" from="TabContainer/Interface/TemaContainer/Tema" to="." method="_on_tema_selecionado"]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoPreferencia/SpinBox" to="." method="_on_peso_changed" binds= ["preferencia"]]
+[connection signal="value_changed" from="TabContainer/Posicionamento/ExpoentePreferencia/SpinBox" to="." method="_on_peso_changed" binds= ["preferencia_expoente"]]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoForaPeriodo/SpinBox" to="." method="_on_peso_changed" binds= ["fora_periodo"]]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoEmergencia/SpinBox" to="." method="_on_peso_changed" binds= ["emergencia"]]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoChoqueProfessor/SpinBox" to="." method="_on_peso_changed" binds= ["choque_professor"]]

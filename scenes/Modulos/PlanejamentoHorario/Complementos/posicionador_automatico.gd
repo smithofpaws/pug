@@ -10,7 +10,9 @@ class_name PosicionadorAutomatico extends RefCounted
 ## candidatos de posicionamento (blocos de aula em dias distintos, no mesmo horário — regra 6),
 ## pontua cada um e fixa o de menor custo. As regras pedidas mapeiam para: [br]
 ## - R1 (paridade manhã/tarde): período-alvo por paridade do semestre + peso [code]fora_periodo[/code]; [br]
-## - R2 (preferências): slots sem preferência são proibidos, os demais custam o valor (1..5); [br]
+## - R2 (preferências): slots sem preferência são proibidos; os demais custam o valor 1..5 numa
+##   escala não-linear ([code]pow(v-1, preferencia_expoente) * preferencia[/code]), em que o verde
+##   (1) custa 0 e o vermelho (5) é fortemente penalizado; [br]
 ## - R3 (mesmo semestre): restrição dura ao gerar candidatos; [br]
 ## - R4 (menor choque): pesos de choque de professor e de alunos no custo; [br]
 ## - R5 (2+2): créditos→aulas com arredondamento de ímpar ≥3, em blocos de [code]tamanho_bloco[/code]; [br]
@@ -345,6 +347,7 @@ func _bloco_viavel(linha_inicio: int, dia: int, semestre: String, profs: Array, 
 func _custo_bloco(codigo: String, profs: Array, linha_inicio: int, dia: int, periodo_alvo: String, t: int) -> float:
 	var custo: float = 0.0
 	var peso_pref: float = float(_pesos.get("preferencia", 1.0))
+	var pref_exp: float = float(_pesos.get("preferencia_expoente", 2.0))
 	var peso_emerg: float = float(_pesos.get("emergencia", 20.0))
 	var peso_cprof: float = float(_pesos.get("choque_professor", 50.0))
 	var peso_caluno: float = float(_pesos.get("choque_aluno", 2.0))
@@ -355,7 +358,13 @@ func _custo_bloco(codigo: String, profs: Array, linha_inicio: int, dia: int, per
 		for prof in profs:
 			var pl: String = str(prof).to_lower()
 			if _preferencias.has(pl):
-				custo += float(_preferencias[pl].get(k, 0)) * peso_pref
+				# Escala não-linear: o valor 1 (verde/preferido) custa 0 e o 5 (vermelho/evitado)
+				# custa muito mais que a faixa linear, para que a preferência domine critérios
+				# secundários (fora_periodo, bônus de mesmo horário). pow((v-1), exp): 1→0, 2→1,
+				# 3→4, 4→9, 5→16 com exp=2.
+				var v: int = int(_preferencias[pl].get(k, 0))
+				if v >= 1:
+					custo += pow(float(v - 1), pref_exp) * peso_pref
 		if _linhas_emergencia.has(linha):
 			custo += peso_emerg
 		for ocup in _ocup.get(k, []):

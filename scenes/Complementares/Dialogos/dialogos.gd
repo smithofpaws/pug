@@ -9,15 +9,25 @@ class_name Dialogos extends RefCounted
 ## O diálogo é criado sob demanda, adicionado como filho de [param pai] e liberado da memória ao fechar
 ## por qualquer caminho (confirmar, cancelar, Esc ou X) — não há como vazar o nó. [br]
 ## Formato de [param ao_confirmar] deve ser um [Callable] sem argumentos (executado só na confirmação). [br]
-## [param texto_ok]/[param texto_cancelar] personalizam os rótulos dos botões.
+## [param texto_ok]/[param texto_cancelar] personalizam os rótulos dos botões. [br]
+## [param largura_max] (> 0) fixa a largura do diálogo (em píxeis) pela largura mínima do label e
+## ativa a quebra automática do texto — útil para mensagens longas, que de outro modo esticariam o
+## diálogo horizontalmente. Com 0 (padrão), o diálogo dimensiona à linha mais longa, como antes.
 ## [codeblock]
 ## Dialogos.confirmar(self, "Exportar", "Deseja exportar?", _exportar, "Exportar")
 ## [/codeblock]
 static func confirmar(pai: Node, titulo: String, texto: String, ao_confirmar: Callable, \
-		texto_ok: String = "Sim", texto_cancelar: String = "Cancelar") -> void:
+		texto_ok: String = "Sim", texto_cancelar: String = "Cancelar", largura_max: int = 0) -> void:
 	var dialogo := ConfirmationDialog.new()
 	dialogo.title = titulo
 	dialogo.dialog_text = texto
+	if largura_max > 0:
+		# Define a largura pela largura mínima do label (com autowrap), e não por min_size/max_size do
+		# Window: estes, com y = 0, faziam o Godot colapsar a altura (sobrava só a barra de título).
+		# Com custom_minimum_size.x o texto quebra nessa largura e o diálogo cresce em altura sozinho.
+		var label := dialogo.get_label()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size = Vector2(largura_max, 0)
 	dialogo.get_ok_button().text = texto_ok
 	dialogo.get_cancel_button().text = texto_cancelar
 	dialogo.confirmed.connect(ao_confirmar)

@@ -326,6 +326,10 @@ O botão **Posicionar automaticamente** abre um diálogo de configuração e, em
 
 O algoritmo considera preferências de professores (quando disponíveis), choques existentes e prioridades configuradas. O resultado pode ser ajustado manualmente após a execução.
 
+As preferências do professor (escala 1 = desejado a 5 = indesejado, verde→vermelho) entram no custo de forma **não-linear**: o peso e o expoente são ajustáveis em **Configurações › Posicionamento** (cada campo traz uma dica explicativa). Horários que o professor deixou em branco são proibidos; um horário marcado em vermelho é fortemente evitado, mas ainda possível.
+
+Quando há disciplinas pendentes **compartilhadas entre cursos** (ex.: `EC01;EM01`), o programa exibe um aviso antes de prosseguir, listando-as e permitindo cancelar para posicioná-las manualmente primeiro — já que o horário delas é uma decisão conjunta dos cursos envolvidos.
+
 Com um curso selecionado no filtro, o posicionamento atua apenas nas disciplinas desse curso (ex.: somente as `ECxx` com Engenharia Civil selecionada). As alocações já existentes dos demais cursos são preservadas como restrição, evitando choques.
 
 #### Exportação

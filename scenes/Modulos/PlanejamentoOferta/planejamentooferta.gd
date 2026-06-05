@@ -405,6 +405,9 @@ func _popular_alocacoes_do_csv() -> void:
 			"codigo": codigo,
 			"nome": nome,
 			"semestre": semestre,
+			# oferta = celula original do CSV (ex.: "EM02;ECExtra"), preservando o compartilhamento
+			# entre cursos ao exportar/reimportar o planejamento.json. Sem isto, vira so o semestre.
+			"oferta": str(entrada.get("oferta", semestre)),
 			"ch_total": ch_total,
 			"professores": profs,
 		}
@@ -693,6 +696,8 @@ func _importar_planejamento_json(caminho: String, arquivo: String) -> void:
 		if semestre.is_empty():
 			_log("Disciplina %s ignorada no JSON: semestre vazio." % codigo, "aviso")
 			continue
+		# oferta combinada entre cursos (ex.: "em02;ecextra"); cai no semestre para JSONs antigos.
+		var oferta: String = str(disciplina.get("oferta", semestre))
 		# [code]nome[/code] e [code]ch_total[/code] sao sempre derivados do codigo via grade —
 		# o export omite os dois campos, entao a unica fonte de verdade e [code]info_grade[/code].
 		var resolvido: Dictionary = _resolver_codigo_via_grade(codigo)
@@ -718,6 +723,7 @@ func _importar_planejamento_json(caminho: String, arquivo: String) -> void:
 			"codigo": codigo,
 			"nome": nome,
 			"semestre": semestre,
+			"oferta": oferta,
 			"ch_total": ch_total,
 			"professores": profs_dict,
 		}
@@ -730,6 +736,7 @@ func _importar_planejamento_json(caminho: String, arquivo: String) -> void:
 		planejamento_temp[chave] = {
 			"codigo": codigo,
 			"semestre": semestre,
+			"oferta": oferta,
 			"ch_disciplina": str(ch_total),
 			"professor": profs_array,
 			"ch": chs_array,
@@ -939,6 +946,8 @@ func _inserir_disciplina_da_grade(grade_nome: String, codigo: String) -> bool:
 		"codigo": codigo.to_lower(),
 		"nome": nome,
 		"semestre": sem,
+		# Disciplina avulsa de uma grade unica: nao ha compartilhamento, oferta = semestre.
+		"oferta": sem,
 		"ch_total": ch_creditos,
 		"professores": {},
 	}
@@ -973,6 +982,9 @@ func _alocacoes_para_array(alocacoes: Dictionary) -> Array:
 		arr.append({
 			"codigo": dados["codigo"],
 			"semestre": (dados["semestre"] as String).to_lower(),
+			# Preserva a oferta combinada entre cursos (ex.: "em02;ecextra"); cai no semestre quando
+			# a disciplina nao e compartilhada.
+			"oferta": str(dados.get("oferta", dados.get("semestre", ""))).to_lower(),
 			"professores": profs_array,
 		})
 	arr.sort_custom(func(a, b): return str(a["semestre"]) + str(a["codigo"]) < \
@@ -1006,6 +1018,7 @@ func _parsear_alocacoes_de_array(arr: Array) -> Dictionary:
 			"codigo": codigo,
 			"nome": resolvido["nome"],
 			"semestre": semestre,
+			"oferta": str(disciplina.get("oferta", semestre)),
 			"ch_total": resolvido["ch_creditos"],
 			"professores": profs_dict,
 		}
@@ -1295,6 +1308,7 @@ func _on_card_interagido(card: CardDisciplina) -> void:
 				"codigo": codigo,
 				"nome": card.nome,
 				"semestre": semestre,
+				"oferta": card.oferta if not card.oferta.is_empty() else semestre,
 				"ch_total": card.ch_total,
 				"professores": profs_dict,
 			}

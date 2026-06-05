@@ -235,6 +235,7 @@
 		"horarios_liberados": [],
 		"pesos": {
 			"preferencia": 1.0,
+			"preferencia_expoente": 2.0,
 			"fora_periodo": 8.0,
 			"emergencia": 20.0,
 			"choque_professor": 50.0,
