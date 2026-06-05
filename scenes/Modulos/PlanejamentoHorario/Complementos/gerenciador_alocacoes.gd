@@ -13,6 +13,12 @@ var modo_visualizacao: String = "nome_reduzido"
 ## somente as alocações deste semestre. Vazio = exibe todas as alocações da célula.
 var semestre_filtro: String = ""
 
+## Prefixos de semestre (maiúsculos, ex.: [code]["EC"][/code]) do curso filtrado no painel.
+## Quando não-vazio, células com sobreposição exibem somente as alocações desse curso (oculta
+## nomes de disciplinas de outros cursos). Compartilhadas casam pelo prefixo (ex.: "EC04;EM04"
+## casa com "EC"). Vazio = sem filtro de curso.
+var curso_filtro_prefixos: Array[String] = []
+
 ## Professor atualmente filtrado no painel de disciplinas. Quando definido, alocações
 ## que correspondem a este professor são exibidas primeiro na célula.
 var _filtro_professor: String = ""
@@ -86,16 +92,24 @@ func atualizar_celula(linha: int, coluna: int) -> void:
 	if not semestre_filtro.is_empty():
 		var do_semestre: Array = []
 		for a_dict in arr:
-			var ch: String = (a_dict as Dictionary).get("chave", "")
-			var sem_aloc: String = _planejamento_csv.get(ch, {}).get("semestre", "")
-			if sem_aloc.is_empty():
-				var card: CardDisciplina = _cards_disciplinas.get(ch)
-				if card:
-					sem_aloc = card.semestre
-			if sem_aloc.to_lower() == semestre_filtro.to_lower():
+			if _semestre_da_aloc(a_dict as Dictionary).to_lower() == semestre_filtro.to_lower():
 				do_semestre.append(a_dict)
 		if not do_semestre.is_empty():
 			arr_render = do_semestre
+	# Com curso_filtro_prefixos ativo: exibe somente as alocações do curso filtrado, ocultando os
+	# nomes das disciplinas de outros cursos (ex.: só EC com Engenharia Civil). Diferente do
+	# semestre_filtro (um destaque), o filtro de curso oculta: células exclusivamente de outros
+	# cursos ficam com texto vazio (do_curso vazio → sem rótulo), sem depender de _aplicar_filtro_grade.
+	# Compartilhadas casam pelo prefixo (ex.: "EC04;EM04" casa com "EC").
+	if not curso_filtro_prefixos.is_empty():
+		var do_curso: Array = []
+		for a_dict in arr_render:
+			var sem_upper: String = _semestre_da_aloc(a_dict as Dictionary).to_upper().strip_edges()
+			for prefixo in curso_filtro_prefixos:
+				if sem_upper.begins_with(prefixo):
+					do_curso.append(a_dict)
+					break
+		arr_render = do_curso
 	# Se houver filtro de professor ativo, reordena: alocações do professor primeiro.
 	if not _filtro_professor.is_empty():
 		var pf := _filtro_professor.to_lower()
@@ -116,6 +130,18 @@ func atualizar_celula(linha: int, coluna: int) -> void:
 	celula.cor_central = "orange" if tem_extra else "white"
 	celula.apenas_central = true
 	celula.alocacao_chave = chave_celula
+
+# Semestre de uma alocação: do planejamento.csv com fallback para o card. Usado pelos filtros
+# de semestre e de curso ao decidir quais alocações exibir numa célula com sobreposição.
+func _semestre_da_aloc(aloc: Dictionary) -> String:
+	var ch: String = aloc.get("chave", "")
+	var sem_aloc: String = _planejamento_csv.get(ch, {}).get("semestre", "")
+	if sem_aloc.is_empty():
+		var card: CardDisciplina = _cards_disciplinas.get(ch)
+		if card:
+			sem_aloc = card.semestre
+	return sem_aloc
+
 
 ## Retorna o rótulo de UMA alocação conforme [member modo_visualizacao]. [br]
 ## Os modos de nome ([code]nome_completo[/code]/[code]nome_reduzido[/code]) exibem apenas o nome da

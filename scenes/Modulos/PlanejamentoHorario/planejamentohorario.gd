@@ -543,6 +543,7 @@ func _on_semestre_edicao_selecionado(_retorno: String, lista_selecionada: Array[
 func _on_filtro_alterado(_filtros: Dictionary) -> void:
 	_filtro_grade_semestre = ""
 	_ger_alocacoes.definir_filtro_professor($"%PainelDisciplinas".filtro_professor)
+	_sincronizar_filtro_curso_grade()
 	_carregar_preferencias_do_filtro()
 	_sincronizar_destaque_semestre()
 	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
@@ -567,10 +568,23 @@ func _carregar_preferencias_do_filtro() -> void:
 ## Reage ao limpar dos filtros do PainelDisciplinas.
 func _on_filtro_limpo() -> void:
 	_filtro_grade_semestre = ""
+	_sincronizar_filtro_curso_grade()
 	_sincronizar_destaque_semestre()
 	_carregar_preferencias_do_filtro()
 	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
 	_aplicar_indicadores()
+
+
+# Sincroniza o filtro de curso da grade (oculta nomes de disciplinas de outros cursos em
+# sobreposições) com o filtro de curso do painel: passa ao gerenciador os prefixos de semestre
+# do curso ativo (ex.: ["EC"]), ou vazio quando não há curso filtrado.
+func _sincronizar_filtro_curso_grade() -> void:
+	var fc: String = $"%PainelDisciplinas".filtro_curso
+	var prefixos: Array[String] = []
+	if not fc.is_empty():
+		for p in cursos.get(fc, {}).get("prefixos_semestre", []):
+			prefixos.append(str(p).to_upper())
+	_ger_alocacoes.curso_filtro_prefixos = prefixos
 
 # Define o semestre destacado na grade (oculta outros semestres em sobreposições): o clique em
 # card tem precedência; na ausência dele, usa o filtro de semestre do painel. Reaplica o texto.

@@ -280,6 +280,8 @@ Tabela com horários (linhas) × dias da semana (colunas). Cada célula pode con
 
 O **filtro de semestre** destaca visualmente apenas as células de um semestre específico.
 
+O **filtro de curso** oculta na grade os nomes das disciplinas de outros cursos: com Engenharia Civil selecionada, apenas as `ECxx` aparecem (incluindo compartilhadas como `EC04;EM04` e `ECCG;EACG`). Em células com disciplinas sobrepostas de cursos diferentes, mostra somente a do curso filtrado.
+
 #### Indicadores de problemas
 
 Um conjunto de indicadores visuais mostra conflitos detectados automaticamente na grade:
