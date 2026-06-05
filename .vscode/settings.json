@@ -1,3 +1,8 @@
 {
-    "godotTools.editorPath.godot4": "c:\\Program Files\\Godot\\Godot.exe"
+    "godotTools.editorPath.godot4": "c:\\Program Files\\Godot\\Godot.exe",
+    // Busca novidades do GitHub automaticamente (a cada ~3 min). Assim o indicador
+    // de sincronizacao (barra inferior) avisa quando ha commits para baixar.
+    "git.autofetch": true,
+    // Notifica quando um push termina com sucesso (feedback positivo).
+    "git.showPushSuccessNotification": true
 }
