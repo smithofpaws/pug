@@ -235,9 +235,9 @@ Ao clicar em uma disciplina, o painel lateral mostra:
 
 - **Determinar demanda** — analisa o histórico para contar quantos alunos precisam de cada disciplina neste semestre.
 - **Determinar demanda (ignorar já ofertados)** — igual ao anterior, mas ignora alunos que já cursaram a disciplina neste semestre.
-- **Verificar carga horária** — gera um relatório consolidado da carga total de cada professor.
-- **Sugerir oferta** — propõe automaticamente quais disciplinas oferecer, com base na demanda levantada e na afinidade dos professores.
-- **Verificar erro de afinidade** — valida a integridade dos dados históricos de afinidade.
+- **Verificar carga horária** — gera um relatório consolidado da carga total de cada professor. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
+- **Sugerir oferta** — propõe automaticamente quais disciplinas oferecer, com base na demanda levantada e na afinidade dos professores. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
+- **Verificar erro de afinidade** — valida a integridade dos dados históricos de afinidade. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
 - **Detectar problemas** — confere a oferta planejada contra as grades curriculares do **curso selecionado no filtro** e aponta inconsistências: (1) disciplinas obrigatórias da grade que faltam na oferta — considerando equivalências e respeitando a paridade do semestre em edição (1º/2º); e (2) disciplinas ofertadas alocadas em um semestre diferente do previsto na grade. As equivalências usadas para cobrir obrigatórias ausentes são listadas para conferência. Requer um curso selecionado no filtro.
 
 > As operações de salvar (`.json`) e exportar (`.csv`) ficam no menu **Arquivo**, descrito acima.

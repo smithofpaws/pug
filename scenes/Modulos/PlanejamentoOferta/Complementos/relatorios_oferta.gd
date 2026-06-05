@@ -225,16 +225,26 @@ func _semestre_prefixed(grade_nome: String, sem: String) -> String:
 
 
 ## Lista a carga horaria alocada por professor (recebida em [param carga_por_prof]) e seu
-## status frente aos limites min/ideal/max de [code]base_config.json[/code].
-func verificar_carga_horaria(carga_por_prof: Dictionary) -> void:
+## status frente aos limites min/ideal/max de [code]base_config.json[/code]. [br]
+## Quando [param cod_curso] nao e vazio, considera apenas professores que ja lecionaram ao curso
+## (via [method AnaliseAfinidade.professores_do_curso]).
+func verificar_carga_horaria(carga_por_prof: Dictionary, cod_curso: String = "") -> void:
 	var ch_min: int = int(_config_oferta.get("ch_minimo", 8))
 	var ch_ideal: int = int(_config_oferta.get("ch_ideal", 12))
 	var ch_max: int = int(_config_oferta.get("ch_maximo", 20))
 	_terminal.titulo("Verificacao de carga horaria", true)
+	if not cod_curso.is_empty():
+		_terminal.linha("Filtro curso: %s" % _cursos.get(cod_curso, {}).get("nome", cod_curso), "aviso")
 	if carga_por_prof.is_empty():
 		_terminal.linha("Nenhum professor alocado.")
 		return
 	var nomes: Array = carga_por_prof.keys()
+	if not cod_curso.is_empty():
+		var do_curso: Dictionary = _afinidade.professores_do_curso(cod_curso)
+		nomes = nomes.filter(func(n): return do_curso.has(n))
+		if nomes.is_empty():
+			_terminal.linha("Nenhum professor alocado que tenha lecionado para o curso.")
+			return
 	nomes.sort_custom(func(a, b): return carga_por_prof[a] > carga_por_prof[b])
 	for nome in nomes:
 		var ch: int = int(carga_por_prof[nome])
@@ -256,9 +266,13 @@ func verificar_carga_horaria(carga_por_prof: Dictionary) -> void:
 	_terminal.linha("Minimo: %d cr | Ideal: ate %d cr | Maximo absoluto: %d cr" % [ch_min, ch_ideal, ch_max])
 
 
-## Aponta alocacoes cujo professor tem afinidade baixa (score < 9) com a disciplina.
-func verificar_erro_afinidade(alocacoes: Dictionary) -> void:
+## Aponta alocacoes cujo professor tem afinidade baixa (score < 9) com a disciplina. [br]
+## Quando [param cod_curso] nao e vazio, considera apenas professores que ja lecionaram ao curso
+## (via [method AnaliseAfinidade.professores_do_curso]).
+func verificar_erro_afinidade(alocacoes: Dictionary, cod_curso: String = "") -> void:
 	_terminal.titulo("Verificacao de erros de afinidade", true)
+	if not cod_curso.is_empty():
+		_terminal.linha("Filtro curso: %s" % _cursos.get(cod_curso, {}).get("nome", cod_curso), "aviso")
 	if alocacoes.is_empty():
 		_terminal.linha("Nenhuma disciplina no planejamento.", "erro")
 		return
@@ -266,6 +280,7 @@ func verificar_erro_afinidade(alocacoes: Dictionary) -> void:
 		_terminal.linha("Indice de afinidade vazio. Verifique se historico_professores.json foi carregado.", "aviso")
 		return
 
+	var profs_curso: Dictionary = _afinidade.professores_do_curso(cod_curso)
 	var erros: Array = []
 	for chave in alocacoes:
 		var dados: Dictionary = alocacoes[chave]
@@ -280,6 +295,8 @@ func verificar_erro_afinidade(alocacoes: Dictionary) -> void:
 		for entry in afinidade:
 			score_por_prof[entry["nome"]] = entry["score"]
 		for prof_nome in profs:
+			if not cod_curso.is_empty() and not profs_curso.has(prof_nome):
+				continue
 			var score: int = score_por_prof.get(prof_nome, 0)
 			if score < 9:
 				erros.append({
@@ -315,6 +332,8 @@ func sugerir_oferta(alocacoes: Dictionary, todos_professores: Array[String], car
 		condicoes_discentes: Dictionary, tem_demanda: bool, cod_curso: String = "", historico_discentes: Dictionary = {}) -> void:
 	var ch_min: int = int(_config_oferta.get("ch_minimo", 8))
 	_terminal.titulo("Sugestao de oferta", true)
+	if not cod_curso.is_empty():
+		_terminal.linha("Filtro curso: %s" % _cursos.get(cod_curso, {}).get("nome", cod_curso), "aviso")
 	if alocacoes.is_empty():
 		_terminal.linha("Nenhuma disciplina no planejamento. Importe um planejamento.csv primeiro.", "erro")
 		return
@@ -365,9 +384,14 @@ func sugerir_oferta(alocacoes: Dictionary, todos_professores: Array[String], car
 					"semestre": disc.get("semestre", ""),
 				}
 
+	# Conjunto de professores que ja lecionaram ao curso filtrado (vazio = sem restricao).
+	var profs_curso: Dictionary = _afinidade.professores_do_curso(cod_curso)
+
 	# Professores abaixo do minimo (incluindo nao alocados).
 	var profs_abaixo: Array = []
 	for nome in todos_professores:
+		if not cod_curso.is_empty() and not profs_curso.has(nome):
+			continue
 		var ch: int = int(carga_por_prof.get(nome, 0))
 		if ch < ch_min:
 			profs_abaixo.append({"nome": nome, "ch": ch})

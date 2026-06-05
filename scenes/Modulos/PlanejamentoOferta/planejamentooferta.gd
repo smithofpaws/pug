@@ -1219,7 +1219,7 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 					_painel_disciplinas._semestre_edicao,
 					_painel_disciplinas.codigos_presentes(), _historico_discentes)
 		"verificar_carga_horaria":
-			_relatorios.verificar_carga_horaria(_calcular_carga_por_prof())
+			_relatorios.verificar_carga_horaria(_calcular_carga_por_prof(), _painel_disciplinas.filtro_curso)
 			_atualizar_status_bar()
 		"sugerir_oferta":
 			# Carrega a demanda sem exigir (a sugestao degrada sem hist.csv) e sem limpar o terminal.
@@ -1228,7 +1228,7 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 				_condicoes_discentes, tem_demanda, _painel_disciplinas.filtro_curso, _historico_discentes)
 			_atualizar_status_bar()
 		"verificar_erro_afinidade":
-			_relatorios.verificar_erro_afinidade(_alocacoes)
+			_relatorios.verificar_erro_afinidade(_alocacoes, _painel_disciplinas.filtro_curso)
 			_atualizar_status_bar()
 		"detectar_problema_oferta":
 			_relatorios.detectar_problema_oferta(

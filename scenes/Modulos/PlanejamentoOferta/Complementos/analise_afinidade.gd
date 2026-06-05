@@ -24,6 +24,9 @@ var _equiv_cache: Dictionary = {}
 var _por_prof_cache: Dictionary = {}
 var _por_prof_construido: bool = false
 
+# Cache de professores por curso (construido sob demanda): { cod_curso → { nome_normalizado: true } }.
+var _prof_curso_cache: Dictionary = {}
+
 
 ## Injeta os dados e (re)constroi o indice e os caches. [param janela] e o tamanho da janela
 ## de afinidade (de [code]base_config.json:planejamento_oferta.janela_afinidade[/code]).
@@ -35,6 +38,7 @@ func configurar(historico: Dictionary, cursos: Dictionary, equivalencias: Dictio
 	_equiv_cache.clear()
 	_por_prof_cache.clear()
 	_por_prof_construido = false
+	_prof_curso_cache.clear()
 	construir_index()
 
 
@@ -238,14 +242,51 @@ func prefixo_para_curso(semestre: String) -> String:
 
 
 ## Retorna o [code]cod_curso[/code] que contem [param turma] em sua lista [code]turmas[/code].
-## Retorna string vazia quando nenhum curso casa.
+## Retorna string vazia quando nenhum curso casa. A comparacao e numerica: as turmas vem do
+## JSON como float (ex.: [code]20.0[/code]) e do historico como int (ex.: [code]20[/code]), logo
+## [code]str()[/code] direto ("20.0" vs "20") nunca casaria.
 func turma_para_curso(turma: Variant) -> String:
+	var turma_int: int = int(turma)
 	for cod_curso in _cursos.keys():
 		var turmas: Array = _cursos[cod_curso].get("turmas", [])
 		for t in turmas:
-			if str(t) == str(turma):
+			if int(t) == turma_int:
 				return cod_curso
 	return ""
+
+
+## Conjunto de professores (nomes normalizados) que ja lecionaram ao curso [param cod_curso],
+## detectados pelo codigo de turma do historico (via [method turma_para_curso]). Formato:
+## [code]{ nome_normalizado: true }[/code]. Retorna dict vazio quando [param cod_curso] e vazio
+## ou nao ha historico. Cacheado por curso (o historico e imutavel apos [method configurar]).
+func professores_do_curso(cod_curso: String) -> Dictionary:
+	if cod_curso.is_empty():
+		return {}
+	if _prof_curso_cache.has(cod_curso):
+		return _prof_curso_cache[cod_curso]
+	var resultado: Dictionary = {}
+	for prof_nome in _historico_professores:
+		if _prof_leciona_curso(_historico_professores[prof_nome], cod_curso):
+			resultado[normalizar_nome(prof_nome)] = true
+	_prof_curso_cache[cod_curso] = resultado
+	return resultado
+
+
+# Varre as disciplinas/anos/semestres de um professor procurando uma turma do curso.
+func _prof_leciona_curso(disciplinas: Dictionary, cod_curso: String) -> bool:
+	for codigo in disciplinas:
+		var dados: Dictionary = disciplinas[codigo]
+		for ano_str in dados:
+			if not (dados[ano_str] is Dictionary):
+				continue
+			for sem_str in dados[ano_str]:
+				var entrada_sem = dados[ano_str][sem_str]
+				if not (entrada_sem is Array):
+					continue
+				for t in _extrair_turmas(entrada_sem):
+					if turma_para_curso(t) == cod_curso:
+						return true
+	return false
 
 
 ## Converte um score de afinidade em estrelas (faixas fixas).
