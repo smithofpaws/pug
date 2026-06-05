@@ -455,6 +455,8 @@ Retorna todas as configurações para os valores padrão definidos no arquivo `b
 
 Histórico acadêmico exportado do GURI. Deve conter as colunas de matrícula, nome do aluno, código e nome da disciplina, nota final, situação (aprovado, reprovado, trancado, etc.) e carga horária. O programa aceita arquivos com separador `;` ou `,`.
 
+Para analisar **vários cursos** ao mesmo tempo, o botão **Historico** (na tela principal) permite **selecionar múltiplos arquivos** `hist.csv` de uma vez — um por curso, por exemplo. Eles são **concatenados** num único `hist.csv`, substituindo qualquer histórico importado anteriormente. Como cada linha guarda o curso de origem, os módulos passam a reconhecer os diversos cursos automaticamente (ex.: o filtro de curso na Situação de Alunos).
+
 ### 6.2 horarios.txt
 
 Grade de horários do semestre. Cada linha representa uma aula com professor, sala, disciplina, turno, dia, horário, tipo (T/P/L) e número de vagas. O formato exato é definido no `base_config.json`.

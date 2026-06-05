@@ -56,7 +56,12 @@ func _criar_botoes() -> void:
 		selector.id = key
 		selector.button_text = info.get("texto", key)
 		selector.site_link = info.get("endereco", "")
-		selector.file_mode = 1 if _diretorios.has(key) else 0
+		# Diretorios e o historico abrem em multi-selecao (OPEN_FILES): o hist.csv pode ser
+		# importado como varios arquivos de cursos distintos, concatenados num unico hist.csv.
+		if _diretorios.has(key) or key == "hist.csv":
+			selector.file_mode = FileDialog.FILE_MODE_OPEN_FILES
+		else:
+			selector.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 		var formatos: Dictionary = GV.configuracao_base.get("formatos_arquivos", {})
 		var filtro: String = formatos.get(key, "")
 		if not filtro.is_empty():
@@ -237,12 +242,88 @@ func _on_selector_fileselected(file_path: String, id: String) -> void:
 func _on_selector_folderselected(folder_path: String, id: String) -> void:
 	print_debug("AVISO: Seleção de pasta não suportada")
 
-# Caso selecionados múltiplos arquivos, trata-se do caso de seleção de arquivos como surveys.
+# Caso selecionados múltiplos arquivos. Para "hist.csv" concatena os históricos num único arquivo;
+# para os demais (ex.: surveys) mantém o comportamento de copiar cada arquivo para a subpasta.
 func _on_selector_multiplefilesselected(multiple_file_paths: PackedStringArray, id: String) -> void:
 	# Primeiro o diretório temp é limpado
 	_limpar_diretorio(GV.dir_temp)
-	for a in multiple_file_paths.size():
-		var file_name: String = multiple_file_paths[a].get_file()
-		var folder_path: String = multiple_file_paths[a].get_base_dir() + "/"
-		_converter_utf8(folder_path, GV.dir_saida + id + "/", [file_name])
+	if id == "hist.csv":
+		_importar_hist_concatenado(multiple_file_paths)
+	else:
+		for a in multiple_file_paths.size():
+			var file_name: String = multiple_file_paths[a].get_file()
+			var folder_path: String = multiple_file_paths[a].get_base_dir() + "/"
+			_converter_utf8(folder_path, GV.dir_saida + id + "/", [file_name])
+	# Atualiza imediatamente os indicadores (verde/vermelho) em vez de aguardar o timer.
+	_atualizar_mostradores()
+
+# Concatena um ou mais arquivos de histórico num único [code]dados/saida/hist.csv[/code],
+# substituindo qualquer hist.csv anterior. Cada arquivo é convertido para UTF-8; mantém-se apenas
+# um cabeçalho (o do primeiro arquivo válido) e as linhas de dados são agrupadas por matrícula
+# (ler_dados só agrupa matrículas consecutivas). Arquivos que não sejam histórico são ignorados.
+func _importar_hist_concatenado(paths: PackedStringArray) -> void:
+	var cabecalho: String = ""
+	# Mapa matrícula -> linhas de dados, na ordem de primeira aparição (Dictionary preserva ordem).
+	var por_matricula: Dictionary = {}
+	var ignorados: Array[String] = []
+	var convertidos: int = 0
+	for i in paths.size():
+		var nome_orig: String = paths[i].get_file()
+		var pasta: String = paths[i].get_base_dir() + "/"
+		var nome_temp: String = "hist_%d.csv" % i
+		_converter_utf8(pasta, GV.dir_temp, [nome_orig])
+		# convertto_utf8 mantém o nome do arquivo; renomeia para um nome único e estável no temp.
+		var dir_temp = DirAccess.open(GV.dir_temp)
+		if dir_temp and dir_temp.file_exists(nome_orig):
+			dir_temp.rename(nome_orig, nome_temp)
+		# Valida que é histórico (coluna 3, linha 1, começa com "cod"), igual a _renomear_mover.
+		var det: Array[Array] = file_handling.read_csvfile(GV.dir_temp, nome_temp, [3], [1], [";", ","])
+		if det.is_empty() or det[0].is_empty() or not str(det[0][0]).to_lower().begins_with("cod"):
+			ignorados.append(nome_orig)
+			continue
+		var linhas: Array[String] = file_handling.read_txt_file(GV.dir_temp, nome_temp)
+		if linhas.size() < 2:
+			ignorados.append(nome_orig)
+			continue
+		if cabecalho == "":
+			cabecalho = linhas[0]
+		convertidos += 1
+		# Linha 0 = cabeçalho (descartado); demais são dados, agrupados por matrícula (coluna 0).
+		for j in range(1, linhas.size()):
+			var linha: String = linhas[j]
+			if linha.strip_edges() == "":
+				continue
+			var matricula: String = linha.split(";")[0]
+			if not por_matricula.has(matricula):
+				por_matricula[matricula] = []
+			por_matricula[matricula].append(linha)
+	if cabecalho == "":
+		print_debug("AVISO: Nenhum arquivo de histórico válido foi selecionado. hist.csv não foi alterado.")
+		_resumo_importacao_hist(0, 0, ignorados)
+		return
+	var saida: Array[String] = [cabecalho]
+	for matricula in por_matricula:
+		for linha in por_matricula[matricula]:
+			saida.append(linha)
+	file_handling.save_text_file(GV.dir_saida, "hist.csv", saida)
+	_resumo_importacao_hist(convertidos, por_matricula.size(), ignorados)
+
+# Exibe um diálogo de resumo da concatenação dos históricos (a tela principal não tem terminal).
+func _resumo_importacao_hist(arquivos: int, alunos: int, ignorados: Array[String]) -> void:
+	var texto: String
+	if arquivos == 0:
+		texto = "Nenhum arquivo de histórico válido foi importado."
+	else:
+		texto = "%d arquivo(s) de histórico concatenado(s) em hist.csv.\n%d aluno(s) no total." \
+			% [arquivos, alunos]
+	if ignorados.size() > 0:
+		texto += "\n\nIgnorado(s) (não reconhecidos como histórico):\n- " + "\n- ".join(ignorados)
+	var dialogo := AcceptDialog.new()
+	dialogo.title = "Importação de histórico"
+	dialogo.dialog_text = texto
+	add_child(dialogo)
+	dialogo.popup_centered()
+	Dialogos.limitar_a_tela(dialogo)
+	dialogo.confirmed.connect(dialogo.queue_free)
+	dialogo.canceled.connect(dialogo.queue_free)
 #endregion
