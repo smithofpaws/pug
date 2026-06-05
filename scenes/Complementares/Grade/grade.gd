@@ -9,6 +9,7 @@ signal celula_clicada_direita(linha: int, coluna: int)
 signal celula_clicada_meio(linha: int, coluna: int)
 signal drop_realizado(linha: int, coluna: int, dados: Dictionary)
 signal arraste_iniciado(linha: int, coluna: int)
+signal arraste_terminado
 
 # Classes instanciadas.
 var analise_horarios := AnaliseHorarios.new()
@@ -82,6 +83,7 @@ func _criar_grade() -> void:
 		modulo.clicado_meio.connect(_on_celula_clicada_meio.bind(temp_lin, temp_col))
 		modulo.celula_dropada.connect(_on_celula_dropada)
 		modulo.arraste_iniciado.connect(_on_celula_arraste_iniciado)
+		modulo.arraste_terminado.connect(_on_celula_arraste_terminado)
 		# Caso dados vazios, não faz nada.
 		if dados.size() == 0:
 			return
@@ -315,6 +317,9 @@ func _on_celula_dropada(linha: int, coluna: int, dados: Dictionary) -> void:
 
 func _on_celula_arraste_iniciado(linha: int, coluna: int) -> void:
 	arraste_iniciado.emit(linha, coluna)
+
+func _on_celula_arraste_terminado() -> void:
+	arraste_terminado.emit()
 
 func _limpar_highlight_todas_celulas() -> void:
 	for cell in $GridContainer.get_children():

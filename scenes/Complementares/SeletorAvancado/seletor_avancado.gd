@@ -56,6 +56,21 @@ func selecionar_item(index: int) -> void:
 	_on_popupmenu_option_chosen(index)
 
 
+## Define o texto do botão como [param texto] se ele couber na largura atual; caso contrário usa
+## [param fallback]. Útil para listas de itens marcados (ex.: vários semestres) cujo texto pode
+## exceder o botão.
+func definir_texto_ou_fallback(texto: String, fallback: String) -> void:
+	var btn: MenuButton = $MenuButton
+	var fonte: Font = btn.get_theme_font("font")
+	if fonte == null:
+		texto_padrao = texto
+		return
+	var tam_fonte: int = btn.get_theme_font_size("font_size")
+	var largura_texto: float = fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tam_fonte).x
+	# Desconta uma folga para o padding interno do botão.
+	texto_padrao = texto if largura_texto <= btn.size.x - 16.0 else fallback
+
+
 ## Desmarca todos os itens checkable do PopupMenu, sem alterar [member lista_itens].
 ## Util para limpar visualmente a selecao ao resetar o filtro via middle-click.
 func limpar_selecao() -> void:

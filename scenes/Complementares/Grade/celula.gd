@@ -8,6 +8,7 @@ signal clicado_direito
 signal clicado_meio
 signal celula_dropada(linha: int, coluna: int, dados: Dictionary)
 signal arraste_iniciado(linha: int, coluna: int)
+signal arraste_terminado
 
 ## String do texto do centro.
 var texto_central: String : set = _set_texto_central
@@ -55,6 +56,13 @@ var texto_rodape: String : set = _set_texto_rodape
 
 ## Quando true, aplica leve clareamento/escurecimento ao fundo para criar faixas alternadas por linha.
 var faixa_alternada: bool : set = _set_faixa_alternada
+
+## Quando true, exibe hachura diagonal sobre o fundo (estado temporário, ex.: horário a evitar ao
+## mover uma disciplina). Não altera o fundo nem as barras.
+var hachurado: bool = false : set = _set_hachurado
+
+# Overlay de hachura, criado em runtime (ver [method _criar_hachura]).
+var _hachura: HachuraOverlay
 
 ## Índice da coluna da célula na grade. Preenchido externamente pelo [Grade].
 var xpos: int
@@ -122,10 +130,14 @@ func _restaurar_cores_originais() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
+		var era_origem: bool = _arrastando
 		_arrastando = false
 		if _drag_hovering:
 			_drag_hovering = false
 			_restaurar_cores_originais()
+		# Só a célula que originou o arraste avisa o fim (drop ou cancelamento).
+		if era_origem:
+			arraste_terminado.emit()
 	elif what == NOTIFICATION_THEME_CHANGED:
 		# Reaplica a cor do texto adaptada ao novo fundo do tema.
 		_update_button()
@@ -134,6 +146,15 @@ func _ready() -> void:
 	# Código de arraste desabilitado — evita processamento ocioso por frame em cada célula.
 	set_process(false)
 	_criar_barras_borda()
+	_criar_hachura()
+
+# Cria o overlay de hachura logo acima do fundo (Button) e abaixo do texto, oculto por padrão.
+func _criar_hachura() -> void:
+	_hachura = HachuraOverlay.new()
+	_hachura.name = "Hachura"
+	_hachura.visible = false
+	add_child(_hachura)
+	move_child(_hachura, $Button.get_index() + 1)
 
 # Cria as quatro barras de borda (ColorRect) que permitem marcação independente de cada lado.
 func _criar_barras_borda() -> void:
@@ -274,6 +295,9 @@ func _set_apenas_central(new_value: bool) -> void:
 				# Não oculta as barras de borda
 				if child in _barras.values():
 					continue
+				# Nem o overlay de hachura (sua visibilidade é controlada por _set_hachurado).
+				if child == _hachura:
+					continue
 				# Mantém visíveis os labels de canto que tenham texto (ex.: código/CH).
 				if child is Label and child.text != "":
 					continue
@@ -300,6 +324,11 @@ func _set_texto_rodape(new_value: String) -> void:
 func _set_faixa_alternada(new_value: bool) -> void:
 	faixa_alternada = new_value
 	_update_button()
+
+func _set_hachurado(new_value: bool) -> void:
+	hachurado = new_value
+	if _hachura:
+		_hachura.visible = new_value
 
 func _para_cor(valor) -> Color:
 	if valor is Color:
