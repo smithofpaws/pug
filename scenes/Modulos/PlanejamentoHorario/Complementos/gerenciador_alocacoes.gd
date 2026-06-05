@@ -14,10 +14,19 @@ var modo_visualizacao: String = "nome_reduzido"
 var semestre_filtro: String = ""
 
 ## Prefixos de semestre (maiúsculos, ex.: [code]["EC"][/code]) do curso filtrado no painel.
-## Quando não-vazio, células com sobreposição exibem somente as alocações desse curso (oculta
-## nomes de disciplinas de outros cursos). Compartilhadas casam pelo prefixo (ex.: "EC04;EM04"
-## casa com "EC"). Vazio = sem filtro de curso.
+## Compartilhadas casam pelo prefixo (ex.: "EC04;EM04" casa com "EC"). Vazio = sem filtro de curso.
 var curso_filtro_prefixos: Array[String] = []
+
+## Semestres marcados no filtro de semestre do painel (ex.: [code]["EC02", "EC02;EM02"][/code]).
+## Vazio = sem filtro de semestre.
+var filtro_semestres: Array[String] = []
+
+## Toggles da Visualização ("Filtros"): para cada filtro ativo (curso/semestre/professor), quando
+## o toggle é verdadeiro as disciplinas que não passam são [b]ocultadas[/b]; quando falso, apenas
+## [b]esmaecidas[/b]. "Curso" começa ligado para preservar a ocultação de outros cursos.
+var ocultar_curso: bool = true
+var ocultar_semestre: bool = false
+var ocultar_professor: bool = false
 
 ## Professor atualmente filtrado no painel de disciplinas. Quando definido, alocações
 ## que correspondem a este professor são exibidas primeiro na célula.
@@ -96,40 +105,79 @@ func atualizar_celula(linha: int, coluna: int) -> void:
 				do_semestre.append(a_dict)
 		if not do_semestre.is_empty():
 			arr_render = do_semestre
-	# Com curso_filtro_prefixos ativo: exibe somente as alocações do curso filtrado, ocultando os
-	# nomes das disciplinas de outros cursos (ex.: só EC com Engenharia Civil). Diferente do
-	# semestre_filtro (um destaque), o filtro de curso oculta: células exclusivamente de outros
-	# cursos ficam com texto vazio (do_curso vazio → sem rótulo), sem depender de _aplicar_filtro_grade.
-	# Compartilhadas casam pelo prefixo (ex.: "EC04;EM04" casa com "EC").
-	if not curso_filtro_prefixos.is_empty():
-		var do_curso: Array = []
-		for a_dict in arr_render:
-			var sem_upper: String = _semestre_da_aloc(a_dict as Dictionary).to_upper().strip_edges()
-			for prefixo in curso_filtro_prefixos:
-				if sem_upper.begins_with(prefixo):
-					do_curso.append(a_dict)
-					break
-		arr_render = do_curso
-	# Se houver filtro de professor ativo, reordena: alocações do professor primeiro.
-	if not _filtro_professor.is_empty():
-		var pf := _filtro_professor.to_lower()
+	# Reordena para que as alocações que passam por TODOS os filtros ativos (curso/semestre/professor)
+	# venham primeiro — assim o nome destacado (não esmaecido) aparece no topo da célula, e as
+	# esmaecidas ficam abaixo.
+	if not curso_filtro_prefixos.is_empty() or not filtro_semestres.is_empty() or not _filtro_professor.is_empty():
 		arr_render.sort_custom(func(a: Variant, b: Variant):
-			var pa := _prof_bate(a as Dictionary, pf)
-			var pb := _prof_bate(b as Dictionary, pf)
-			return pa and not pb)
+			return _aloc_passa_filtros(a as Dictionary) and not _aloc_passa_filtros(b as Dictionary))
+	# Aplica os filtros do painel (curso/semestre/professor) por alocação. Cada filtro ativo, quando
+	# a alocação não passa, OCULTA (toggle ligado da Visualização) ou ESMAECE (toggle desligado).
+	var pf: String = _filtro_professor.to_lower()
 	var partes: Array[String] = []
-	var tem_extra: bool = false
 	for a_dict in arr_render:
 		var aloc: Dictionary = a_dict
-		if aloc.get("is_extra", false):
-			tem_extra = true
 		var rotulo: String = rotulo_alocacao(aloc)
-		if not rotulo.is_empty():
-			partes.append(rotulo)
+		if rotulo.is_empty():
+			continue
+		var ocultar: bool = false
+		var esmaecer: bool = false
+		if not curso_filtro_prefixos.is_empty() and not _aloc_no_curso(aloc):
+			if ocultar_curso: ocultar = true
+			else: esmaecer = true
+		if not filtro_semestres.is_empty() and not _aloc_no_filtro_semestre(aloc):
+			if ocultar_semestre: ocultar = true
+			else: esmaecer = true
+		if not pf.is_empty() and not _prof_bate(aloc, pf):
+			if ocultar_professor: ocultar = true
+			else: esmaecer = true
+		if ocultar:
+			continue
+		if esmaecer:
+			rotulo = "[color=neutro]%s[/color]" % rotulo
+		partes.append(rotulo)
 	celula.texto_central = "\n".join(partes)
-	celula.cor_central = "orange" if tem_extra else "white"
+	# Cor base neutra; o estado final (sem professor, hora extra, esmaecido) é decidido pelo
+	# AplicadorVisualGrade, que roda após reaplicar_todas.
+	celula.cor_central = "padrao"
 	celula.apenas_central = true
 	celula.alocacao_chave = chave_celula
+
+# Verdadeiro se a alocação passa por todos os filtros do painel ativos (curso, semestre e professor).
+# Alocações que passam são exibidas em destaque; as que não passam são esmaecidas ou ocultadas.
+func _aloc_passa_filtros(aloc: Dictionary) -> bool:
+	if not curso_filtro_prefixos.is_empty() and not _aloc_no_curso(aloc):
+		return false
+	if not filtro_semestres.is_empty() and not _aloc_no_filtro_semestre(aloc):
+		return false
+	if not _filtro_professor.is_empty() and not _prof_bate(aloc, _filtro_professor.to_lower()):
+		return false
+	return true
+
+# Verdadeiro se a alocação pertence ao curso filtrado, comparando o semestre com os prefixos de
+# [member curso_filtro_prefixos] (ex.: "EC04;EM04" casa com "EC"). Sem filtro de curso → verdadeiro.
+func _aloc_no_curso(aloc: Dictionary) -> bool:
+	if curso_filtro_prefixos.is_empty():
+		return true
+	var sem_upper: String = _semestre_da_aloc(aloc).to_upper().strip_edges()
+	for prefixo in curso_filtro_prefixos:
+		if sem_upper.begins_with(prefixo):
+			return true
+	return false
+
+# Verdadeiro se a alocação se enquadra em algum semestre marcado em [member filtro_semestres],
+# comparando o semestre e a oferta combinada da disciplina (espelha PainelDisciplinas.aplicar_filtro).
+func _aloc_no_filtro_semestre(aloc: Dictionary) -> bool:
+	var sem: String = _semestre_da_aloc(aloc).to_lower()
+	var oferta: String = ""
+	var card: CardDisciplina = _cards_disciplinas.get(aloc.get("chave", ""))
+	if card:
+		oferta = card.oferta.to_lower()
+	for fs in filtro_semestres:
+		var f: String = str(fs).to_lower()
+		if sem == f or (not oferta.is_empty() and oferta == f):
+			return true
+	return false
 
 # Semestre de uma alocação: do planejamento.csv com fallback para o card. Usado pelos filtros
 # de semestre e de curso ao decidir quais alocações exibir numa célula com sobreposição.
@@ -232,35 +280,17 @@ func reaplicar_todas() -> void:
 			continue
 		atualizar_celula(linha, coluna)
 
-## Marca em vermelho as células cujo professor está vazio. [br]
-## Retorna a contagem de células com problema. Se [param indicar] for [code]false[/code], conta mas não altera cores.
-func aplicar_indicador_problemas(indicar: bool) -> int:
-	if alocacoes.size() == 0:
-		return 0
-	if not _grade:
-		return 0
-	var contador: int = 0
+## Conjunto das células ([code]"linha_coluna"[/code]) que contêm alguma alocação sem professor
+## atribuído no planejamento.csv. Puro: não altera a grade. Alimenta o [AplicadorVisualGrade]
+## (cor do texto) e o relatório do terminal.
+func celulas_sem_professor() -> Dictionary:
+	var resultado: Dictionary = {}
 	for chave_celula in alocacoes:
-		var arr: Array = alocacoes[chave_celula]
-		var tem_problema: bool = false
-		for a_dict in arr:
-			var aloc: Dictionary = a_dict
-			var chave: String = aloc.get("chave", "")
-			var dados_csv: Dictionary = _planejamento_csv.get(chave, {})
-			var profs: Array = dados_csv.get("professor", [])
+		for a_dict in alocacoes[chave_celula]:
+			var chave: String = (a_dict as Dictionary).get("chave", "")
+			var profs: Array = _planejamento_csv.get(chave, {}).get("professor", [])
 			var prof_nome: String = str(profs[0]) if profs.size() > 0 else ""
 			if prof_nome.is_empty():
-				tem_problema = true
+				resultado[chave_celula] = true
 				break
-		if tem_problema:
-			var partes: PackedStringArray = chave_celula.split("_")
-			if partes.size() == 2:
-				var linha: int = int(partes[0])
-				var coluna: int = int(partes[1])
-				if linha >= 1 and coluna >= 1 and linha < _grade._linhas and coluna < _grade._colunas:
-					# Só pinta quando indicar; senão apenas conta (não sobrescreve a cor
-					# definida pelo filtro de semestre, que repinta as células logo antes).
-					if indicar:
-						_grade.get_celula(linha, coluna).cor_central = "red"
-					contador += 1
-	return contador
+	return resultado

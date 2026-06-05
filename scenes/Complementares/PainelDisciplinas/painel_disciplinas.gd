@@ -61,6 +61,24 @@ func selecionar_filtro_curso(cod_curso: String) -> void:
 	_on_filtro_curso_opcao_selecionada("", [cod_curso])
 
 
+## Programa o filtro de semestre para um único [param semestre] (ex.: clique direito numa célula da
+## grade). Marca apenas o item correspondente, reseta o filtro de professor e dispara o efeito,
+## como a seleção manual de um semestre.
+func selecionar_filtro_semestre_unico(semestre: String) -> void:
+	var popup: PopupMenu = $"%FiltroSemestre".get_node("MenuButton").get_popup()
+	for i in popup.item_count:
+		if popup.is_item_checkable(i):
+			popup.set_item_checked(i, popup.get_item_text(i).to_lower() == semestre.to_lower())
+	var nova: Array[String] = [semestre]
+	filtro_semestre = nova
+	$"%FiltroSemestre".texto_padrao = semestre
+	filtro_professor = ""
+	$"%FiltroProfessor".texto_padrao = "Professor"
+	$"%FiltroProfessor".lista_itens = popular_filtro_professor()
+	aplicar_filtro()
+	filtro_alterado.emit({"curso": filtro_curso, "semestre": filtro_semestre, "professor": filtro_professor})
+
+
 func _ready() -> void:
 	$"%FiltroCurso".opcao_selecionada.connect(_on_filtro_curso_opcao_selecionada)
 	$"%FiltroSemestre".opcao_selecionada.connect(_on_filtro_semestre_opcao_selecionada)
@@ -137,10 +155,13 @@ func _on_filtro_semestre_opcao_selecionada(_retorno: String, lista_selecionada: 
 		if s != "" and s != "Todos":
 			nova.append(s)
 	filtro_semestre = nova
-	if nova.size() == 1:
+	if nova.is_empty():
+		$"%FiltroSemestre".texto_padrao = "Semestre"
+	elif nova.size() == 1:
 		$"%FiltroSemestre".texto_padrao = nova[0]
 	else:
-		$"%FiltroSemestre".texto_padrao = "Semestre"
+		# Apresenta os semestres marcados; se o texto não couber no botão, usa um rótulo curto.
+		$"%FiltroSemestre".definir_texto_ou_fallback(", ".join(nova), "Múltiplos semestres")
 	filtro_professor = ""
 	$"%FiltroProfessor".texto_padrao = "Professor"
 	$"%FiltroProfessor".lista_itens = popular_filtro_professor()

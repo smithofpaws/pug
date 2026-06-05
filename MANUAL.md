@@ -275,32 +275,47 @@ Exibe as disciplinas a alocar como cartões coloridos. Filtros permitem navegar 
 
 Tabela com horários (linhas) × dias da semana (colunas). Cada célula pode conter uma ou mais disciplinas. As células são coloridas por semestre para facilitar a leitura visual.
 
-- Clique em uma célula para abrir o **editor de célula**, onde é possível definir ou alterar disciplina, professor, sala, vagas, tipo (teórica/prática/laboratório) e turma.
-- É possível adicionar mais de um professor por célula.
+- **Clique direito** em uma célula: abre um menu com as disciplinas daquele horário; ao escolher uma, o filtro de semestre é aplicado automaticamente ao semestre dela.
+- **Clique do meio** em uma célula: remove a alocação dali.
+- Clique em um **card** na lista de disciplinas (à esquerda) para destacar, com **fundo verde claro**, apenas as células daquela disciplina na grade.
 
-O **filtro de semestre** destaca visualmente apenas as células de um semestre específico.
+Os filtros do painel (curso, semestre e professor) afetam a grade: numa célula com disciplinas sobrepostas, as que **não** passam por um filtro ativo aparecem **esmaecidas** (ou são **ocultadas**, conforme a Visualização). Por exemplo, com o **filtro de professor** em Diego Arthur Hartmann, a disciplina dele fica em branco e as demais no mesmo horário ficam esmaecidas; compartilhadas de curso casam pelo prefixo (`EC04;EM04` conta como `EC`).
 
-O **filtro de curso** oculta na grade os nomes das disciplinas de outros cursos: com Engenharia Civil selecionada, apenas as `ECxx` aparecem (incluindo compartilhadas como `EC04;EM04` e `ECCG;EACG`). Em células com disciplinas sobrepostas de cursos diferentes, mostra somente a do curso filtrado.
+O botão **Visualização**, no grupo **Filtros**, controla, para cada filtro, se as disciplinas que não passam são **ocultadas** (caixa marcada) ou apenas **esmaecidas** (caixa desmarcada):
+
+- **Curso** — vem **marcado** por padrão, mantendo a ocultação das disciplinas de outros cursos.
+- **Semestre** — marque para ocultar as disciplinas fora dos semestres filtrados.
+- **Professor** — marque para mostrar apenas as disciplinas do professor filtrado, ocultando as demais.
+
+Ao **mover** uma disciplina na grade, o programa destaca o semestre dela para revelar choques de semestre — **exceto** quando há um **filtro de professor** ativo: nesse caso o destaque não é forçado, mantendo visíveis as disciplinas do professor para que você controle os choques do próprio professor durante o ajuste.
+
+Para ajudar a achar um horário livre dos **dois** tipos de choque, durante o arraste a grade marca a dimensão complementar com **hachura** (linhas diagonais):
+
+- Com **filtro de professor** ativo: os horários do professor ficam em verde e os horários do **semestre** da disciplina ficam **hachurados**.
+- Com **filtro de semestre** ativo: os horários do semestre ficam em verde e os horários do **professor** da disciplina ficam **hachurados**.
+
+Assim, uma célula livre de verde e de hachura é segura (sem choque de professor nem de semestre). A hachura é temporária: aparece ao iniciar o arraste e some ao soltar.
 
 #### Indicadores de problemas
 
-Um conjunto de indicadores visuais mostra conflitos detectados automaticamente na grade:
+A grade sinaliza os problemas detectados automaticamente seguindo uma convenção consistente: **a cor indica a severidade** e **o lado da célula indica a categoria** do problema. O **tipo exato** aparece ao **passar o mouse sobre a célula** (dica).
 
-| Indicador | Significado |
-|---|---|
-| Choque de professor | Um professor está alocado em dois ou mais horários simultâneos |
-| Choque de sala | Uma sala está atribuída a duas ou mais disciplinas simultâneas |
-| Choque de alunos | Um grupo de alunos está em dois ou mais horários simultâneos |
-| Carga horária excedida | Professor ultrapassou o limite semanal de horas |
-| Carga diária elevada | Professor com seis ou mais horas no mesmo dia |
-| Noturna seguida de matinal | Professor com aula noturna num dia e matinal no dia seguinte |
-| Sem professor | Célula alocada sem professor atribuído |
+- **Cor (severidade):** vermelho = erro (impede a oferta), amarelo = aviso (revisar).
+- **Lado da célula (categoria):**
+  - **barra inferior** — choque de recurso (professor, sala ou semestre no mesmo horário);
+  - **barra esquerda** — sobrecarga do professor (carga ≥6h no mesmo dia, ou aula noturna seguida de matinal no dia seguinte);
+  - **barra direita** — problema da disciplina (carga horária excedida);
+  - **barra superior** — preferência de horário do professor (verde→vermelho, do melhor ao pior; informativo, não é um alerta);
+  - **cor do texto** — estado da alocação: vermelho = sem professor; laranja = hora extra.
+- **Tooltip:** passe o mouse sobre uma célula com marcação para ver a lista exata das condições (ex.: "⚠ Choque de professor", "⚠ Carga ≥6h no mesmo dia", "✕ Sem professor").
 
-Cada indicador pode ser ativado ou desativado individualmente, conforme o critério de análise desejado.
+Os indicadores podem ser ligados/desligados individualmente. Com um filtro de curso/semestre ativo, as marcações de alerta aparecem apenas nas células em foco; os problemas das demais seguem contabilizados no terminal.
 
 #### Verificador de carga horária
 
-Exibe um resumo da carga semanal de cada professor, com marcação visual (amarelo = carga diária elevada, vermelho = carga semanal excedida).
+Reporta no terminal os professores com carga diária elevada (≥6h num dia) e os casos de aula noturna seguida de matinal. Na grade, esses casos aparecem como aviso (amarelo) na barra esquerda da célula; o tipo exato fica no tooltip. Esses avisos são **por professor**: com um **filtro de professor** ativo, a carga e a noturna→matinal são calculadas apenas para ele — assim, numa célula compartilhada, o aviso de outro professor não é atribuído à disciplina do filtrado.
+
+Os relatórios do terminal (choques, carga, posicionamento) são estruturados (título, seções e itens) e podem ser copiados como Markdown.
 
 #### Posicionador automático
 

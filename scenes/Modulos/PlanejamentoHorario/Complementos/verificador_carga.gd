@@ -1,32 +1,37 @@
 class_name VerificadorCarga extends RefCounted
 ## Verifica a carga horária dos professores na grade de alocações. [br]
 ## Detecta dois problemas: carga ≥6h no mesmo dia e aula noturna seguida de manhã cedo [br]
-## no dia seguinte. Marca as células afetadas com a barra esquerda e devolve as mensagens.
+## no dia seguinte. [br]
+##
+## É puro de detecção: devolve as mensagens e, por célula, quais estão em sobrecarga. NÃO pinta a
+## grade — a pintura fica a cargo do [AplicadorVisualGrade].
 
-# Grade visual onde as marcações são aplicadas.
-var _grade: GradeVisual
 # Referências compartilhadas com o módulo principal.
 var _alocacoes: Dictionary
 var _planejamento_csv: Dictionary
 
-# Cor da barra esquerda usada para sinalizar carga excessiva ou noturna→manhã.
-const COR_AVISO := Color(1, 0.5, 0, 1)
-
-## Configura as referências necessárias para verificação e marcação visual.
-func configurar(grade: GradeVisual, alocacoes: Dictionary, planejamento_csv: Dictionary) -> void:
-	_grade = grade
+## Configura as referências necessárias para verificação.
+func configurar(alocacoes: Dictionary, planejamento_csv: Dictionary) -> void:
 	_alocacoes = alocacoes
 	_planejamento_csv = planejamento_csv
 
 ## Verifica a carga dos professores conforme [param horas] (horas das aulas em ordem). [br]
-## [param marcar_carga] e [param marcar_noturna] controlam se cada tipo pinta a barra esquerda. [br]
-## Retorna [code]{ "avisos": Array[String], "info": String }[/code], onde [param avisos] são os [br]
-## problemas encontrados e [param info] é a mensagem de status (vazia quando há avisos).
-func verificar(horas: Array[String], marcar_carga: bool, marcar_noturna: bool) -> Dictionary:
-	if not _grade or horas.is_empty():
-		return {"avisos": [], "info": ""}
-	_limpar_barras_esquerdas()
+## Retorna [code]{ "avisos": Array[String], "info": String, "celulas_carga": Dictionary,
+## "celulas_noturna": Dictionary }[/code], onde os mapas são conjuntos [code]{ "linha_coluna":
+## true }[/code] das células afetadas por cada problema.
+func verificar(horas: Array[String], prof_filtro: String = "") -> Dictionary:
+	if horas.is_empty():
+		return {"avisos": [], "info": "", "celulas_carga": {}, "celulas_noturna": {}}
 	var prof_dias: Dictionary = _mapear_professores_por_dia(horas)
+	# Com filtro de professor, restringe a verificação a ele: carga/noturna são por professor, e numa
+	# célula compartilhada o aviso de OUTRO professor não deve aparecer na disciplina do filtrado.
+	if not prof_filtro.is_empty():
+		var pfl: String = prof_filtro.to_lower()
+		var so_filtrado: Dictionary = {}
+		for pn in prof_dias:
+			if pn.to_lower() == pfl:
+				so_filtrado[pn] = prof_dias[pn]
+		prof_dias = so_filtrado
 	var celulas_carga: Dictionary = {}
 	var celulas_noturna: Dictionary = {}
 	var avisos: Array[String] = []
@@ -45,24 +50,25 @@ func verificar(horas: Array[String], marcar_carga: bool, marcar_noturna: bool) -
 			var dia2: int = dias_ordenados[i + 1]
 			if dia2 != dia1 + 1:
 				continue
-			if not _tem_aula_no_periodo(dia_map[dia1], horas, true):
+			# Marca SOMENTE as aulas efetivamente noturnas (dia 1) e matinais (dia 2) que causam o
+			# problema — não o dia inteiro. Assim uma aula de tarde no meio não fica sinalizada.
+			var linhas_noturnas: Array = _linhas_no_periodo(dia_map[dia1], horas, true)
+			if linhas_noturnas.is_empty():
 				continue
-			if _tem_aula_no_periodo(dia_map[dia2], horas, false):
-				avisos.append("%s: aula noturna (col %d) seguida de manhã cedo (col %d)." % [pn.capitalize(), dia1, dia2])
-				for l in dia_map[dia1]:
-					celulas_noturna["%d_%d" % [l, dia1]] = true
-				for l in dia_map[dia2]:
-					celulas_noturna["%d_%d" % [l, dia2]] = true
-	if marcar_carga:
-		_pintar_barra_esquerda(celulas_carga)
-	if marcar_noturna:
-		_pintar_barra_esquerda(celulas_noturna)
+			var linhas_matinais: Array = _linhas_no_periodo(dia_map[dia2], horas, false)
+			if linhas_matinais.is_empty():
+				continue
+			avisos.append("%s: aula noturna (col %d) seguida de manhã cedo (col %d)." % [pn.capitalize(), dia1, dia2])
+			for l in linhas_noturnas:
+				celulas_noturna["%d_%d" % [l, dia1]] = true
+			for l in linhas_matinais:
+				celulas_noturna["%d_%d" % [l, dia2]] = true
 	var info: String = ""
 	if prof_dias.is_empty():
 		info = "(Verif. carga: nenhum professor encontrado)"
 	elif avisos.is_empty():
 		info = "(Verif. carga: OK — %d professor(es))" % prof_dias.size()
-	return {"avisos": avisos, "info": info}
+	return {"avisos": avisos, "info": info, "celulas_carga": celulas_carga, "celulas_noturna": celulas_noturna}
 
 # Mapeia cada professor para as linhas que ocupa em cada coluna (dia): { prof -> { coluna -> [linhas] } }.
 func _mapear_professores_por_dia(horas: Array[String]) -> Dictionary:
@@ -94,36 +100,16 @@ func _mapear_professores_por_dia(horas: Array[String]) -> Dictionary:
 					dia_map[coluna].append(linha)
 	return prof_dias
 
-# Verifica se alguma das [param linhas] cai no período noturno (≥18h) ou matutino (≤12h, [param noite] = false).
-func _tem_aula_no_periodo(linhas: Array, horas: Array[String], noite: bool) -> bool:
+# Linhas (índices 1-based) de [param linhas] que caem no período noturno (≥18h) ou, quando
+# [param noite] é false, no matutino (≤12h).
+func _linhas_no_periodo(linhas: Array, horas: Array[String], noite: bool) -> Array:
+	var resultado: Array = []
 	for l in linhas:
 		if l > horas.size():
 			continue
 		var hora_inicio: int = int(horas[l - 1].substr(0, 2))
 		if noite and hora_inicio >= 18:
-			return true
-		if not noite and hora_inicio <= 12:
-			return true
-	return false
-
-# Remove as barras esquerdas de todas as células alocadas.
-func _limpar_barras_esquerdas() -> void:
-	for chave_celula in _alocacoes:
-		var partes: PackedStringArray = chave_celula.split("_")
-		if partes.size() != 2:
-			continue
-		var linha: int = int(partes[0])
-		var coluna: int = int(partes[1])
-		if linha >= 1 and linha < _grade._linhas and coluna >= 1 and coluna < _grade._colunas:
-			_grade.get_celula(linha, coluna).cor_barra_esquerda = Color(0, 0, 0, 0)
-
-# Pinta a barra esquerda das [param celulas] (chaves "linha_coluna") com a cor de aviso.
-func _pintar_barra_esquerda(celulas: Dictionary) -> void:
-	for chave_celula in celulas:
-		var partes: PackedStringArray = chave_celula.split("_")
-		if partes.size() != 2:
-			continue
-		var linha: int = int(partes[0])
-		var coluna: int = int(partes[1])
-		if linha >= 1 and linha < _grade._linhas and coluna >= 1 and coluna < _grade._colunas:
-			_grade.get_celula(linha, coluna).cor_barra_esquerda = COR_AVISO
+			resultado.append(l)
+		elif not noite and hora_inicio <= 12:
+			resultado.append(l)
+	return resultado

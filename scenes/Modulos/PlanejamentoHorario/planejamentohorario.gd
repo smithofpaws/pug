@@ -6,7 +6,6 @@ class_name PlanejamentoHorario extends ReferenceRect
 ## - Editar os horários das disciplinas. [br]
 ##
 ## Lógica delegada para classes em [code]Complementos/[/code]: [br]
-## - [EditorCelula]: diálogo de edição de célula [br]
 ## - [DetectorDeChoques]: detecção e marcação de choques [br]
 ## - [VerificadorCarga]: verificação de carga horária dos professores [br]
 ## - [GerenciadorAlocacoes]: CRUD de alocações e renderização de células [br]
@@ -26,7 +25,8 @@ var _dados: ArquivosPlanejamento
 var _ger_alocacoes: GerenciadorAlocacoes
 var _detector: DetectorDeChoques
 var _verif_carga: VerificadorCarga
-var _editor: EditorCelula
+var _aplicador: AplicadorVisualGrade
+var _relatorios: RelatoriosHorario
 var _posicionador: PosicionadorAutomatico
 
 ## Recebido pelo main em sua criação e vem do arquivo base_config.json.
@@ -106,6 +106,20 @@ var _indicadores_ativos: Array[String] = []
 # Ultimo total de choques detectado, para reaplicar a barra de status na troca de tema.
 var _ultimo_total_choques: int = 0
 
+# Condições por célula ("linha_coluna" → dict) da última recálculo da grade. Alimenta o
+# AplicadorVisualGrade e o tooltip; preenchido por _montar_mapa_condicoes.
+var _mapa_condicoes: Dictionary = {}
+
+# Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
+# uma, aplica o filtro de semestre ao semestre dela. _menu_celula_semestres guarda, por índice de
+# item, o semestre correspondente.
+var _menu_celula: PopupMenu
+var _menu_celula_semestres: Array[String] = []
+
+# Código (minúsculo) da disciplina destacada por clique em um card: suas células ficam em verde
+# claro na grade. Vazio = nenhuma. Limpo ao alterar/limpar os filtros.
+var _disciplina_destacada: String = ""
+
 # Ultimo total de alunos em choque entre disciplinas sobrepostas (par a par), para a barra de status.
 var _ultimo_total_alunos_choque: int = 0
 
@@ -163,9 +177,16 @@ func _ready() -> void:
 	_ger_alocacoes.configurar($"%GradeHorarios", {}, {}, analise_grades, grades_disciplinas_curriculos)
 
 	_detector = DetectorDeChoques.new()
-	_detector.configurar($"%GradeHorarios", {}, {}, {}, cores_terminal)
+	_detector.configurar({}, {}, {})
 
 	_verif_carga = VerificadorCarga.new()
+	_verif_carga.configurar({}, {})
+
+	_aplicador = AplicadorVisualGrade.new()
+	_aplicador.configurar($"%GradeHorarios")
+
+	_relatorios = RelatoriosHorario.new()
+	_relatorios.configurar($"%Terminal")
 
 	_posicionador = PosicionadorAutomatico.new()
 
@@ -192,9 +213,6 @@ func _ready() -> void:
 	var sem_atual: String = GeneralFunctions.semestre_atual()
 	$"%FiltroSemestreEdicao".selecionar_item(2 if sem_atual == "1" else 1)
 
-	_editor = EditorCelula.new(self)
-	_editor.edicao_confirmada.connect(_on_editor_confirmar)
-
 	_seletor_cursos = SeletorCursos.new(self)
 	_seletor_cursos.cursos_selecionados.connect(_on_cursos_selecionados_planejamento)
 
@@ -217,8 +235,8 @@ func _ready() -> void:
 	$"%SeletorVisualizacao".lista_itens = {
 		"Nomes e códigos*": formatos_grade.get("rotulos", []),
 		"Nomes e códigos_retorno": valores_visualizacao,
-		"Organização*": [],
-		"Organização_retorno": [],
+		"Filtros_": ["Curso", "Semestre", "Professor"],
+		"Filtros_retorno": ["ocultar_curso", "ocultar_semestre", "ocultar_professor"],
 	}
 	var idx_visualizacao: int = valores_visualizacao.find("nome_reduzido")
 	$"%SeletorVisualizacao".selecionar_item(idx_visualizacao if idx_visualizacao >= 0 else 0)
@@ -226,6 +244,9 @@ func _ready() -> void:
 	for i in popup_viz.get_item_count():
 		if popup_viz.is_item_separator(i):
 			popup_viz.set_item_text(i, popup_viz.get_item_text(i).trim_suffix("*"))
+		# "Curso" começa marcado: mantém a ocultação de outros cursos já existente.
+		elif popup_viz.is_item_checkable(i) and popup_viz.get_item_text(i) == "Curso":
+			popup_viz.set_item_checked(i, true)
 	_dados.carregar_horarios_ini(GV.dir_saida, "horarios.ini")
 	_carregar_dados_discentes()
 	_limpar_preferencias_grade()
@@ -260,6 +281,11 @@ func _ready() -> void:
 
 	$"%GradeHorarios".drop_realizado.connect(_on_grade_drop_realizado)
 	$"%GradeHorarios".arraste_iniciado.connect(_on_grade_arraste_iniciado)
+	$"%GradeHorarios".arraste_terminado.connect(_on_grade_arraste_terminado)
+
+	_menu_celula = PopupMenu.new()
+	add_child(_menu_celula)
+	_menu_celula.index_pressed.connect(_on_menu_celula_index_pressed)
 	$"%GradeHorarios".celula_clicada_direita.connect(_on_grade_celula_clicada_direita)
 	$"%GradeHorarios".celula_clicada_meio.connect(_on_grade_celula_clicada_meio)
 	$"%GradeHorarios".celula_clicada.connect(_on_grade_celula_clicada)
@@ -272,10 +298,7 @@ func _ready() -> void:
 func _limpar_preferencias_grade() -> void:
 	$"%GradeHorarios".larguras_colunas = []
 	$"%GradeHorarios".dados = _dados.gerar_matriz_vazia()
-	_ger_alocacoes.reaplicar_todas()
-	_detectar_choques()
-	# Reconstruir a grade reseta cor_central; reaplica o indicador "sem professor" (sem reimprimir no terminal).
-	_ger_alocacoes.aplicar_indicador_problemas(IND_SEM_PROFESSOR in _indicadores_ativos)
+	_recalcular_grade(false)
 
 # Faz a leitura do arquivo de regras .csv enviado pelos professores e prepara para exibição.
 func _ler_regras_professores(arquivo_selecionado: String) -> void:
@@ -283,10 +306,7 @@ func _ler_regras_professores(arquivo_selecionado: String) -> void:
 	var matriz_horario: Array[Array] = resultado[0]
 	$"%GradeHorarios".larguras_colunas = []
 	$"%GradeHorarios".dados = matriz_horario
-	_ger_alocacoes.reaplicar_todas()
-	_detectar_choques()
-	# Reconstruir a grade reseta cor_central; reaplica o indicador "sem professor" (sem reimprimir no terminal).
-	_ger_alocacoes.aplicar_indicador_problemas(IND_SEM_PROFESSOR in _indicadores_ativos)
+	_recalcular_grade(false)
 	var comentarios: Array[String] = _dados.ler_comentarios_professor(arquivo_selecionado)
 	if not comentarios.is_empty():
 		$"%Terminal".secao("Regras do professor")
@@ -299,38 +319,142 @@ func _ler_regras_professores(arquivo_selecionado: String) -> void:
 #region Sinais
 func _on_seletor_preferencias_opcao_selecionada(_retorno: String, lista_selecionada: Array[String]) -> void:
 	_indicadores_ativos = lista_selecionada
-	# Repinta do zero para limpar marcações antigas (ex.: vermelho ao desligar o indicador),
-	# respeitando o filtro de semestre antes de reaplicar os indicadores ativos.
-	_ger_alocacoes.reaplicar_todas()
-	_refrescar_apos_alocacao()
+	# Repinta do zero para refletir os indicadores ativos (sem reimprimir relatórios no terminal).
+	_recalcular_grade(false)
 
-func _on_seletor_visualizacao_opcao_selecionada(_retorno: String, _lista_selecionada: Array[String]) -> void:
-	_ger_alocacoes.modo_visualizacao = _retorno
-	_ger_alocacoes.reaplicar_todas()
-	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
-	_aplicar_indicadores()
+func _on_seletor_visualizacao_opcao_selecionada(retorno: String, lista_selecionada: Array[String]) -> void:
+	match retorno:
+		"ocultar_curso", "ocultar_semestre", "ocultar_professor":
+			# Toggles do grupo "Filtros": atualiza os três a partir do estado dos checkboxes.
+			_ger_alocacoes.ocultar_curso = "ocultar_curso" in lista_selecionada
+			_ger_alocacoes.ocultar_semestre = "ocultar_semestre" in lista_selecionada
+			_ger_alocacoes.ocultar_professor = "ocultar_professor" in lista_selecionada
+		_:
+			_ger_alocacoes.modo_visualizacao = retorno
+	_recalcular_grade(false)
 
-func _aplicar_indicadores() -> void:
-	var tem_sem_prof := IND_SEM_PROFESSOR in _indicadores_ativos
-	var contador: int = _ger_alocacoes.aplicar_indicador_problemas(tem_sem_prof)
-	if contador > 0 and tem_sem_prof:
-		$"%Terminal".text_edit("Indicador: " + str(contador) + " célula(s) sem professor.", \
-			cores_terminal.get("aviso", "yellow"), false, false)
-
-# Reaplica choques, filtro de visibilidade e indicadores após mover ou alocar disciplinas.
-# A ordem importa: atualizar_celula reseta cor_central para branco, então o filtro precisa
-# ser reaplicado para reapagar (dimgray) as alocações de outro semestre/filtro.
+# Reaplica a grade após mover ou alocar disciplinas. O relato de choques no terminal fica restrito
+# às [param celulas_afetadas] (a ação corrente), evitando reportar choques de outras células da grade.
 func _refrescar_apos_alocacao(celulas_afetadas: Array[String] = []) -> void:
-	_detectar_choques(celulas_afetadas)
-	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
-	_aplicar_indicadores()
+	_recalcular_grade(true, celulas_afetadas)
+
+# Ponto único de atualização visual da grade: redetecta choques/carga/sem-professor, monta as
+# condições por célula (respeitando os indicadores ativos e o foco do filtro) e aplica todas as
+# camadas (fundo, barras, cor do texto e tooltip) via AplicadorVisualGrade. Quando [param reportar]
+# é true, também escreve os relatórios no terminal. Substitui a antiga pintura espalhada por
+# detector/verificador/gerenciador/filtro.
+func _recalcular_grade(reportar: bool = true, celulas_relato: Array = []) -> void:
+	if not _ger_alocacoes:
+		return
+	_detector.configurar(_ger_alocacoes.alocacoes, _dados._planejamento_csv, $"%PainelDisciplinas".cards_disciplinas)
+	_verif_carga.configurar(_ger_alocacoes.alocacoes, _dados._planejamento_csv)
+	_ger_alocacoes.filtro_semestres = $"%PainelDisciplinas".filtro_semestre
+	_ger_alocacoes.definir_filtro_professor($"%PainelDisciplinas".filtro_professor)
+	_ger_alocacoes.reaplicar_todas()
+	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	var res_choques: Dictionary = _detector.detectar()
+	var res_carga: Dictionary = _verif_carga.verificar(horas, $"%PainelDisciplinas".filtro_professor)
+	var sem_prof: Dictionary = _ger_alocacoes.celulas_sem_professor()
+	_ultimo_total_choques = res_choques.get("total", 0)
+	_mapa_condicoes = _montar_mapa_condicoes(res_choques, res_carga, sem_prof)
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var partes: PackedStringArray = chave_celula.split("_")
+		if partes.size() == 2:
+			_aplicador.aplicar(int(partes[0]), int(partes[1]), _mapa_condicoes.get(chave_celula, {}))
+	_atualizar_choques_alunos()  # também atualiza a barra de status
+	if reportar:
+		if celulas_relato.is_empty():
+			_relatorios.choques(res_choques)
+		else:
+			_relatorios.choques_em(res_choques, celulas_relato)
+		_relatorios.carga(res_carga)
+		if IND_SEM_PROFESSOR in _indicadores_ativos:
+			_relatorios.sem_professor(sem_prof.size())
+
+# Agrega, por célula alocada, as condições ativas (filtradas pelos indicadores ligados) que
+# alimentam o AplicadorVisualGrade e o tooltip. [code]em_foco[/code] vem da lógica de filtro.
+func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_prof: Dictionary) -> Dictionary:
+	var painel := $"%PainelDisciplinas"
+	var tem_filtro: bool = painel.filtro_ativo() or not _filtro_grade_semestre.is_empty()
+	var ind_choque := IND_CHOQUE in _indicadores_ativos
+	var ind_ch_exc := IND_CH_EXCEDIDA in _indicadores_ativos
+	var ind_carga := IND_CARGA in _indicadores_ativos
+	var ind_noturna := IND_NOTURNA_MANHA in _indicadores_ativos
+	var ind_sem_prof := IND_SEM_PROFESSOR in _indicadores_ativos
+	var cel_choque: Dictionary = res_choques.get("celulas_choque", {})
+	var cel_ch_exc: Dictionary = res_choques.get("celulas_ch_excedida", {})
+	var cel_carga: Dictionary = res_carga.get("celulas_carga", {})
+	var cel_noturna: Dictionary = res_carga.get("celulas_noturna", {})
+	var mapa: Dictionary = {}
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var em_foco: bool = false
+		for aloc in _ger_alocacoes.alocacoes[chave_celula]:
+			if _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
+				em_foco = true
+				break
+		var ch: Dictionary = cel_choque.get(chave_celula, {})
+		var destaque_disc: bool = false
+		if not _disciplina_destacada.is_empty():
+			for a in _ger_alocacoes.alocacoes[chave_celula]:
+				if str((a as Dictionary).get("codigo", "")).to_lower() == _disciplina_destacada:
+					destaque_disc = true
+					break
+		var cond: Dictionary = {
+			"tem_filtro": tem_filtro,
+			"em_foco": em_foco,
+			"destaque_disciplina": destaque_disc,
+			"sem_professor": ind_sem_prof and sem_prof.has(chave_celula),
+			"hora_extra": _celula_tem_extra(chave_celula),
+			"choque_prof": ind_choque and ch.get("prof", false),
+			"choque_sala": ind_choque and ch.get("sala", false),
+			"choque_sem": ind_choque and ch.get("sem", false),
+			"ch_excedida": ind_ch_exc and cel_ch_exc.has(chave_celula),
+			"carga": ind_carga and cel_carga.has(chave_celula),
+			"noturna": ind_noturna and cel_noturna.has(chave_celula),
+		}
+		cond["tooltip"] = _montar_tooltip_celula(cond)
+		mapa[chave_celula] = cond
+	return mapa
+
+# Verdadeiro se alguma alocação da célula é hora extra.
+func _celula_tem_extra(chave_celula: String) -> bool:
+	for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
+		if (aloc as Dictionary).get("is_extra", false):
+			return true
+	return false
+
+# Monta o BBCode do tooltip de uma célula listando as condições ativas (✕ erro, ⚠ aviso). Vazio
+# quando não há alerta ou quando a célula está fora do foco do filtro (espelha a pintura).
+func _montar_tooltip_celula(cond: Dictionary) -> String:
+	if cond.get("tem_filtro", false) and not cond.get("em_foco", true):
+		return ""
+	var hex_erro := PaletaSemantica.cor_hex("erro")
+	var hex_aviso := PaletaSemantica.cor_hex("aviso")
+	var linhas: Array[String] = []
+	if cond.get("sem_professor", false):
+		linhas.append("[color=%s]✕ Sem professor[/color]" % hex_erro)
+	if cond.get("choque_prof", false):
+		linhas.append("[color=%s]⚠ Choque de professor[/color]" % hex_erro)
+	if cond.get("choque_sem", false):
+		linhas.append("[color=%s]⚠ Choque de semestre[/color]" % hex_erro)
+	if cond.get("choque_sala", false):
+		linhas.append("[color=%s]⚠ Choque de sala[/color]" % hex_aviso)
+	if cond.get("carga", false):
+		linhas.append("[color=%s]⚠ Carga ≥6h no mesmo dia[/color]" % hex_aviso)
+	if cond.get("noturna", false):
+		linhas.append("[color=%s]⚠ Noturna → manhã[/color]" % hex_aviso)
+	if cond.get("ch_excedida", false):
+		linhas.append("[color=%s]⚠ CH excedida[/color]" % hex_aviso)
+	if cond.get("hora_extra", false):
+		linhas.append("[color=%s]Hora extra[/color]" % hex_aviso)
+	return "\n".join(linhas)
 
 func _on_importar_horarios_button_up() -> void:
 	if _dados.carregar_horarios_txt(GV.dir_saida):
 		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["horarios"])
-		_dados.imprimir_horarios_txt($"%Terminal", converted, cores_terminal["padrao"])
+		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 	else:
-		$"%Terminal".text_edit("Arquivo \"horarios.txt\" não foi lido corretamente!", cores_terminal["padrao"], false, true)
+		$"%Terminal".text_edit("Arquivo \"horarios.txt\" não foi lido corretamente!", "padrao", false, true)
 	_popular_grade_do_txt()
 
 func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
@@ -373,14 +497,14 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 		msg += ", " + str(plano["cards_novos"].size()) + " novas disciplinas"
 	if plano["ignoradas"] > 0:
 		msg += ", " + str(plano["ignoradas"]) + " ignoradas"
-	$"%Terminal".text_edit(msg + ".", cores_terminal.get("sucesso", "green"), true, false)
+	$"%Terminal".text_edit(msg + ".", "sucesso", true, false)
 
 # Abre o dialogo modal de selecao de cursos antes da leitura do planejamento.csv. A leitura
 # efetiva acontece em _on_cursos_selecionados_planejamento, ao confirmar a selecao.
 func _abrir_janela_selecao_cursos_planejamento() -> void:
 	if cursos.is_empty():
 		$"%Terminal".text_edit("Nenhum curso cadastrado em base_config.json:cursos.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 	var pre: Array = _cursos_marcados_planejamento.duplicate()
 	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
@@ -397,7 +521,7 @@ func _abrir_janela_selecao_cursos_planejamento() -> void:
 func _on_cursos_selecionados_planejamento(cods: Array[String]) -> void:
 	if cods.is_empty():
 		$"%Terminal".text_edit("Nenhum curso selecionado — importacao cancelada.", \
-			cores_terminal.get("aviso", "yellow"), true, true)
+			"aviso", true, true)
 		return
 	_cursos_marcados_planejamento = cods.duplicate()
 	var prefixos: Array[String] = []
@@ -409,7 +533,7 @@ func _on_cursos_selecionados_planejamento(cods: Array[String]) -> void:
 				prefixos.append(s)
 	if prefixos.is_empty():
 		$"%Terminal".text_edit("Cursos selecionados nao possuem prefixos_semestre em base_config.json.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 	_importar_planejamento_csv(prefixos)
 
@@ -418,18 +542,18 @@ func _importar_planejamento_csv(prefixos_semestre: Array[String]) -> void:
 	if _dados.carregar_planejamento(GV.dir_saida, prefixos_semestre):
 		_dados.adicionar_planejamento()
 		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
-		_dados.imprimir_horarios_txt($"%Terminal", converted, cores_terminal["padrao"])
+		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 		_sincronizar_referencias()
 		$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
 		_sincronizar_referencias()
 	else:
-		$"%Terminal".text_edit("Arquivo \"planejamento.csv\" não foi lido corretamente!", cores_terminal["padrao"], false, true)
+		$"%Terminal".text_edit("Arquivo \"planejamento.csv\" não foi lido corretamente!", "padrao", false, true)
 
 
 func _abrir_janela_selecao_cursos_horario() -> void:
 	if cursos.is_empty():
 		$"%Terminal".text_edit("Nenhum curso cadastrado em base_config.json:cursos.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 	var pre: Array = []
 	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
@@ -445,7 +569,7 @@ func _abrir_janela_selecao_cursos_horario() -> void:
 func _on_cursos_selecionados_horario(cods: Array[String]) -> void:
 	if cods.is_empty():
 		$"%Terminal".text_edit("Nenhum curso selecionado — importacao cancelada.", \
-			cores_terminal.get("aviso", "yellow"), true, true)
+			"aviso", true, true)
 		return
 	var prefixos: Array[String] = []
 	for cod in cods:
@@ -456,17 +580,17 @@ func _on_cursos_selecionados_horario(cods: Array[String]) -> void:
 				prefixos.append(s)
 	if prefixos.is_empty():
 		$"%Terminal".text_edit("Cursos selecionados nao possuem prefixos_semestre em base_config.json.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 	_importar_horarios_com_prefixos(prefixos)
 
 
 func _importar_horarios_com_prefixos(prefixos: Array[String]) -> void:
 	if not _dados.carregar_horarios_txt(GV.dir_saida):
-		$"%Terminal".text_edit("Arquivo \"horarios.txt\" não foi lido corretamente!", cores_terminal["padrao"], false, true)
+		$"%Terminal".text_edit("Arquivo \"horarios.txt\" não foi lido corretamente!", "padrao", false, true)
 		return
 	var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["horarios"])
-	_dados.imprimir_horarios_txt($"%Terminal", converted, cores_terminal["padrao"])
+	_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 	_popular_grade_do_txt(prefixos)
 
 
@@ -474,11 +598,11 @@ func _on_mesclar_csv_e_txt_button_up() -> void:
 	var caminho_txt: String = GV.dir_saida + "horarios.txt"
 	if not FileAccess.file_exists(caminho_txt):
 		$"%Terminal".text_edit("Arquivo horarios.txt não encontrado em " + caminho_txt + ".", \
-			cores_terminal.get("erro", "red"), true, false)
+			"erro", true, false)
 		return
 	if _dados._planejamento_csv.size() == 0:
 		$"%Terminal".text_edit("Nenhum planejamento carregado. Importe o planejamento.csv primeiro.", \
-			cores_terminal.get("aviso", "yellow"), true, false)
+			"aviso", true, false)
 		return
 	var resultado: Dictionary = _dados.mesclar_planejamento_com_horarios_txt(caminho_txt)
 	# Escreve merge base (sem removidas).
@@ -504,7 +628,7 @@ func _on_mesclar_csv_e_txt_button_up() -> void:
 func _recarregar_horarios_txt_apos_merge(entries: Array) -> void:
 	_dados._horarios_txt_lista["horarios"] = horarios_exe.exportar_horariostxt(entries)
 	var converted: Array = horarios_exe.exportar_horariostxt(entries)
-	_dados.imprimir_horarios_txt($"%Terminal", converted, cores_terminal["padrao"])
+	_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 
 func _on_exportar_button_up() -> void:
 	_dados.exportar_horarios(diretorio_exportacao, _ger_alocacoes.alocacoes, grades_disciplinas_curriculos, $"%Terminal", cores_terminal)
@@ -542,12 +666,12 @@ func _on_semestre_edicao_selecionado(_retorno: String, lista_selecionada: Array[
 ## Reage à alteração de filtro no PainelDisciplinas, aplicando a grade e indicadores.
 func _on_filtro_alterado(_filtros: Dictionary) -> void:
 	_filtro_grade_semestre = ""
+	_disciplina_destacada = ""
 	_ger_alocacoes.definir_filtro_professor($"%PainelDisciplinas".filtro_professor)
 	_sincronizar_filtro_curso_grade()
 	_carregar_preferencias_do_filtro()
 	_sincronizar_destaque_semestre()
 	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
-	_aplicar_indicadores()
 
 
 ## Carrega as preferências de horário do professor selecionado no filtro do painel.
@@ -568,11 +692,11 @@ func _carregar_preferencias_do_filtro() -> void:
 ## Reage ao limpar dos filtros do PainelDisciplinas.
 func _on_filtro_limpo() -> void:
 	_filtro_grade_semestre = ""
+	_disciplina_destacada = ""
 	_sincronizar_filtro_curso_grade()
 	_sincronizar_destaque_semestre()
 	_carregar_preferencias_do_filtro()
 	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
-	_aplicar_indicadores()
 
 
 # Sincroniza o filtro de curso da grade (oculta nomes de disciplinas de outros cursos em
@@ -586,23 +710,22 @@ func _sincronizar_filtro_curso_grade() -> void:
 			prefixos.append(str(p).to_upper())
 	_ger_alocacoes.curso_filtro_prefixos = prefixos
 
-# Define o semestre destacado na grade (oculta outros semestres em sobreposições): o clique em
-# card tem precedência; na ausência dele, usa o filtro de semestre do painel. Reaplica o texto.
+# Sincroniza o destaque de semestre da grade (clique em card / arraste, que oculta outros semestres
+# em sobreposições) e o filtro de semestre do painel. O filtro do painel é tratado pelos toggles da
+# Visualização (ocultar/esmaecer), separado do destaque temporário do arraste.
 func _sincronizar_destaque_semestre() -> void:
-	var sem: String = _filtro_grade_semestre
-	if sem.is_empty():
-		var fs: Array = $"%PainelDisciplinas".filtro_semestre
-		if fs.size() == 1:
-			sem = fs[0]
-	_ger_alocacoes.semestre_filtro = sem
+	_ger_alocacoes.semestre_filtro = _filtro_grade_semestre
+	_ger_alocacoes.filtro_semestres = $"%PainelDisciplinas".filtro_semestre
 	_ger_alocacoes.reaplicar_todas()
 
 
 ## Ao interagir com um card (clique ou arrasto): seleciona as preferências de horário do
 ## primeiro professor com cadastro e destaca o semestre do card apenas na grade.
 func _on_card_interagido(card: CardDisciplina) -> void:
+	# Clicar em um card destaca apenas as células daquela disciplina (verde claro) na grade.
+	# _selecionar_preferencias_do_card recalcula a grade (e já usa o destaque recém-definido).
+	_disciplina_destacada = card.codigo.to_lower()
 	_selecionar_preferencias_do_card(card)
-	_aplicar_filtro_grade_semestre(card.semestre)
 
 # Seleciona o arquivo de preferências de horário do primeiro professor do card com cadastro.
 func _selecionar_preferencias_do_card(card: CardDisciplina) -> void:
@@ -638,22 +761,112 @@ func _aplicar_filtro_grade_semestre(sem: String) -> void:
 	_filtro_grade_semestre = sem
 	_sincronizar_destaque_semestre()
 	_aplicar_filtro_grade(_ger_alocacoes.alocacoes)
-	_aplicar_indicadores()
 
 func _on_timer_timeout() -> void:
 	if _dados._horarios_txt_lista.get("horarios", []).size() > 0 and _dados._horarios_txt_lista.get("planejamento", []).size() > 0:
 		$"%SeletorAcoes".get_node("MenuButton").get_popup().set_item_disabled(2, false)
 
-# Ao iniciar o arrasto de uma célula, destaca na grade o semestre da disciplina que será movida
-# (a mesma escolhida por _indice_com_filtro), revelando antes de soltar onde haveria choque.
+# Ao iniciar o arrasto de uma célula, prepara a grade para revelar onde a disciplina pode entrar
+# sem choque, conforme os filtros ativos: [br]
+# - só professor: mantém as disciplinas do professor em destaque (verde) e [b]hachura[/b] os
+#   horários do semestre da disciplina (choque de semestre a evitar); [br]
+# - só semestre: destaca o semestre (verde) e [b]hachura[/b] os horários do professor da disciplina
+#   (choque de professor a evitar); [br]
+# - nenhum: destaca o semestre da disciplina (padrão); [br]
+# - ambos: mantém professor + semestre (não força destaque nem hachura).
 func _on_grade_arraste_iniciado(linha: int, coluna: int) -> void:
 	var arr: Array = _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna])
 	if arr.is_empty():
 		return
-	var chave_card: String = (arr[_indice_com_filtro(arr)] as Dictionary).get("chave", "")
-	var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave_card, null)
-	if card:
+	var aloc: Dictionary = arr[_indice_com_filtro(arr)]
+	var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""), null)
+	if not card:
+		return
+	var prof_ativo: bool = not $"%PainelDisciplinas".filtro_professor.is_empty()
+	var sem_ativo: bool = $"%PainelDisciplinas".filtro_semestre.size() > 0
+	if prof_ativo and not sem_ativo:
+		_aplicar_hachura(_celulas_do_semestre(card.semestre, linha, coluna))
+	elif sem_ativo and not prof_ativo:
 		_aplicar_filtro_grade_semestre(card.semestre)
+		_aplicar_hachura(_celulas_do_professor(_profs_da_aloc(aloc), linha, coluna))
+	elif not prof_ativo and not sem_ativo:
+		_aplicar_filtro_grade_semestre(card.semestre)
+
+# Ao terminar o arrasto (drop ou cancelamento), remove a hachura de todas as células.
+func _on_grade_arraste_terminado() -> void:
+	var grade: GradeVisual = $"%GradeHorarios"
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var partes: PackedStringArray = chave_celula.split("_")
+		if partes.size() != 2:
+			continue
+		var cel: Celula = grade.get_celula(int(partes[0]), int(partes[1]))
+		if cel:
+			cel.hachurado = false
+
+# Aplica hachura nas células de [param celulas] ("linha_coluna" → true) e a remove das demais.
+func _aplicar_hachura(celulas: Dictionary) -> void:
+	var grade: GradeVisual = $"%GradeHorarios"
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var partes: PackedStringArray = chave_celula.split("_")
+		if partes.size() != 2:
+			continue
+		var cel: Celula = grade.get_celula(int(partes[0]), int(partes[1]))
+		if cel:
+			cel.hachurado = celulas.has(chave_celula)
+
+# Células ocupadas por alguma disciplina do semestre [param sem] (string exata, como o detector de
+# choques), exceto a célula de origem do arraste.
+func _celulas_do_semestre(sem: String, linha_orig: int, coluna_orig: int) -> Dictionary:
+	var resultado: Dictionary = {}
+	var sl: String = sem.to_lower()
+	var origem: String = "%d_%d" % [linha_orig, coluna_orig]
+	for chave_celula in _ger_alocacoes.alocacoes:
+		if chave_celula == origem:
+			continue
+		for a in _ger_alocacoes.alocacoes[chave_celula]:
+			if _semestre_da_aloc(a as Dictionary).to_lower() == sl:
+				resultado[chave_celula] = true
+				break
+	return resultado
+
+# Células ocupadas por algum dos [param profs] (minúsculo), exceto a célula de origem do arraste.
+func _celulas_do_professor(profs: Array, linha_orig: int, coluna_orig: int) -> Dictionary:
+	var resultado: Dictionary = {}
+	var alvo: Dictionary = {}
+	for p in profs:
+		alvo[str(p).to_lower()] = true
+	var origem: String = "%d_%d" % [linha_orig, coluna_orig]
+	for chave_celula in _ger_alocacoes.alocacoes:
+		if chave_celula == origem:
+			continue
+		for a in _ger_alocacoes.alocacoes[chave_celula]:
+			var achou: bool = false
+			for ap in _dados._planejamento_csv.get((a as Dictionary).get("chave", ""), {}).get("professor", []):
+				if alvo.has(str(ap).to_lower()):
+					achou = true
+					break
+			if achou:
+				resultado[chave_celula] = true
+				break
+	return resultado
+
+# Professores da alocação (do planejamento.csv, com fallback para o card).
+func _profs_da_aloc(aloc: Dictionary) -> Array:
+	var p: Array = _dados._planejamento_csv.get(aloc.get("chave", ""), {}).get("professor", [])
+	if p.is_empty():
+		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""))
+		if card:
+			return card.professores
+	return p
+
+# Semestre de uma alocação (do planejamento.csv, com fallback para o card).
+func _semestre_da_aloc(aloc: Dictionary) -> String:
+	var s: String = _dados._planejamento_csv.get(aloc.get("chave", ""), {}).get("semestre", "")
+	if s.is_empty():
+		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""))
+		if card:
+			s = card.semestre
+	return s
 
 func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> void:
 	if linha == 0 or coluna == 0:
@@ -692,7 +905,7 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 			_refrescar_apos_alocacao([chave_orig, chave_dest])
 			$"%Terminal".text_edit("Movido: %s → [%d, %d]." % \
 				[aloc.get("codigo", "?").to_upper(), linha, coluna], \
-				cores_terminal.get("sucesso", "green"), true, false)
+				"sucesso", true, false)
 			_reportar_choques_alunos_celulas([[linha, coluna]])
 			return
 	var chave: String = dados.get("chave", "")
@@ -705,7 +918,7 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 	if card.ch_alocada >= card.ch_total and not card.permite_extra:
 		$"%Terminal".text_edit("Disciplina %s já com CH completa (%d/%d)." % \
 			[codigo.to_upper(), card.ch_alocada, card.ch_total], \
-			cores_terminal.get("aviso", "yellow"), true, false)
+			"aviso", true, false)
 		return
 	var modo_extra: bool = card.permite_extra
 	var ch_restante: int = 1 if modo_extra else card.ch_total - card.ch_alocada
@@ -750,15 +963,15 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 	if modo_extra:
 		$"%Terminal".text_edit("Hora extra: %s → [%d, %d] (%d/%dh +%d extra)." % \
 			[codigo.to_upper(), linha, coluna, card.ch_alocada, card.ch_total, card.ch_extra], \
-			cores_terminal.get("sucesso", "green"), true, false)
+			"sucesso", true, false)
 	elif shift and slots_alocados > 1:
 		$"%Terminal".text_edit("Alocado (Shift): %s → %dh [%d-%d, %d] (%d/%dh)." % \
 			[codigo.to_upper(), slots_alocados, linha, linha + slots_alocados - 1, coluna, card.ch_alocada, card.ch_total], \
-			cores_terminal.get("sucesso", "green"), true, false)
+			"sucesso", true, false)
 	else:
 		$"%Terminal".text_edit("Alocado: %s → [%d, %d] (%d/%dh)." % \
 			[codigo.to_upper(), linha, coluna, card.ch_alocada, card.ch_total], \
-			cores_terminal.get("sucesso", "green"), true, false)
+			"sucesso", true, false)
 	_refrescar_apos_alocacao(afetadas)
 	var celulas_novas: Array = []
 	for i in slots_alocados:
@@ -787,7 +1000,7 @@ func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
 	var codigos_str: String = " + ".join(codigos)
 	$"%Terminal".text_edit("Removida alocação: %s ← [%d, %d]." % \
 		[codigos_str, linha, coluna], \
-		cores_terminal.get("aviso", "yellow"), true, false)
+		"aviso", true, false)
 	_detectar_choques()
 
 func _indice_com_filtro(arr: Array) -> int:
@@ -865,7 +1078,7 @@ func _mover_bloco_celulas(linha_orig: int, coluna_orig: int, linha_dest: int, co
 	var n: int = linhas_origem.size()
 	if linha_dest + n > grade_vis._linhas:
 		$"%Terminal".text_edit("Não há espaço para mover %d células a partir da linha %d." % [n, linha_dest],
-			cores_terminal.get("erro", "red"), true, false)
+			"erro", true, false)
 		return
 	var alocacoes_mover: Array[Dictionary] = []
 	for r_orig in linhas_origem:
@@ -895,7 +1108,7 @@ func _mover_bloco_celulas(linha_orig: int, coluna_orig: int, linha_dest: int, co
 	_refrescar_apos_alocacao(afetadas_bloco)
 	$"%Terminal".text_edit("Bloco movido (Shift): %d células → [%d-%d, %d]." %
 		[n, linha_dest, linha_dest + n - 1, coluna_dest],
-		cores_terminal.get("sucesso", "green"), true, false)
+		"sucesso", true, false)
 	var celulas_bloco: Array = []
 	for i in n:
 		celulas_bloco.append([linha_dest + i, coluna_dest])
@@ -909,37 +1122,37 @@ func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 	$"%Terminal".text_edit("", "padrao", false, true)
 	_reportar_choques_alunos_celulas([[linha, coluna]])
 
-# Clique direito: abre o menu de alterações da disciplina (anteriormente era o clique esquerdo).
+# Clique direito: abre um menu com as disciplinas daquele horário. Ao escolher uma, aplica o
+# filtro de semestre ao semestre dela (atalho para focar a grade naquela disciplina).
 func _on_grade_celula_clicada_direita(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
 		return
-	var chave_celula := "%d_%d" % [linha, coluna]
-	var arr: Array = _ger_alocacoes.obter_alocacoes(chave_celula)
-	if not arr.is_empty():
-		_editor.abrir(linha, coluna, arr[0])
-
-func _on_editor_confirmar(linha: int, coluna: int, dados: Dictionary) -> void:
-	var chave_celula := "%d_%d" % [linha, coluna]
-	var arr: Array = _ger_alocacoes.obter_alocacoes(chave_celula)
+	var arr: Array = _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna])
 	if arr.is_empty():
 		return
-	arr[0]["sala"] = dados["sala"]
-	arr[0]["tipo"] = dados["tipo"]
-	arr[0]["turma"] = dados["turma"]
-	arr[0]["vagas"] = dados["vagas"]
-	_ger_alocacoes.atualizar_celula(linha, coluna)
-	_refrescar_apos_alocacao()
+	_menu_celula.clear()
+	_menu_celula_semestres.clear()
+	for a_dict in arr:
+		var aloc: Dictionary = a_dict
+		var codigo: String = str(aloc.get("codigo", "")).to_upper()
+		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""), null)
+		var nome: String = card.nome if card else codigo
+		var sem: String = _semestre_da_aloc(aloc)
+		_menu_celula.add_item("%s — %s (%s)" % [codigo, nome, sem])
+		_menu_celula_semestres.append(sem)
+	_menu_celula.reset_size()
+	_menu_celula.popup(Rect2i(DisplayServer.mouse_get_position(), Vector2i.ZERO))
 
-func _detectar_choques(celulas_afetadas: Array[String] = []) -> void:
-	_detector.configurar($"%GradeHorarios", _ger_alocacoes.alocacoes, _dados._planejamento_csv, $"%PainelDisciplinas".cards_disciplinas, cores_terminal)
-	var marcar_choques: bool = IND_CHOQUE in _indicadores_ativos
-	var resultado: Dictionary = _detector.detectar(marcar_choques, celulas_afetadas)
-	if resultado.has("resumo"):
-		for p in resultado["resumo"]:
-			$"%Terminal".linha(p, resultado["cor"])
-	_ultimo_total_choques = resultado.get("total", 0)
-	_atualizar_choques_alunos()
-	_verificar_carga_professor()
+# Ao escolher uma disciplina no menu da célula, aplica o filtro de semestre ao semestre dela.
+func _on_menu_celula_index_pressed(idx: int) -> void:
+	if idx < 0 or idx >= _menu_celula_semestres.size():
+		return
+	var sem: String = _menu_celula_semestres[idx]
+	if not sem.is_empty():
+		$"%PainelDisciplinas".selecionar_filtro_semestre_unico(sem)
+
+func _detectar_choques(_celulas_afetadas: Array[String] = []) -> void:
+	_recalcular_grade(true)
 
 func _notification(what: int) -> void:
 	# Na troca de tema, reaplica a barra de status (cor de choques adaptada) sem redetectar nem
@@ -1063,7 +1276,7 @@ func _imprimir_choque_par(aloc_a: Dictionary, aloc_b: Dictionary) -> void:
 	var rot_a: String = _ger_alocacoes.rotulo_alocacao(aloc_a)
 	var rot_b: String = _ger_alocacoes.rotulo_alocacao(aloc_b)
 	$"%Terminal".linha("Choque de alunos: %s × %s → %d aluno(s) em ambas." % \
-		[rot_a, rot_b, n], cores_terminal.get("aviso", "yellow"))
+		[rot_a, rot_b, n], "aviso")
 	if n > 0 and IND_DETALHAR_ALUNOS in _indicadores_ativos:
 		_listar_alunos_em_choque(discentes, rot_a, rot_b)
 
@@ -1122,19 +1335,9 @@ func _prioridade_condicao(cond: String) -> int:
 		return 3
 	return 4
 
-func _verificar_carga_professor() -> void:
-	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
-	_verif_carga.configurar($"%GradeHorarios", _ger_alocacoes.alocacoes, _dados._planejamento_csv)
-	var resultado: Dictionary = _verif_carga.verificar(horas, IND_CARGA in _indicadores_ativos, \
-		IND_NOTURNA_MANHA in _indicadores_ativos)
-	for aviso in resultado["avisos"]:
-		$"%Terminal".text_edit(aviso, cores_terminal.get("erro", "red"), true, false)
-	if not resultado["info"].is_empty():
-		$"%Terminal".text_edit(resultado["info"], cores_terminal.get("padrao", "gray"), true, false)
-
 func _sincronizar_referencias() -> void:
 	_ger_alocacoes.configurar($"%GradeHorarios", $"%PainelDisciplinas".cards_disciplinas, _dados._planejamento_csv, analise_grades, grades_disciplinas_curriculos)
-	_detector.configurar($"%GradeHorarios", _ger_alocacoes.alocacoes, _dados._planejamento_csv, $"%PainelDisciplinas".cards_disciplinas, cores_terminal)
+	_detector.configurar(_ger_alocacoes.alocacoes, _dados._planejamento_csv, $"%PainelDisciplinas".cards_disciplinas)
 	_vincular_regras_aos_cards()
 
 
@@ -1170,35 +1373,11 @@ func _vincular_regras_aos_cards() -> void:
 		DicaFlutuante.vincular(card, bbcode)
 
 
-## Aplica o filtro de visibilidade nas células da grade de horários.
-func _aplicar_filtro_grade(alocacoes: Dictionary) -> void:
-	var grade := $"%GradeHorarios" as GradeVisual
-	if not grade:
-		return
-	var painel := $"%PainelDisciplinas"
-	var tem_filtro: bool = painel.filtro_ativo() or not _filtro_grade_semestre.is_empty()
-	for chave_celula in alocacoes:
-		var partes: PackedStringArray = chave_celula.split("_")
-		if partes.size() != 2:
-			continue
-		var celula: Celula = grade.get_celula(int(partes[0]), int(partes[1]))
-		if not tem_filtro:
-			celula.cor_fundo = Color(0.173, 0.173, 0.173, 1)
-			celula.cor_texto_override = Color.TRANSPARENT
-			continue
-		var bateu: bool = false
-		for aloc in alocacoes[chave_celula]:
-			if _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
-				bateu = true
-				break
-		if bateu:
-			celula.cor_fundo = Color("#1a3a1a")
-			celula.cor_texto_override = Color.WHITE
-		else:
-			celula.cor_central = "dimgray"
-			celula.cor_fundo = Color(0.173, 0.173, 0.173, 1)
-			celula.cor_texto_override = Color.TRANSPARENT
-			celula.cor_texto_override = Color.TRANSPARENT
+## Reaplica o visual da grade refletindo o filtro ativo (sem reimprimir relatórios no terminal).
+## O foco do filtro (fundo destacado/esmaecido) é decidido pelo AplicadorVisualGrade a partir das
+## condições por célula montadas em [method _recalcular_grade].
+func _aplicar_filtro_grade(_alocacoes: Dictionary) -> void:
+	_recalcular_grade(false)
 
 func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
 	match retorno:
@@ -1211,7 +1390,7 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 			file_handling.save_json(diretorio_exportacao, "planejamento.json", json)
 			$"%Terminal".text_edit("Exportado: " + diretorio_exportacao + "planejamento.json" + \
 				" (" + str(json["disciplinas"].size()) + " disciplinas).", \
-				cores_terminal.get("sucesso", "green"), true, false)
+				"sucesso", true, false)
 		"importar_csv":
 			_converter_planejamento_csv()
 		"horarios.txt":
@@ -1237,7 +1416,7 @@ func _converter_planejamento_csv() -> void:
 		var file_name: String = path.get_file()
 		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, "planejamento.csv")
 		$"%Terminal".text_edit("%s convertido e salvo como planejamento.csv em %s." \
-			% [file_name, GV.dir_saida], cores_terminal.get("sucesso", "green"), true, true)
+			% [file_name, GV.dir_saida], "sucesso", true, true)
 		fd.queue_free()
 		# Encadeia direto na selecao de cursos para importar o arquivo recem-convertido,
 		# poupando o usuario de abrir manualmente "Arquivo > Abrir planejamento.csv".
@@ -1295,7 +1474,7 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		temp_xlsx = GV.dir_temp + nome_arquivo
 		if not file_handling.converter_xlsx_para_csv(caminho, temp_xlsx):
 			$"%Terminal".text_edit("Conversor .xlsx nao encontrado. Coloque xlsx_to_csv.exe em externo/bin/ para importar arquivos Excel.", \
-				cores_terminal.get("erro", "red"), true, false)
+				"erro", true, false)
 			return
 		csv_para_importar = temp_xlsx
 
@@ -1317,7 +1496,7 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		var utf8_safe := FileHandling.SafeFileAccess.new(temp_path, FileAccess.READ)
 		if not utf8_safe.is_valid():
 			$"%Terminal".text_edit("Erro ao ler arquivo convertido: " + temp_path, \
-				cores_terminal.get("erro", "red"), true, false)
+				"erro", true, false)
 			if not temp_xlsx.is_empty():
 				DirAccess.remove_absolute(temp_xlsx)
 			return
@@ -1327,7 +1506,7 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		var destino := FileHandling.SafeFileAccess.new(diretorio_regras + "/" + nome_arquivo, FileAccess.WRITE)
 		if not destino.is_valid():
 			$"%Terminal".text_edit("Erro ao salvar arquivo em " + diretorio_regras, \
-				cores_terminal.get("erro", "red"), true, false)
+				"erro", true, false)
 			DirAccess.remove_absolute(temp_path)
 			if not temp_xlsx.is_empty():
 				DirAccess.remove_absolute(temp_xlsx)
@@ -1341,7 +1520,7 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		var err := DirAccess.copy_absolute(csv_para_importar, diretorio_regras + "/" + nome_arquivo)
 		if err != OK:
 			$"%Terminal".text_edit("Erro ao copiar arquivo para " + diretorio_regras, \
-				cores_terminal.get("erro", "red"), true, false)
+				"erro", true, false)
 			if not temp_xlsx.is_empty():
 				DirAccess.remove_absolute(temp_xlsx)
 			return
@@ -1351,7 +1530,7 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		DirAccess.remove_absolute(temp_xlsx)
 
 	$"%Terminal".text_edit("Importado: " + destino_final, \
-		cores_terminal.get("sucesso", "green"), true, false)
+		"sucesso", true, false)
 
 
 ## Importa o [code]planejamento.json[/code] exportado do modulo Planejamento de Oferta.
@@ -1362,12 +1541,12 @@ func _importar_planejamento_json() -> void:
 	if not FileAccess.file_exists(caminho):
 		$"%Terminal".text_edit("Nenhum planejamento.json encontrado em " + diretorio_exportacao \
 			+ ". Exporte um planejamento no modulo Planejamento de Oferta primeiro.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 	var dados: Dictionary = file_handling.load_json(diretorio_exportacao, "planejamento.json")
 	if dados.is_empty() or not dados.has("disciplinas"):
 		$"%Terminal".text_edit("planejamento.json com formato invalido.", \
-			cores_terminal.get("erro", "red"), true, true)
+			"erro", true, true)
 		return
 
 	# Converte o JSON para o formato _planejamento_csv.
@@ -1417,12 +1596,12 @@ func _importar_planejamento_json() -> void:
 
 	if _dados._planejamento_csv.is_empty():
 		$"%Terminal".text_edit("Nenhuma disciplina valida encontrada no planejamento.json.", \
-			cores_terminal.get("aviso", "yellow"), true, true)
+			"aviso", true, true)
 		return
 
 	_dados.adicionar_planejamento()
 	var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
-	_dados.imprimir_horarios_txt($"%Terminal", converted, cores_terminal["padrao"])
+	_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 	_sincronizar_referencias()
 	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
 
@@ -1473,7 +1652,7 @@ func _importar_planejamento_json() -> void:
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
 	$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
-		% [_dados._planejamento_csv.size(), cont_aloc, caminho], cores_terminal.get("sucesso", "green"), true, false)
+		% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
 
 func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
 	match retorno:
@@ -1504,7 +1683,7 @@ func _nova_grade() -> void:
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
 	$"%Terminal".text_edit("Grade limpa. Recomece as alocações.", \
-		cores_terminal.get("sucesso", "green"), true, false)
+		"sucesso", true, false)
 
 # Cards a considerar no posicionamento automatico: todos quando nao ha filtro de curso ativo, ou
 # apenas os do curso filtrado (ex.: so ECxx com Engenharia Civil selecionada). As alocacoes
@@ -1537,7 +1716,7 @@ func _abrir_config_posicionamento() -> void:
 		if not fc.is_empty():
 			sufixo = " do curso %s" % cursos.get(fc, {}).get("nome", fc)
 		$"%Terminal".text_edit("Nenhuma disciplina pendente%s para posicionar. Importe um planejamento primeiro." % sufixo, \
-			cores_terminal.get("aviso", "yellow"), true, true)
+			"aviso", true, true)
 		return
 	_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic)
 
@@ -1546,11 +1725,6 @@ func _abrir_config_posicionamento() -> void:
 func _on_config_posicionamento_definida(cfg: Dictionary) -> void:
 	_inicio_manha_posic = bool(cfg.get("inicio_manha", true))
 	_permitir_sabado_posic = bool(cfg.get("permitir_sabado", false))
-	$"%Terminal".text_edit("", "padrao", false, true)
-	var fc: String = $"%PainelDisciplinas".filtro_curso
-	if not fc.is_empty():
-		$"%Terminal".text_edit("Filtro curso: %s" % cursos.get(fc, {}).get("nome", fc), \
-			cores_terminal.get("aviso", "yellow"), true, false)
 	var grade: GradeVisual = $"%GradeHorarios"
 	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
 	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
@@ -1590,16 +1764,11 @@ func _peso_choque_alunos(cod_a: String, cod_b: String) -> int:
 	return analise_historico.comparar_discentes_disciplina(cod_a, cod_b, \
 		_condicoes_discentes, _condicoes_choque_selecionadas).size()
 
-# Aplica o plano do posicionador: aloca cada slot, atualiza a CH dos cards, repinta a grade e
-# reporta no terminal as aulas alocadas e as disciplinas que não couberam. Os choques restantes
-# são reimpressos por _refrescar_apos_alocacao (detecção + status bar).
+# Aplica o plano do posicionador: aloca cada slot, atualiza a CH dos cards, imprime o relatório do
+# posicionamento (título + filtro de curso + não alocadas) e repinta a grade. Os choques resultantes
+# são reportados em seguida por _refrescar_apos_alocacao (logo abaixo no terminal).
 func _aplicar_plano_posicionamento(plano: Dictionary) -> void:
-	var alocacoes_plano: Array = plano.get("alocacoes", [])
-	if alocacoes_plano.is_empty():
-		$"%Terminal".text_edit("Posicionamento automático: nenhuma alocação gerada.", \
-			cores_terminal.get("aviso", "yellow"), true, false)
-		return
-	for item in alocacoes_plano:
+	for item in plano.get("alocacoes", []):
 		_ger_alocacoes.alocar("%d_%d" % [item["linha"], item["coluna"]], item["aloc"])
 		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(item["chave"])
 		if card:
@@ -1611,14 +1780,9 @@ func _aplicar_plano_posicionamento(plano: Dictionary) -> void:
 				if irma.codigo.to_lower() == cod_base and chave_irma != item["chave"]:
 					irma.ch_alocada += 1
 	_sincronizar_referencias()
-	_ger_alocacoes.reaplicar_todas()
+	var fc: String = $"%PainelDisciplinas".filtro_curso
+	var nome_curso: String = cursos.get(fc, {}).get("nome", fc) if not fc.is_empty() else ""
+	_relatorios.posicionamento(plano, nome_curso)
 	_refrescar_apos_alocacao()
-	$"%Terminal".linha("Posicionamento automático: %d aula(s) alocada(s)." % alocacoes_plano.size(), \
-		cores_terminal.get("sucesso", "green"))
-	var nao_alocadas: Array = plano.get("nao_alocadas", [])
-	if not nao_alocadas.is_empty():
-		$"%Terminal".secao("Não foi possível posicionar completamente")
-		for msg in nao_alocadas:
-			$"%Terminal".item(str(msg), 0, cores_terminal.get("aviso", "yellow"))
 
 #endregion
