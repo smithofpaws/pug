@@ -227,6 +227,9 @@ func _carregar_arquivos() -> void:
 			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/grades/", files[a])
 			JsonValidator.validar_grade(dados)
 			GV.grades[nome] = dados
+	# Deriva a lista de grades de cada curso a partir dos arquivos carregados (fonte unica de
+	# verdade: os proprios arquivos de grade, nomeados <cod_curso>_<versao>.json).
+	_derivar_grades_cursos()
 	# Carregar equivalencias
 	dir = DirAccess.open(GV.dir_principal + "arquivos/equivalencias/")
 	if dir == null:
@@ -249,6 +252,27 @@ func _carregar_arquivos() -> void:
 			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/cargaexigida/", files[a])
 			JsonValidator.validar_carga_exigida(dados)
 			GV.ch_exigida[nome] = dados
+
+# Deriva [code]cursos[cod].grades[/code] a partir dos arquivos em [code]arquivos/grades/[/code]
+# (ja carregados em [member GV.grades]), agrupando pelo prefixo [code]cod_curso[/code] do nome
+# [code]<cod_curso>_<versao>[/code]. Substitui a lista mantida a mao no base_config.json: os arquivos
+# de grade sao a fonte unica de verdade. So roda em memoria; nao grava nada em disco.
+func _derivar_grades_cursos() -> void:
+	var cursos: Dictionary = GV.configuracao_base.get("cursos", {})
+	if cursos.is_empty():
+		return
+	# Zera as listas; serao repovoadas a partir dos arquivos presentes.
+	for cod in cursos:
+		cursos[cod]["grades"] = []
+	for chave_grade in GV.grades:
+		var cod: String = str(chave_grade).get_slice("_", 0)
+		if cursos.has(cod):
+			cursos[cod]["grades"].append(chave_grade)
+		else:
+			push_warning("Grade '" + str(chave_grade) + "' sem curso correspondente em base_config.json:cursos.")
+	# Ordem deterministica (detectar_versao_grade adota a mais recente via sort).
+	for cod in cursos:
+		cursos[cod]["grades"].sort()
 
 func _limpar_modulo() -> void:
 	for child in $Modulo.get_children():

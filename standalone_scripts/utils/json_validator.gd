@@ -54,7 +54,7 @@ static func _schema_base_config() -> Dictionary:
 				"nome": STR,
 				"prefixos_semestre": ARR,
 				"turmas": ARR,
-				"grades": ARR
+				"?grades": ARR
 			}
 		}
 	}

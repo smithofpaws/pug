@@ -539,7 +539,9 @@ func _mapear_cursos() -> void:
 		_curso_por_matricula[aluno[0]] = _detectar_curso(aluno[0])
 
 # Detecta o cod_curso de uma [param matricula]: resolve a grade do aluno (via detectar_versao_grade)
-# e devolve o curso cuja lista de grades a contém. Retorna "" se não encontrar.
+# e devolve o curso cuja lista de grades a contém. A lista [code]cursos[cod].grades[/code] é derivada
+# dos arquivos em [code]arquivos/grades/[/code] no startup, então cobre todas as grades existentes.
+# Retorna "" se não encontrar.
 func _detectar_curso(matricula: String) -> String:
 	return _curso_da_grade(analise_historico.detectar_versao_grade(matricula, _historico))
 

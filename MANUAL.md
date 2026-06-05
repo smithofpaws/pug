@@ -465,6 +465,10 @@ Grade de horários do semestre. Cada linha representa uma aula com professor, sa
 
 Oferta de disciplinas para o semestre planejado. Contém código da disciplina, carga horária e o(s) professor(es) alocado(s). Pode ser gerado pelo módulo Planejamento de Oferta ou editado manualmente em planilha.
 
+### 6.4 Grades curriculares (`arquivos/grades/`)
+
+Cada grade é um arquivo JSON nomeado `<cod_curso>_<versao>.json` (ex.: `alec_2023.json`, `alem_2023.json`), onde `cod_curso` é o código do curso definido em `base_config.json`. O programa **detecta automaticamente** as grades disponíveis a partir desses arquivos na inicialização — para adicionar uma nova versão de currículo, basta colocar o arquivo na pasta e reabrir o programa; não é preciso editar o `base_config.json`. O sufixo `_0000` é um placeholder para "disciplinas sem grade".
+
 ---
 
 ## 7. Arquivos de Saída
