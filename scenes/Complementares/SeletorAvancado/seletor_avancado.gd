@@ -44,10 +44,25 @@ var atualizar_texto_padrao: bool = false
 # Array que contém os dados a serem retornados pelo signal de seleção.
 var _retorno: Array[String] = []
 
-# Contém uma lista de matrizes que separa os itens por grupos e suas definições. Empregado em 
-# definições mais complexas do comportamento dos grupos, como grupos que só podem ter um item 
+# Contém uma lista de matrizes que separa os itens por grupos e suas definições. Empregado em
+# definições mais complexas do comportamento dos grupos, como grupos que só podem ter um item
 # marcado por vez, por exemplo.
 var _selecao_unica: Array[Array] = []
+
+# Dicas por item do dropdown (índice do PopupMenu → texto BBCode), exibidas via DicaFlutuante ao
+# passar o mouse / focar o item. Itens de PopupMenu não são Controls (DicaFlutuante.vincular exige um
+# Control), por isso usamos o sinal id_focused do popup. Assume id == índice — válido enquanto os
+# itens forem criados por add_item/add_check_item sem id explícito (caso desta cena).
+var _dicas_itens: Dictionary = {}
+
+## Vincula uma DicaFlutuante ao item de índice [param index] do dropdown, exibida ao passar o mouse.
+## Chame [b]após[/b] definir [member lista_itens] (reconstruir a lista não preserva as dicas). Texto
+## vazio remove a dica do item.
+func definir_dica_item(index: int, texto_bbcode: String) -> void:
+	if texto_bbcode.strip_edges().is_empty():
+		_dicas_itens.erase(index)
+	else:
+		_dicas_itens[index] = texto_bbcode
 
 func selecionar_item(index: int) -> void:
 	if index >= _selecao_unica.size():
@@ -80,13 +95,25 @@ func limpar_selecao() -> void:
 			popup.set_item_checked(i, false)
 
 func _ready() -> void:
-	$MenuButton.get_popup().index_pressed.connect(_on_popupmenu_option_chosen)
-	$MenuButton.get_popup().set_hide_on_checkable_item_selection(false)
+	var popup: PopupMenu = $MenuButton.get_popup()
+	popup.index_pressed.connect(_on_popupmenu_option_chosen)
+	popup.set_hide_on_checkable_item_selection(false)
+	# Dicas por item (ver _dicas_itens): id_focused dispara ao focar/passar o mouse; ao fechar o popup
+	# escondemos a dica pendente.
+	popup.id_focused.connect(_on_item_focado)
+	popup.popup_hide.connect(func(): DicaFlutuante.esconder())
 	$MenuButton.clip_text = true
 	$MenuButton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	aplicar_contorno_popup()
 	_set_textopadrao(texto_padrao)
 	gui_input.connect(_on_gui_input)
+
+# Exibe (ou esconde) a DicaFlutuante do item sob o foco/mouse. Sem dica para o id, esconde a anterior.
+func _on_item_focado(id: int) -> void:
+	if _dicas_itens.has(id):
+		DicaFlutuante.mostrar_em(_dicas_itens[id])
+	else:
+		DicaFlutuante.esconder()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_THEME_CHANGED:

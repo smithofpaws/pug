@@ -324,13 +324,25 @@ O botão **Posicionar automaticamente** abre um diálogo de configuração e, em
 - **Turno inicial preferido** — manhã, tarde ou noite.
 - **Permitir sábado** — inclui ou exclui o sábado na tentativa de alocação.
 
+O diálogo deixa explícito o **escopo** (todos os cursos ou apenas o curso filtrado) e mostra um **diagnóstico de pré-requisitos** colorido: vermelho = item obrigatório ausente (a **carga horária** das disciplinas, vinda do planejamento — sem ela o botão **Posicionar** fica desabilitado); laranja = presente mas incompleto (ex.: disciplinas sem CH, ou grade sem alguns códigos); amarelo = item opcional ausente (grade curricular, `hist.csv` ou preferências de professores — não impedem o posicionamento). O `hist.csv` só fica verde quando contém alunos das disciplinas do escopo: um histórico de outro curso (sem alunos nas pendentes) aparece em amarelo, pois não influencia o choque entre alunos ali.
+
 O algoritmo considera preferências de professores (quando disponíveis), choques existentes e prioridades configuradas. O resultado pode ser ajustado manualmente após a execução.
 
 As preferências do professor (escala 1 = desejado a 5 = indesejado, verde→vermelho) entram no custo de forma **não-linear**: o peso e o expoente são ajustáveis em **Configurações › Posicionamento** (cada campo traz uma dica explicativa). Horários que o professor deixou em branco são proibidos; um horário marcado em vermelho é fortemente evitado, mas ainda possível.
 
-Quando há disciplinas pendentes **compartilhadas entre cursos** (ex.: `EC01;EM01`), o programa exibe um aviso antes de prosseguir, listando-as e permitindo cancelar para posicioná-las manualmente primeiro — já que o horário delas é uma decisão conjunta dos cursos envolvidos.
+Quando há disciplinas pendentes **compartilhadas entre cursos** (ex.: `EC01;EM01`), o programa exibe um aviso antes de prosseguir, listando-as — já que o horário delas é uma decisão conjunta dos cursos envolvidos. O aviso oferece três caminhos: **Posicionar todas** (inclui as compartilhadas), **Apenas as não compartilhadas** (posiciona o restante agora e deixa as compartilhadas para depois) ou **Cancelar** (para posicioná-las manualmente primeiro).
 
 Com um curso selecionado no filtro, o posicionamento atua apenas nas disciplinas desse curso (ex.: somente as `ECxx` com Engenharia Civil selecionada). As alocações já existentes dos demais cursos são preservadas como restrição, evitando choques.
+
+#### Mesclar horários.txt e planejamento.json (.csv)
+
+Esta ação **reconcilia um `horarios.txt` já montado** (uma grade que você posicionou e exportou antes) **com o planejamento atualmente carregado** — útil quando o planejamento muda depois de a grade estar pronta, para não recomeçar do zero:
+
+- Disciplinas que **permanecem** no planejamento mantêm o horário/dia/sala que já tinham no `horarios.txt`.
+- Disciplinas **novas** (no planejamento, mas ausentes do `horarios.txt`) entram **sem horário**, prontas para posicionar.
+- Disciplinas que **saíram** do planejamento (constavam no `horarios.txt`) são listadas num diálogo, e você decide se as **reinclui** ou **descarta**.
+
+A opção fica no menu **Ações** e só é **habilitada** quando há, ao mesmo tempo, um `horarios.txt` e um planejamento carregados — caso contrário aparece esmaecida. O pareamento entre as duas fontes é por **código + semestre**, então rótulos de semestre diferentes (ex.: uma compartilhada `EC02;EM02` no planejamento vs. `EC02` no `horarios.txt`) não casam e a entrada do `horarios.txt` entra como disciplina nova.
 
 #### Exportação
 

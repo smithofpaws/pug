@@ -14,18 +14,27 @@ class_name DicasPrograma extends Resource
 static func vincular(control: Control, caminho: Array, args: Dictionary = {}) -> void:
 	if not is_instance_valid(control):
 		return
+	var texto_dica: String = texto(caminho, args)
+	if texto_dica.is_empty():
+		return
+	DicaFlutuante.vincular(control, texto_dica)
 
+
+## Retorna o texto da dica em [param caminho] (sequencia de chaves em [code]GV.dicas[/code]), com
+## [param args] substituindo marcadores [code]{chave}[/code]. Devolve "" se o caminho nao levar a uma
+## String. Util quando a dica nao se prende a um [Control] (ex.: item de [PopupMenu], exibido via
+## [method DicaFlutuante.mostrar_em]).
+static func texto(caminho: Array, args: Dictionary = {}) -> String:
 	var atual = GV.dicas
 	for chave in caminho:
 		if not (atual is Dictionary) or not atual.has(chave):
-			return
+			return ""
 		atual = atual[chave]
 
 	if not (atual is String):
-		return
+		return ""
 
-	var texto: String = atual
+	var resultado: String = atual
 	for arg in args:
-		texto = texto.replace("{" + arg + "}", str(args[arg]))
-
-	DicaFlutuante.vincular(control, texto)
+		resultado = resultado.replace("{" + arg + "}", str(args[arg]))
+	return resultado

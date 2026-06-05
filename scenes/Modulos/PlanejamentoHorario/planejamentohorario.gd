@@ -96,6 +96,9 @@ var _config_posic: ConfigPosicionamento
 # Ultimas escolhas no _config_posic, reapresentadas ao reabrir o dialogo.
 var _inicio_manha_posic: bool = true
 var _permitir_sabado_posic: bool = false
+# Quando true, o posicionamento ignora as disciplinas compartilhadas entre cursos (escolha feita no
+# aviso de compartilhadas). Definido a cada abertura do dialogo de configuracao.
+var _excluir_compartilhadas_posic: bool = false
 
 # Ultimos cod_curso marcados no _seletor_cursos, reapresentados ao reabrir o dialogo.
 var _cursos_marcados_planejamento: Array[String] = []
@@ -266,10 +269,11 @@ func _ready() -> void:
 		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
 
 	$"%SeletorAcoes".lista_itens = {
-		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Atualizar do planejamento"],
+		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)"],
 		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento"],
 	}
 	$"%SeletorAcoes".get_node("MenuButton").get_popup().set_item_disabled(2, true)
+	$"%SeletorAcoes".definir_dica_item(2, DicasPrograma.texto(["planejamento_horario", "mesclar_horarios_planejamento"]))
 	$"%SeletorAcoes".opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
 	$"%StatusBar".definir_segmentos({
@@ -1751,31 +1755,158 @@ func _curso_de_semestre(sem: String) -> String:
 # (restritas ao curso filtrado, quando há filtro ativo).
 func _abrir_config_posicionamento() -> void:
 	var cards_alvo: Dictionary = _cards_para_posicionar()
-	var pendentes: int = 0
+	# Cards não completos (com ou sem CH) — o que ainda precisa de horário. Cards sem CH entram aqui
+	# para que o diagnóstico possa alertar (em vermelho) quando nenhum tem carga horária.
+	var nao_completos: int = 0
 	for chave in cards_alvo:
 		var card: CardDisciplina = cards_alvo[chave]
-		if card.ch_total > 0 and card.ch_alocada < card.ch_total:
-			pendentes += 1
-	if pendentes == 0:
-		var fc: String = $"%PainelDisciplinas".filtro_curso
-		var sufixo: String = ""
-		if not fc.is_empty():
-			sufixo = " do curso %s" % cursos.get(fc, {}).get("nome", fc)
+		if not (card.ch_total > 0 and card.ch_alocada >= card.ch_total):
+			nao_completos += 1
+	var fc: String = $"%PainelDisciplinas".filtro_curso
+	var nome_curso_filtro: String = cursos.get(fc, {}).get("nome", fc) if not fc.is_empty() else ""
+	if nao_completos == 0:
+		var sufixo: String = " do curso %s" % nome_curso_filtro if not nome_curso_filtro.is_empty() else ""
 		$"%Terminal".text_edit("Nenhuma disciplina pendente%s para posicionar. Importe um planejamento primeiro." % sufixo, \
 			"aviso", true, true)
 		return
+	var diagnostico: Array = _diagnostico_posicionamento(cards_alvo)
 	# Disciplinas pendentes compartilhadas entre cursos: posicioná-las é uma decisão conjunta dos
-	# cursos envolvidos, então avisamos e deixamos o usuário optar por fazê-lo manualmente antes.
+	# cursos envolvidos, então avisamos e deixamos o usuário optar por fazê-lo manualmente antes
+	# (incluindo a opção de posicionar só as não compartilhadas agora).
 	var compartilhadas: Array[String] = _compartilhadas_entre_cursos_pendentes(cards_alvo)
 	if compartilhadas.is_empty():
-		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic)
+		_excluir_compartilhadas_posic = false
+		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico)
 		return
+	_avisar_compartilhadas(compartilhadas, nome_curso_filtro, diagnostico)
+
+# Aviso (3 saídas) exibido quando há disciplinas pendentes compartilhadas entre cursos. Como o
+# helper Dialogos.confirmar é sim/não, monta-se um ConfirmationDialog próprio (ver AGENTS.md): botão
+# OK = posicionar todas; botão extra = posicionar só as não compartilhadas; Cancelar = desistir.
+func _avisar_compartilhadas(compartilhadas: Array[String], nome_curso_filtro: String, diagnostico: Array) -> void:
 	var texto: String = "As seguintes disciplinas pendentes são compartilhadas entre cursos:\n\n%s\n\n" % "\n".join(compartilhadas) \
 		+ "Como o horário delas é uma decisão conjunta dos cursos envolvidos, você pode preferir " \
-		+ "posicioná-las manualmente antes. Deseja posicionar automaticamente mesmo assim?"
-	Dialogos.confirmar(self, "Disciplinas compartilhadas entre cursos", texto, \
-		func(): _config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic), \
-		"Posicionar mesmo assim", "Cancelar", 520)
+		+ "posicioná-las manualmente antes. O que deseja fazer?"
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Disciplinas compartilhadas entre cursos"
+	dialog.dialog_text = texto
+	dialog.wrap_controls = true
+	dialog.get_ok_button().text = "Posicionar todas"
+	dialog.get_cancel_button().text = "Cancelar"
+	# Largura fixa pela largura mínima do label (com autowrap), e não por min_size do Window — o mesmo
+	# truque de Dialogos.confirmar para mensagens longas não esticarem o diálogo na horizontal.
+	var label := dialog.get_label()
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(520, 0)
+	dialog.add_button("Apenas as não compartilhadas", true, "apenas_nao_compartilhadas")
+	dialog.confirmed.connect(func():
+		_excluir_compartilhadas_posic = false
+		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico))
+	dialog.custom_action.connect(func(acao: StringName):
+		if acao == "apenas_nao_compartilhadas":
+			dialog.hide()
+			_excluir_compartilhadas_posic = true
+			_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico))
+	dialog.visibility_changed.connect(func():
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+
+# Monta o diagnóstico de pré-requisitos do posicionamento para [param cards_alvo] (já restritos ao
+# curso filtrado, quando há filtro). Cada item é { "texto": String, "token": String, "bloqueia": bool },
+# com o token de cor: "erro" (vermelho — obrigatório ausente, bloqueia), "alerta" (laranja — presente
+# mas incompleto), "aviso" (amarelo — opcional ausente) e "sucesso" (verde — ok). Só a carga horária
+# do planejamento é obrigatória; grade, hist.csv e preferências são opcionais.
+func _diagnostico_posicionamento(cards_alvo: Dictionary) -> Array:
+	var itens: Array = []
+	var com_ch: int = 0
+	var sem_ch: int = 0
+	var fora_grade: int = 0
+	var profs: Dictionary = {}
+	for chave in cards_alvo:
+		var card: CardDisciplina = cards_alvo[chave]
+		if card.ch_total > 0 and card.ch_alocada >= card.ch_total:
+			continue  # já completa: não é pendente
+		if card.ch_total > 0:
+			com_ch += 1
+		else:
+			sem_ch += 1
+		var nome_grade: String = analise_grades.info_grade(grades_disciplinas_curriculos, card.codigo, "nome")
+		if nome_grade.begins_with("Codigo") or nome_grade.begins_with("Informa"):
+			fora_grade += 1
+		for p in card.professores:
+			profs[str(p).to_lower()] = true
+	var total_pend: int = com_ch + sem_ch
+
+	# 1) Carga horária (planejamento) — OBRIGATÓRIO.
+	if com_ch == 0:
+		itens.append({"texto": "Carga horária ausente: nenhuma disciplina pendente tem CH definida — não há o que posicionar. Importe um planejamento com carga horária.", "token": "erro", "bloqueia": true})
+	elif sem_ch > 0:
+		itens.append({"texto": "Carga horária incompleta: %d de %d disciplinas pendentes sem CH (não serão posicionadas)." % [sem_ch, total_pend], "token": "alerta", "bloqueia": false})
+	else:
+		itens.append({"texto": "Carga horária: %d disciplina(s) pendente(s) com CH definida." % com_ch, "token": "sucesso", "bloqueia": false})
+
+	# 2) Grade curricular — opcional (fornece nome/classificação; não impede o posicionamento).
+	if total_pend > 0 and fora_grade == total_pend:
+		itens.append({"texto": "Grade curricular não carregada: as disciplinas aparecem só pelo código (opcional; não impede posicionar).", "token": "aviso", "bloqueia": false})
+	elif fora_grade > 0:
+		itens.append({"texto": "Grade curricular incompleta: %d disciplina(s) pendente(s) sem correspondência na grade." % fora_grade, "token": "alerta", "bloqueia": false})
+	else:
+		itens.append({"texto": "Grade curricular: todas as disciplinas reconhecidas.", "token": "sucesso", "bloqueia": false})
+
+	# 3) hist.csv — opcional (peso de choque entre alunos). Verde só quando o histórico cobre as
+	# disciplinas deste escopo: um hist.csv de outro curso (sem alunos nas pendentes) não influencia
+	# o choque de alunos aqui, então vira aviso (amarelo) em vez de sucesso.
+	if _historico.is_empty():
+		itens.append({"texto": "hist.csv não carregado: o choque entre alunos não será considerado (opcional).", "token": "aviso", "bloqueia": false})
+	else:
+		var presentes: Dictionary = _disciplinas_no_historico()
+		var cods_pend: Dictionary = {}
+		for chave in cards_alvo:
+			var card: CardDisciplina = cards_alvo[chave]
+			if card.ch_total <= 0 or card.ch_alocada >= card.ch_total:
+				continue  # só as que serão de fato posicionadas (com CH e incompletas)
+			cods_pend[card.codigo.to_lower()] = true
+		var com_alunos: int = 0
+		for cod in cods_pend:
+			if presentes.has(cod):
+				com_alunos += 1
+		if com_alunos == 0:
+			itens.append({"texto": "hist.csv carregado, mas sem alunos das disciplinas deste escopo (ex.: histórico de outro curso): o choque entre alunos não será considerado.", "token": "aviso", "bloqueia": false})
+		else:
+			itens.append({"texto": "hist.csv carregado: choque entre alunos considerado (%d de %d disciplina(s) pendente(s) com histórico)." % [com_alunos, cods_pend.size()], "token": "sucesso", "bloqueia": false})
+
+	# 4) Preferências dos professores — opcional (sem arquivo = professor sem restrição de horário).
+	var com_pref: int = 0
+	for pl in profs:
+		if not _arquivo_preferencias_de(pl).is_empty():
+			com_pref += 1
+	var total_profs: int = profs.size()
+	if total_profs == 0:
+		pass  # nenhuma pendente com professor: nada a relatar
+	elif com_pref == 0:
+		itens.append({"texto": "Preferências de horário: nenhum dos %d professores tem arquivo (opcional; sem restrição)." % total_profs, "token": "aviso", "bloqueia": false})
+	elif com_pref < total_profs:
+		itens.append({"texto": "Preferências de horário: %d de %d professores com arquivo." % [com_pref, total_profs], "token": "aviso", "bloqueia": false})
+	else:
+		itens.append({"texto": "Preferências de horário: todos os %d professores têm arquivo." % total_profs, "token": "sucesso", "bloqueia": false})
+
+	return itens
+
+# Conjunto (cod_disciplina minúsculo → true) das disciplinas presentes no histórico sob as condições
+# de choque selecionadas. Usado pelo diagnóstico para saber se o hist.csv cobre o curso em questão —
+# se nenhuma pendente do escopo aparecer aqui, o choque de alunos não terá efeito. Construído uma vez
+# (varre matrículas × condições), em vez de consultar disciplina a disciplina.
+func _disciplinas_no_historico() -> Dictionary:
+	var presentes: Dictionary = {}
+	var conds: Array = _condicoes_choque_selecionadas if not _condicoes_choque_selecionadas.is_empty() else condicoes
+	for matricula in _condicoes_discentes:
+		var cond_disc: Dictionary = _condicoes_discentes[matricula]
+		for c in conds:
+			for cod in cond_disc.get(c, []):
+				presentes[str(cod).to_lower()] = true
+	return presentes
 
 # Roda o posicionador com a configuração escolhida (turno inicial e sábado) e aplica o plano na
 # grade. As preferências de cada professor são lidas dos CSVs; o choque de alunos vem do Callable.
@@ -1789,9 +1920,24 @@ func _on_config_posicionamento_definida(cfg: Dictionary) -> void:
 	config["inicio_manha"] = _inicio_manha_posic
 	config["permitir_sabado"] = _permitir_sabado_posic
 	_posicionador.configurar([grade._linhas, grade._colunas], horas, dias, \
-		_cards_para_posicionar(), _ger_alocacoes.alocacoes, _dados._planejamento_csv, \
+		_cards_alvo_posicionamento(), _ger_alocacoes.alocacoes, _dados._planejamento_csv, \
 		_montar_preferencias_professores(), config, Callable(self, "_peso_choque_alunos"))
 	_aplicar_plano_posicionamento(_posicionador.gerar_plano())
+
+# Cards efetivamente posicionados: os do escopo (curso filtrado, via _cards_para_posicionar),
+# removendo as disciplinas compartilhadas entre cursos quando o usuário optou por posicionar só as
+# não compartilhadas. As alocações já existentes de qualquer card seguem como restrição de ocupação.
+func _cards_alvo_posicionamento() -> Dictionary:
+	var cards: Dictionary = _cards_para_posicionar()
+	if not _excluir_compartilhadas_posic:
+		return cards
+	var resultado: Dictionary = {}
+	for chave in cards:
+		var card: CardDisciplina = cards[chave]
+		if _oferta_cruza_cursos(card.oferta):
+			continue
+		resultado[chave] = card
+	return resultado
 
 # Monta { nome_professor_minúsculo: { "linha_coluna": valor 1..5 } } lendo os CSVs de preferências
 # dos professores presentes no painel. Professores sem arquivo ficam de fora (o posicionador os
