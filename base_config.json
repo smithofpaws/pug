@@ -233,6 +233,7 @@
 		"tamanho_bloco": 2.0,
 		"choque_professor_rigido": true,
 		"horarios_liberados": [],
+		"diagnostico_hist_cobertura_min": 0.8,
 		"pesos": {
 			"preferencia": 1.0,
 			"preferencia_expoente": 2.0,

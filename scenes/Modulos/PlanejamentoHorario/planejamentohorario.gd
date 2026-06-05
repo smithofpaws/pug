@@ -1872,8 +1872,15 @@ func _diagnostico_posicionamento(cards_alvo: Dictionary) -> Array:
 		for cod in cods_pend:
 			if presentes.has(cod):
 				com_alunos += 1
+		# Verde só acima de um limiar de cobertura (config; padrão 80%): basta um aluno numa turma
+		# compartilhada para uma disciplina "contar", então exigir cobertura ampla evita o falso verde
+		# de um histórico que mal toca o curso. Abaixo do limiar (ou zero), vira aviso (amarelo).
+		var cobertura_min: float = float(config_posicionamento.get("diagnostico_hist_cobertura_min", 0.8))
+		var cobertura: float = float(com_alunos) / float(cods_pend.size()) if not cods_pend.is_empty() else 0.0
 		if com_alunos == 0:
 			itens.append({"texto": "hist.csv carregado, mas sem alunos das disciplinas deste escopo (ex.: histórico de outro curso): o choque entre alunos não será considerado.", "token": "aviso", "bloqueia": false})
+		elif cobertura < cobertura_min:
+			itens.append({"texto": "hist.csv carregado, mas cobre só %d de %d disciplina(s) pendente(s) (%d%%, abaixo de %d%%): o choque entre alunos terá efeito parcial." % [com_alunos, cods_pend.size(), int(round(cobertura * 100.0)), int(round(cobertura_min * 100.0))], "token": "aviso", "bloqueia": false})
 		else:
 			itens.append({"texto": "hist.csv carregado: choque entre alunos considerado (%d de %d disciplina(s) pendente(s) com histórico)." % [com_alunos, cods_pend.size()], "token": "sucesso", "bloqueia": false})
 
