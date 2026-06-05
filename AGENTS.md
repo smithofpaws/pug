@@ -25,11 +25,29 @@ O projeto é usado em 3 computadores e vive numa pasta do **OneDrive**. O **git 
 canônico — não o OneDrive**. Editar em duas máquinas em paralelo via OneDrive já causou
 divergência séria no passado.
 
-- **Antes de trocar de máquina:** commitar e sincronizar. Não editar em dois PCs ao mesmo tempo.
-- **Quando houver remoto (GitHub):** usar `pull` ao começar e `push` ao terminar, em vez de
-  depender da sincronia do OneDrive para levar o histórico entre as máquinas.
-- **Git não está no PATH das sessões:** usar `C:\Program Files\Git\cmd\git.exe`.
+**O usuário está aprendendo git.** Ao ajudar: explicar o *porquê* em linguagem simples antes de
+rodar comandos; reforçar o hábito de **commitar cedo e por tema** (um commit = uma ideia, mensagem
+clara em português). Lembrar que commit local já é ponto de retorno; o push leva ao GitHub (backup
+e sincroniza os 3 PCs).
+
+- **Remoto:** `origin` = `https://github.com/smithofpaws/pug.git` (privado). Autenticação por
+  **HTTPS + Git Credential Manager** (no 1º push/pull de cada máquina abre o navegador para login;
+  depois fica salvo). Existe chave SSH local não vinculada à conta — por isso usa-se HTTPS.
+- **Rotina recomendada:** ao **começar** numa máquina → `git pull` (traz o que as outras
+  enviaram). Ao **terminar** uma tarefa → `git status`, `git add`, `git commit`, `git push`.
+- **Login interativo (1ª vez de cada máquina):** comandos que pedem autenticação (`push`/`pull`)
+  devem ser rodados **pelo usuário** via prefixo `!` (ex.: `! git push`), pois o login abre o
+  navegador na sessão dele. Depois das credenciais salvas, o assistente pode rodar direto.
+- **git no PATH:** no **PowerShell** usar `C:\Program Files\Git\cmd\git.exe`; no **bash** (Bash
+  tool e prefixo `!`) o `git` já está no PATH.
+- **Lembrete visual:** auto-fetch ligado no VSCodium (`.vscode/settings.json`); o indicador de
+  sincronização na barra inferior mostra `↑N` (commits a enviar) e `↓N` (commits a baixar).
+- **Não editar em dois PCs em paralelo;** antes de trocar de máquina, commitar e sincronizar.
 - **Backups locais** ficam em `.backup/` (gitignored); o OneDrive os replica.
+- **Plano (migração):** mover o projeto para uma pasta **fora do OneDrive** e sincronizar só pelo
+  GitHub (`clone` + `pull`/`push`). Enquanto estiver no OneDrive, o `.git` é sincronizado por dois
+  mecanismos (OneDrive + GitHub) — frágil; deixar o OneDrive terminar de sincronizar antes de abrir
+  o projeto noutra máquina. **Ao concluir a migração, atualizar esta seção.**
 
 ### Dados pessoais fora do git (LGPD)
 
