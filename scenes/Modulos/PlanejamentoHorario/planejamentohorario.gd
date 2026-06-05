@@ -1407,7 +1407,11 @@ func _importar_planejamento_json() -> void:
 				"semestre": semestre,
 				"professor": nomes,
 				"ch": chs,
-				"oferta": "1",
+				# Espelha o caminho CSV (file_handling.gd): oferta = celula de semestre da
+				# disciplina. O JSON nao traz oferta combinada entre cursos, entao oferta ==
+				# semestre. Antes vinha "1" hardcoded, que poluia o filtro de semestre com um
+				# fantasma "1" e fazia aplicar_filtro casar com todos os cards.
+				"oferta": semestre,
 				"ch_disciplina": str(ch_total),
 			}
 
