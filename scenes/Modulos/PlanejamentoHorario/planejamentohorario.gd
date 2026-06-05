@@ -1506,15 +1506,37 @@ func _nova_grade() -> void:
 	$"%Terminal".text_edit("Grade limpa. Recomece as alocações.", \
 		cores_terminal.get("sucesso", "green"), true, false)
 
-# Abre o diálogo de configuração do posicionamento automático, se houver disciplinas pendentes.
+# Cards a considerar no posicionamento automatico: todos quando nao ha filtro de curso ativo, ou
+# apenas os do curso filtrado (ex.: so ECxx com Engenharia Civil selecionada). As alocacoes
+# existentes de outros cursos seguem inteiras como restricao de ocupacao (passadas a parte ao
+# posicionador), mas so as disciplinas do curso filtrado sao posicionadas.
+func _cards_para_posicionar() -> Dictionary:
+	var painel := $"%PainelDisciplinas"
+	var fc: String = painel.filtro_curso
+	if fc.is_empty():
+		return painel.cards_disciplinas
+	var resultado: Dictionary = {}
+	for chave in painel.cards_disciplinas:
+		var card: CardDisciplina = painel.cards_disciplinas[chave]
+		if painel.semestre_pertence_ao_curso(card.semestre, fc):
+			resultado[chave] = card
+	return resultado
+
+# Abre o diálogo de configuração do posicionamento automático, se houver disciplinas pendentes
+# (restritas ao curso filtrado, quando há filtro ativo).
 func _abrir_config_posicionamento() -> void:
+	var cards_alvo: Dictionary = _cards_para_posicionar()
 	var pendentes: int = 0
-	for chave in $"%PainelDisciplinas".cards_disciplinas:
-		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas[chave]
+	for chave in cards_alvo:
+		var card: CardDisciplina = cards_alvo[chave]
 		if card.ch_total > 0 and card.ch_alocada < card.ch_total:
 			pendentes += 1
 	if pendentes == 0:
-		$"%Terminal".text_edit("Nenhuma disciplina pendente para posicionar. Importe um planejamento primeiro.", \
+		var fc: String = $"%PainelDisciplinas".filtro_curso
+		var sufixo: String = ""
+		if not fc.is_empty():
+			sufixo = " do curso %s" % cursos.get(fc, {}).get("nome", fc)
+		$"%Terminal".text_edit("Nenhuma disciplina pendente%s para posicionar. Importe um planejamento primeiro." % sufixo, \
 			cores_terminal.get("aviso", "yellow"), true, true)
 		return
 	_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic)
@@ -1525,6 +1547,10 @@ func _on_config_posicionamento_definida(cfg: Dictionary) -> void:
 	_inicio_manha_posic = bool(cfg.get("inicio_manha", true))
 	_permitir_sabado_posic = bool(cfg.get("permitir_sabado", false))
 	$"%Terminal".text_edit("", "padrao", false, true)
+	var fc: String = $"%PainelDisciplinas".filtro_curso
+	if not fc.is_empty():
+		$"%Terminal".text_edit("Filtro curso: %s" % cursos.get(fc, {}).get("nome", fc), \
+			cores_terminal.get("aviso", "yellow"), true, false)
 	var grade: GradeVisual = $"%GradeHorarios"
 	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
 	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
@@ -1532,7 +1558,7 @@ func _on_config_posicionamento_definida(cfg: Dictionary) -> void:
 	config["inicio_manha"] = _inicio_manha_posic
 	config["permitir_sabado"] = _permitir_sabado_posic
 	_posicionador.configurar([grade._linhas, grade._colunas], horas, dias, \
-		$"%PainelDisciplinas".cards_disciplinas, _ger_alocacoes.alocacoes, _dados._planejamento_csv, \
+		_cards_para_posicionar(), _ger_alocacoes.alocacoes, _dados._planejamento_csv, \
 		_montar_preferencias_professores(), config, Callable(self, "_peso_choque_alunos"))
 	_aplicar_plano_posicionamento(_posicionador.gerar_plano())
 

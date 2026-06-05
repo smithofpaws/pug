@@ -311,6 +311,8 @@ O botão **Posicionar automaticamente** abre um diálogo de configuração e, em
 
 O algoritmo considera preferências de professores (quando disponíveis), choques existentes e prioridades configuradas. O resultado pode ser ajustado manualmente após a execução.
 
+Com um curso selecionado no filtro, o posicionamento atua apenas nas disciplinas desse curso (ex.: somente as `ECxx` com Engenharia Civil selecionada). As alocações já existentes dos demais cursos são preservadas como restrição, evitando choques.
+
 #### Exportação
 
 As saídas ficam no menu **Arquivo** (descrito acima): **Salvar planejamento.json** (grupo Locais) preserva o estado para retomar depois, e **Exportar › horarios.txt** (grupo Exportar) gera a grade no formato compatível com o Horários.exe.
