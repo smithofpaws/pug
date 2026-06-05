@@ -120,9 +120,11 @@ O terminal mostra, para cada aluno analisado:
 
 Módulo central de análise individual. Permite examinar em detalhes a situação acadêmica de qualquer aluno do histórico.
 
-#### Seleção de aluno
+#### Seleção de curso e aluno
 
-Escolha o aluno pelo menu suspenso no topo do módulo. A interface é atualizada imediatamente com os dados do aluno selecionado.
+Quando o `hist.csv` reúne alunos de mais de um curso, o menu **Curso** no topo filtra a lista de alunos. Selecionar um curso (ex.: Engenharia Civil) restringe a lista a todos os alunos desse curso, abrangendo todas as suas versões de currículo (ex.: tanto `alec_2010` quanto `alec_2023`). A opção **Todos os cursos** remove o filtro e exibe a lista completa. O curso vem pré-selecionado conforme o **PPC principal** definido em Configurações; só aparecem no menu os cursos efetivamente presentes no histórico.
+
+Escolha o aluno pelo menu suspenso ao lado. A interface é atualizada imediatamente com os dados do aluno selecionado.
 
 #### Grade curricular
 
@@ -161,7 +163,7 @@ O terminal apresenta um relatório completo do aluno:
 
 #### Exportação
 
-O botão **Exportar** gera um arquivo Markdown com a situação de todos os alunos do histórico, incluindo carga horária vencida e condições de matrícula de cada um.
+O botão **Exportar** gera um arquivo Markdown com a situação dos alunos, incluindo carga horária vencida e condições de matrícula de cada um. A exportação respeita o filtro de curso ativo (o cabeçalho do arquivo indica o curso); selecione **Todos os cursos** para incluir todos.
 
 ---
 

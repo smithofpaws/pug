@@ -43,6 +43,16 @@ unique_name_in_owner = true
 layout_mode = 2
 texto_padrao = "Aluno"
 
+[node name="LabelCurso" type="Label" parent="Topo/HBoxContainer" unique_id=411000001]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Curso:"
+
+[node name="SeletorCurso" parent="Topo/HBoxContainer" unique_id=411000002 instance=ExtResource("7_w88nm")]
+unique_name_in_owner = true
+layout_mode = 2
+texto_padrao = "Curso"
+
 [node name="VSeparator4" type="VSeparator" parent="Topo/HBoxContainer" unique_id=2052931679]
 layout_mode = 2
 
@@ -68,10 +78,10 @@ layout_mode = 2
 [node name="OnOffTerminal" type="Button" parent="Topo/HBoxContainer" unique_id=1567213729]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
-toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
+toggle_mode = true
 icon = ExtResource("2_51wdq")
 icon_alignment = 1
 expand_icon = true
@@ -79,10 +89,10 @@ expand_icon = true
 [node name="OnOffHorarios" type="Button" parent="Topo/HBoxContainer" unique_id=1437418238]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
-toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
+toggle_mode = true
 icon = ExtResource("3_klai2")
 icon_alignment = 1
 expand_icon = true
@@ -90,10 +100,10 @@ expand_icon = true
 [node name="OnOffGrade" type="Button" parent="Topo/HBoxContainer" unique_id=1753044782]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
-toggle_mode = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
+toggle_mode = true
 icon = ExtResource("4_1taqb")
 icon_alignment = 1
 expand_icon = true
@@ -150,6 +160,7 @@ visible = false
 layout_mode = 2
 
 [connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaAlunos" to="." method="_on_seletor_lista_alunos_opcao_selecionada"]
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorCurso" to="." method="_on_seletor_curso_opcao_selecionada"]
 [connection signal="pressed" from="Topo/HBoxContainer/Exportar" to="." method="_on_exportar_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffHorarios" to="." method="_on_on_off_horarios_button_up"]

@@ -322,6 +322,7 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.diretorio_exportacao = GV.dir_exportacoes
 			modulo.config_interface = GV.configuracao_base["interface"]
 			modulo.formatos_grade = GV.configuracao_base.get("formatos_grade", {})
+			modulo.cursos = GV.configuracao_base.get("cursos", {})
 			$Modulo.add_child(modulo)
 		"situacao_disciplinas":
 			var modulo = load("res://scenes/Modulos/SituacaoDisciplinas/SituacaoDisciplinas.tscn").instantiate()

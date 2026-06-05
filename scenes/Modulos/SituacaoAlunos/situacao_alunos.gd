@@ -37,6 +37,12 @@ var equivalencias: Dictionary = {}
 ## }
 var grades_disciplinas_curriculos: Dictionary = {}
 
+## Recebido pelo main em sua criação e vem de [code]base_config.json:cursos[/code]. [br]
+## Mapeia cada [code]cod_curso[/code] aos seus metadados (nome, grades, etc.). É a fonte para
+## o filtro de curso do Topo: um curso (e.g. [code]alec[/code]) abrange várias grades
+## (e.g. [code]alec_2010[/code], [code]alec_2023[/code]).
+var cursos: Dictionary = {}
+
 ## Recebido pelo main em sua criação e vem da pasta de cargas exigidas.
 var cargas_exigidas: Dictionary = {}
 
@@ -72,7 +78,18 @@ var _horarios_ini: Dictionary
 var _horarios_txt: Array
 
 # É uma array contendo em cada elemento a combinação do nome do aluno e sua matrícula.
+# Apenas a porção FILTRADA pelo curso ativo (alimenta o seletor de alunos e a exportação).
 var _lista_alunos: Array[Array]
+
+# Lista completa de alunos do hist.csv (todos os cursos), antes do filtro de curso.
+# _condicoes_discentes é computado sobre ela, para a troca de curso não exigir recálculo.
+var _lista_alunos_todos: Array[Array]
+
+# Mapa matrícula -> cod_curso, computado uma vez para filtrar a lista por curso.
+var _curso_por_matricula: Dictionary = {}
+
+# cod_curso atualmente filtrado no Topo. String vazia ("") significa "Todos os cursos".
+var _curso_filtro: String = ""
 
 # É uma array contendo as informações de reprovação de todas matrículas.
 var _analisado_reprov: Dictionary
@@ -128,28 +145,24 @@ func _ready() -> void:
 	# Lê os horários.
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida,"horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida,"horarios.txt", posicoes_horarios_txt)
-	# Prepara a lista de alunos.
-	_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-	var alunos_itens: Array[String] = []
-	var alunos_retorno: Array[String] = []
-	for a in _lista_alunos.size():
-		alunos_itens.append(_lista_alunos[a][1].capitalize())
-		alunos_retorno.append(_lista_alunos[a][0])
-	$"%SeletorListaAlunos".lista_itens = {
-		"_alunos*": alunos_itens,
-		"_alunos_retorno": alunos_retorno
-	}
-	$"%SeletorListaAlunos".atualizar_texto_padrao = true
-	if _lista_alunos.size() > 0:
-		_matricula_atual = _lista_alunos[0][0]
-		$"%SeletorListaAlunos".selecionar_item(0)
+	# Prepara a lista completa de alunos (todos os cursos do hist.csv).
+	_lista_alunos_todos = analise_historico.criar_lista_alunos(_historico)
+	# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
+	# Computado sobre a lista COMPLETA para que a troca de curso em runtime não exija recálculo.
+	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos_todos, _historico, condicoes, \
+	grades_disciplinas_curriculos, equivalencias)
+	# Mapeia cada matrícula ao seu cod_curso (uma única vez) para alimentar o filtro de curso.
+	_mapear_cursos()
 
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	$"%SeletorListaAlunos".custom_minimum_size = Vector2(largura_seletor, 30)
+	$"%SeletorCurso".custom_minimum_size = Vector2(largura_seletor, 30)
+	$"%SeletorListaAlunos".atualizar_texto_padrao = true
+	$"%SeletorCurso".atualizar_texto_padrao = true
+	# Monta o seletor de curso e pré-seleciona o curso do ppc_principal. Ao selecionar, o handler
+	# chama _montar_lista_alunos (repovoa o seletor de alunos). _pronto ainda é false: não roda análise.
+	_montar_seletor_curso()
 
-	# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
-	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-	grades_disciplinas_curriculos, equivalencias)
 	# Seleciona primeira condicao e opcao do visualizador (dispara signals).
 	$"%Horarios".selecionar_condicao(0)
 	$"%Horarios".selecionar_condicao(1)
@@ -518,6 +531,76 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 	return md
 
 
+#region Filtro de curso
+# Preenche [_curso_por_matricula] mapeando cada matrícula da lista completa ao seu cod_curso.
+func _mapear_cursos() -> void:
+	_curso_por_matricula.clear()
+	for aluno in _lista_alunos_todos:
+		_curso_por_matricula[aluno[0]] = _detectar_curso(aluno[0])
+
+# Detecta o cod_curso de uma [param matricula]: resolve a grade do aluno (via detectar_versao_grade)
+# e devolve o curso cuja lista de grades a contém. Retorna "" se não encontrar.
+func _detectar_curso(matricula: String) -> String:
+	return _curso_da_grade(analise_historico.detectar_versao_grade(matricula, _historico))
+
+# Retorna o cod_curso cuja lista [code]grades[/code] contém a [param grade] informada (ou "").
+func _curso_da_grade(grade: String) -> String:
+	for cod in cursos:
+		if grade in cursos[cod].get("grades", []):
+			return cod
+	return ""
+
+# Monta o seletor de curso do Topo. Lista apenas os cursos presentes no hist.csv, precedidos da
+# opção "Todos os cursos" (retorno ""). Pré-seleciona o curso dono do ppc_principal; se ele não
+# tiver alunos no arquivo, recai em "Todos os cursos". Selecionar o item dispara o handler, que
+# repovoa o seletor de alunos via [_montar_lista_alunos].
+func _montar_seletor_curso() -> void:
+	# Cursos efetivamente presentes no hist.csv, preservando a ordem de base_config:cursos.
+	var presentes: Array[String] = []
+	for cod in cursos:
+		if cod in _curso_por_matricula.values():
+			presentes.append(cod)
+	var nomes: Array[String] = ["Todos os cursos"]
+	var cods: Array[String] = [""]
+	for cod in presentes:
+		nomes.append(str(cursos[cod].get("nome", cod)))
+		cods.append(cod)
+	$"%SeletorCurso".lista_itens = {
+		"_cursos*": nomes,
+		"_cursos_retorno": cods
+	}
+	# Índice 0 = "Todos os cursos". Tenta posicionar no curso do ppc_principal.
+	var indice: int = 0
+	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
+	if not ppc.is_empty():
+		var pos: int = cods.find(_curso_da_grade(ppc))
+		if pos > 0:
+			indice = pos
+	$"%SeletorCurso".selecionar_item(indice)
+
+# Reconstrói a lista de alunos exibida aplicando o filtro [_curso_filtro] sobre a lista completa,
+# repovoando o seletor de alunos. A análise é disparada pela seleção do primeiro aluno.
+func _montar_lista_alunos() -> void:
+	_lista_alunos.clear()
+	for aluno in _lista_alunos_todos:
+		if _curso_filtro == "" or _curso_por_matricula.get(aluno[0], "") == _curso_filtro:
+			_lista_alunos.append(aluno)
+	var alunos_itens: Array[String] = []
+	var alunos_retorno: Array[String] = []
+	for a in _lista_alunos.size():
+		alunos_itens.append(_lista_alunos[a][1].capitalize())
+		alunos_retorno.append(_lista_alunos[a][0])
+	$"%SeletorListaAlunos".lista_itens = {
+		"_alunos*": alunos_itens,
+		"_alunos_retorno": alunos_retorno
+	}
+	if _lista_alunos.size() > 0:
+		_matricula_atual = _lista_alunos[0][0]
+		$"%SeletorListaAlunos".selecionar_item(0)
+	else:
+		_matricula_atual = ""
+#endregion
+
 #region Sinais
 # Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
 # e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
@@ -546,6 +629,12 @@ func _on_seletor_lista_alunos_opcao_selecionada(retorno: String, _lista_selecion
 	_matricula_atual = retorno
 	if _pronto:
 		_rodar_análise()
+
+# Troca o curso filtrado e repovoa a lista de alunos. A análise é disparada pela seleção do
+# primeiro aluno (selecionar_item em _montar_lista_alunos aciona _on_seletor_lista_alunos_*).
+func _on_seletor_curso_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
+	_curso_filtro = retorno
+	_montar_lista_alunos()
 
 func _on_horarios_listacondicoes_alterada() -> void:
 	if not _pronto:
@@ -714,10 +803,13 @@ func _on_horarios_celula_clicada(linha: int, coluna: int) -> void:
 	else:
 		_mostrar_selecao_disciplinas(partes, codigos)
 
-## Abre um diálogo de confirmação antes de exportar a situação de todos os alunos.
+## Abre um diálogo de confirmação antes de exportar a situação dos alunos (do curso filtrado).
 func _on_exportar_button_up() -> void:
+	var rotulo_curso: String = "todos os cursos"
+	if _curso_filtro != "":
+		rotulo_curso = str(cursos.get(_curso_filtro, {}).get("nome", _curso_filtro))
 	Dialogos.confirmar(self, "Exportar Situação dos Alunos", \
-		"Deseja exportar a situação de todos os alunos (%d) para um arquivo?" % _lista_alunos.size(), \
+		"Deseja exportar a situação dos alunos de %s (%d) para um arquivo?" % [rotulo_curso, _lista_alunos.size()], \
 		_exportar, "Exportar")
 
 func _exportar() -> void:
@@ -728,9 +820,13 @@ func _exportar() -> void:
 	var linhas: Array[String] = []
 
 	# Cabeçalho do documento
+	var rotulo_curso: String = "Todos os cursos"
+	if _curso_filtro != "":
+		rotulo_curso = str(cursos.get(_curso_filtro, {}).get("nome", _curso_filtro))
 	linhas.append("# Situacao dos Alunos")
 	linhas.append("")
 	linhas.append("**Exportado em:** " + data_hora)
+	linhas.append("**Curso:** " + rotulo_curso)
 	linhas.append("**Total de alunos:** " + str(_lista_alunos.size()))
 	linhas.append("")
 
