@@ -16,6 +16,7 @@
 		"tamanho_fonte_grade_min": 8.0,
 		"tamanho_fonte_grade_max": 32.0,
 		"tema": "nord",
+		"transparencia_fundo": 0.0,
 		"tamanho_janela": {
 			"largura": 1573,
 			"altura": 836

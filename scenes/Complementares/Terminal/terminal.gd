@@ -44,11 +44,14 @@ func _notification(what: int) -> void:
 		# Reaplica as cores de todo o histórico ao novo tema, sem envolver os módulos.
 		_renderizar()
 
-# Acompanha o fundo do tema no ColorRect de fundo do terminal.
+# Acompanha o fundo do tema no ColorRect de fundo do terminal, aplicando a translucidez dos painéis
+# (alpha_painel): empilhada sobre o backdrop, deixa o terminal mais opaco que o fundo geral.
 func _atualizar_fundo() -> void:
 	var style := get_theme_stylebox("panel", "PanelContainer")
 	if style is StyleBoxFlat:
-		$ColorRect.color = style.bg_color
+		var c: Color = style.bg_color
+		c.a = PaletaSemantica.alpha_painel()
+		$ColorRect.color = c
 
 ## Escreve [param text] no terminal com a cor do token [param color] (chave semântica, nome de cor ou
 ## hex). O Terminal resolve e adapta a cor ao tema atual; o módulo só informa o token. [br]

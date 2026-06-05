@@ -29,6 +29,11 @@ var _fonte_grade_offset: int = 0
 var _fonte_grade_min: int = 8
 var _fonte_grade_max: int = 32
 
+var _transp_atual: float = 0.0
+var _transp_min: float = 0.0
+var _transp_max: float = 0.8
+var _transp_passo: float = 0.05
+
 # Dados repassados ao seletor de horários liberados (aba Posicionamento). Atualizados em configurar.
 var _dias_semana: Array = []
 var _horas_aula: Array = []
@@ -277,7 +282,14 @@ func _popular_interface(cfg: Dictionary, temas_internos: Array[String], tema_atu
 	_fonte_grade_offset = iface.get("tamanho_fonte_grade_offset", 0) as int
 	_atualizar_label_fonte_grade()
 
+	_transp_atual = clampf(iface.get("transparencia_fundo", 0.0) as float, _transp_min, _transp_max)
+	_atualizar_label_transparencia()
+
 	_popular_temas(temas_internos, tema_atual)
+
+
+func _atualizar_label_transparencia() -> void:
+	$TabContainer/Interface/TransparenciaContainer/ValorTransparencia.text = "%d%%" % int(round(_transp_atual * 100.0))
 
 
 func _atualizar_label_fonte_grade() -> void:
@@ -362,6 +374,22 @@ func _on_tema_selecionado(nome_interno: String, _lista_selecionada: Array) -> vo
 	if _carregando:
 		return
 	emit_signal("parametro_alterado", ["interface","tema"], nome_interno)
+
+
+func _on_transp_menos_button_up() -> void:
+	_alterar_transparencia(-_transp_passo)
+
+func _on_transp_mais_button_up() -> void:
+	_alterar_transparencia(_transp_passo)
+
+func _alterar_transparencia(delta: float) -> void:
+	if _carregando:
+		return
+	var novo: float = snappedf(clampf(_transp_atual + delta, _transp_min, _transp_max), _transp_passo)
+	if not is_equal_approx(novo, _transp_atual):
+		_transp_atual = novo
+		_atualizar_label_transparencia()
+		emit_signal("parametro_alterado", ["interface","transparencia_fundo"], novo)
 
 
 func _on_janela_afinidade_changed(valor: float) -> void:

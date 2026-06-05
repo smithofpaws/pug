@@ -64,6 +64,21 @@ static var _fundo: Color = Color.BLACK
 static var _cor_texto: Color = Color.WHITE
 static var _tema_atual: String = ""
 
+# Transparência do fundo (0 = opaco, 1 = totalmente transparente), definida pelo main.gd a partir de
+# interface.transparencia_fundo. Usada pelo terminal e pelas células para empilhar sua translucidez
+# sobre o backdrop, deixando-os mais opacos que o fundo geral (ver alpha_painel).
+static var _transparencia: float = 0.0
+
+## Define a transparência atual do fundo (clamp em [0, 1]). Chamada pelo [code]main.gd[/code].
+static func definir_transparencia(t: float) -> void:
+	_transparencia = clampf(t, 0.0, 1.0)
+
+## Alpha a aplicar ao fundo dos painéis (terminal, células). Igual ao do véu do backdrop ([code]1 −
+## T[/code]): como o painel é desenhado sobre o backdrop, a imagem que o atravessa fica em [code]T²[/code],
+## tornando-o mais opaco que o fundo geral. Em T = 0 retorna 1 (opaco, visual inalterado).
+static func alpha_painel() -> float:
+	return 1.0 - _transparencia
+
 # Tema compartilhado pelas grades (GradeVisual). Define apenas o tamanho da fonte; cores e
 # styleboxes continuam herdados do tema global da janela (a busca de tema sobe a arvore item-a-item).
 # Por ser um unico recurso compartilhado, alterar seu default_font_size propaga

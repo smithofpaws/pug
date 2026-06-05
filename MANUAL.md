@@ -438,6 +438,7 @@ A janela de configurações é acessada pelo ícone na barra de navegação. As 
 - **Escala da interface** — ajusta o tamanho geral da janela (de 50% a 300%, com suporte a ajuste por DPI do monitor).
 - **Tamanho de fonte** — define o tamanho base do texto (10pt a 32pt).
 - **Tema visual** — escolha entre os temas disponíveis: Nord, Nord Frost, Everforest, Lucent Orange, Material, Zenburn, Mac Platinum, Windows 98. A mudança é imediata.
+- **Transparência do fundo** — exibe uma imagem de fundo atrás da interface. Em 0% não há imagem (fundo sólido do tema); aumentando o valor, a imagem aparece nas áreas de fundo (margens, barra, espaços vazios). O terminal e as grades também passam a deixar a imagem transparecer, porém de forma **mais sutil** (mais opacos) que o fundo geral, de modo que continuam distinguíveis. A imagem acompanha o tema: uma versão clara nos temas claros e uma escura nos temas escuros.
 
 ### 5.2 Módulos
 

@@ -142,6 +142,31 @@ func _aplicar_cor_fundo() -> void:
 		if estilo is StyleBoxFlat:
 			RenderingServer.set_default_clear_color(estilo.bg_color)
 
+## Aplica a imagem de fundo (atrás de toda a interface) e o véu sobre ela. A imagem acompanha o
+## tema (clara em fundos claros, escura em fundos escuros). O véu ([code]FundoScrim[/code]) usa a cor
+## de fundo do tema com alpha = 1 − transparência: em 0 fica opaco (visual idêntico ao atual); ao
+## aumentar a transparência, a imagem aparece no backdrop. Os painéis opacos seguem por cima.
+func _aplicar_fundo() -> void:
+	var iface: Dictionary = GV.configuracao_base.get("interface", {})
+	var transp: float = clampf(iface.get("transparencia_fundo", 0.0) as float, 0.0, 1.0)
+	# Informa a transparência à paleta: terminal e células leem alpha_painel() ao repintar.
+	PaletaSemantica.definir_transparencia(transp)
+	# Seleciona a imagem pela luminância do fundo do tema (claro -> fundo.jpg, escuro -> fundo_dark.jpg).
+	var clara: bool = PaletaSemantica.fundo().get_luminance() > 0.5
+	var caminho: String = "res://imagens/background/" + ("fundo.jpg" if clara else "fundo_dark.jpg")
+	var imagem: TextureRect = $FundoImagem
+	imagem.texture = load(caminho) if ResourceLoader.exists(caminho) else null
+	imagem.visible = transp > 0.0 and imagem.texture != null
+	# Véu = cor de fundo do tema, com alpha decrescente conforme a transparência aumenta.
+	var cor: Color = PaletaSemantica.fundo()
+	cor.a = 1.0 - transp
+	$FundoScrim.color = cor
+	# Repinta terminal e células ao vivo: emitir "changed" no tema propaga NOTIFICATION_THEME_CHANGED,
+	# que ambos já tratam para reaplicar o fundo (agora com alpha_painel()).
+	var tema: Theme = get_window().theme
+	if tema != null:
+		tema.emit_changed()
+
 ## Lista os temas disponíveis em [code]res://scenes/Themes/[/code], retornando os nomes internos
 ## (nome do arquivo sem extensão) em ordem alfabética.
 func _descobrir_temas() -> Array[String]:
@@ -174,6 +199,7 @@ func _aplicar_tema(nome: String) -> void:
 	PaletaSemantica.atualizar_tema(recurso_tema, nome)
 	get_window().theme = recurso_tema
 	_aplicar_cor_fundo()
+	_aplicar_fundo()
 
 ## Resolve o tamanho da fonte das grades (fonte global + offset, limitado ao piso/teto de
 ## legibilidade) e o aplica ao tema compartilhado das grades via [PaletaSemantica].
@@ -460,6 +486,8 @@ func _on_config_parametro_alterado(caminho: Array, valor: Variant) -> void:
 				_aplicar_fonte_grades()
 			"tema":
 				_aplicar_tema(str(valor))
+			"transparencia_fundo":
+				_aplicar_fundo()
 
 func _on_barra_principal_mensagem_texto(value) -> void:
 	for child in $Modulo.get_children():

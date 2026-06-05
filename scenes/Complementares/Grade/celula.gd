@@ -210,8 +210,11 @@ func _update_button() -> void:
 			rt_rodape.text = _traduzir_cores(texto_rodape, fundo, cor_texto)
 			rt_rodape.add_theme_color_override("default_color", cor_texto)
 	# Cria StyleBoxFlat próprio para o fundo da célula, sem depender do tema.
+	# O fundo recebe a translucidez dos painéis (alpha_painel); contraste do texto e cor da borda
+	# usam [fundo] opaco, preservando legibilidade e a borda definida do "cartão".
+	var alpha_fundo := PaletaSemantica.alpha_painel()
 	var style_normal := StyleBoxFlat.new()
-	style_normal.bg_color = fundo
+	style_normal.bg_color = Color(fundo, alpha_fundo)
 	style_normal.border_width_left = 1
 	style_normal.border_width_right = 1
 	style_normal.border_width_top = 1
@@ -225,10 +228,10 @@ func _update_button() -> void:
 	style_normal.corner_radius_bottom_right = 4
 	$Button.add_theme_stylebox_override("normal", style_normal)
 	var style_hover := style_normal.duplicate()
-	style_hover.bg_color = fundo.lightened(0.1)
+	style_hover.bg_color = Color(fundo.lightened(0.1), alpha_fundo)
 	$Button.add_theme_stylebox_override("hover", style_hover)
 	var style_pressed := style_normal.duplicate()
-	style_pressed.bg_color = fundo.darkened(0.1)
+	style_pressed.bg_color = Color(fundo.darkened(0.1), alpha_fundo)
 	$Button.add_theme_stylebox_override("pressed", style_pressed)
 
 # RegEx compilada uma unica vez para localizar tags [color=...] no texto da celula.

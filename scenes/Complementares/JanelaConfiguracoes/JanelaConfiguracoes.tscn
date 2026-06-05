@@ -285,6 +285,33 @@ custom_minimum_size = Vector2(200, 30)
 layout_mode = 2
 texto_padrao = "Tema"
 
+[node name="TransparenciaContainer" type="HBoxContainer" parent="TabContainer/Interface"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="TabContainer/Interface/TransparenciaContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Transparência do fundo:"
+
+[node name="BotaoTranspMenos" type="Button" parent="TabContainer/Interface/TransparenciaContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="ValorTransparencia" type="Label" parent="TabContainer/Interface/TransparenciaContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+text = "0%"
+horizontal_alignment = 1
+
+[node name="BotaoTranspMais" type="Button" parent="TabContainer/Interface/TransparenciaContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+focus_mode = 0
+text = "+"
+
 [node name="Posicionamento" type="VBoxContainer" parent="TabContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -464,6 +491,8 @@ text = "Configurar…"
 [connection signal="button_up" from="TabContainer/Interface/FonteGradeContainer/BotaoFonteGradeMenos" to="." method="_on_fonte_grade_menos_button_up"]
 [connection signal="button_up" from="TabContainer/Interface/FonteGradeContainer/BotaoFonteGradeMais" to="." method="_on_fonte_grade_mais_button_up"]
 [connection signal="opcao_selecionada" from="TabContainer/Interface/TemaContainer/Tema" to="." method="_on_tema_selecionado"]
+[connection signal="button_up" from="TabContainer/Interface/TransparenciaContainer/BotaoTranspMenos" to="." method="_on_transp_menos_button_up"]
+[connection signal="button_up" from="TabContainer/Interface/TransparenciaContainer/BotaoTranspMais" to="." method="_on_transp_mais_button_up"]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoPreferencia/SpinBox" to="." method="_on_peso_changed" binds= ["preferencia"]]
 [connection signal="value_changed" from="TabContainer/Posicionamento/ExpoentePreferencia/SpinBox" to="." method="_on_peso_changed" binds= ["preferencia_expoente"]]
 [connection signal="value_changed" from="TabContainer/Posicionamento/PesoForaPeriodo/SpinBox" to="." method="_on_peso_changed" binds= ["fora_periodo"]]
