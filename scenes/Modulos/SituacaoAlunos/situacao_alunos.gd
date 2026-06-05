@@ -677,6 +677,7 @@ func _mostrar_selecao_disciplinas(partes: PackedStringArray, codigos: Array[Stri
 	dialogo.add_child(vbox)
 	add_child(dialogo)
 	dialogo.popup_centered()
+	Dialogos.limitar_a_tela(dialogo)
 
 ## Realca na GradeHorarios todas as celulas da disciplina clicada (toggle).
 ## Se a celula tiver multiplas disciplinas, abre popup de selecao.

@@ -130,6 +130,7 @@ func abrir(grade_nome: String, grade: Dictionary, codigos_existentes: Array) -> 
 	dialog.close_requested.connect(dialog.queue_free)
 	_raiz.add_child(dialog)
 	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
 	# Foco inicial no campo de busca: padrao de UI para listas com filtro.
 	campo_busca.grab_focus()
 

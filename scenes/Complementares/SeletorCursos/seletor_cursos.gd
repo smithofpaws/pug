@@ -85,6 +85,7 @@ func abrir(cursos: Dictionary, pre_marcados: Array = []) -> void:
 	dialog.close_requested.connect(dialog.queue_free)
 	_raiz.add_child(dialog)
 	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
 
 # Coleta os cod_curso marcados e emite o sinal.
 func _on_confirmar(checkboxes: Array) -> void:

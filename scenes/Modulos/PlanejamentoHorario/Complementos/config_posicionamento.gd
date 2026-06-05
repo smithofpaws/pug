@@ -33,8 +33,19 @@ func abrir(inicio_manha_inicial: bool = true, permitir_sabado_inicial: bool = fa
 	dialog.get_ok_button().text = "Posicionar"
 	dialog.get_cancel_button().text = "Cancelar"
 
+	# Conteúdo numa área rolável: com escala de fonte grande (ou tela baixa) o diálogo não cresce além
+	# da tela — o conteúdo rola e os botões continuam visíveis (limite aplicado após popup_centered).
+	# O piso de altura (480) acomoda o conteúdo típico sem rolar; a rolagem só entra nos casos extremos.
+	var raiz := VBoxContainer.new()
+	raiz.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog.add_child(raiz)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(500, 480)
+	raiz.add_child(scroll)
 	var vbox := VBoxContainer.new()
-	dialog.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
 
 	var escopo: String = ""
 	if nome_curso_filtro.is_empty():
@@ -110,6 +121,7 @@ func abrir(inicio_manha_inicial: bool = true, permitir_sabado_inicial: bool = fa
 	# Item obrigatório ausente impede o posicionamento: o usuário ainda pode fechar/cancelar.
 	dialog.get_ok_button().disabled = bloqueado
 	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
 
 # Lê o turno inicial marcado e a opção de sábado, e emite o sinal de configuração.
 func _on_confirmar(grupo: ButtonGroup, cb_sabado: CheckBox) -> void:

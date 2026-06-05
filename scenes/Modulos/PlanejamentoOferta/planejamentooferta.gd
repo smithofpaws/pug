@@ -561,6 +561,7 @@ func _converter_planejamento_csv() -> void:
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered()
+	Dialogos.limitar_a_tela(fd)
 
 
 # Abre o dialogo modal de selecao de cursos antes da leitura do planejamento.csv. A leitura
@@ -792,6 +793,7 @@ func _perguntar_mesclar_ou_substituir() -> String:
 		_resposta_dialogo = "cancelar")
 	add_child(dialogo)
 	dialogo.popup_centered()
+	Dialogos.limitar_a_tela(dialogo)
 	while _resposta_dialogo.is_empty():
 		await get_tree().process_frame
 	var r: String = _resposta_dialogo

@@ -65,6 +65,7 @@ func abrir() -> void:
 	_estilizar_setas_abas()
 	min_size.x = _largura_minima_abas()
 	popup_centered()
+	Dialogos.limitar_a_tela(self)
 
 
 # Largura (px lógicos) necessária para o cabeçalho com todas as abas visíveis, estimada a partir da

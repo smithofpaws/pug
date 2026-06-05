@@ -71,6 +71,7 @@ func _set_filters(new_value: PackedStringArray) -> void:
 #region botões e sinais
 func _on_botao_pasta_button_up() -> void:
 	$FileDialog.popup_centered()
+	Dialogos.limitar_a_tela($FileDialog)
 
 func _on_botao_site_button_up() -> void:
 	if site_link.begins_with("http"):

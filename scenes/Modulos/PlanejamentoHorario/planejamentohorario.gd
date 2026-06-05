@@ -1429,6 +1429,7 @@ func _converter_planejamento_csv() -> void:
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered()
+	Dialogos.limitar_a_tela(fd)
 
 
 ## Abre um [FileDialog] para o usuario selecionar arquivos CSV ou XLSX de preferencias
@@ -1449,6 +1450,7 @@ func _importar_preferencias_professor() -> void:
 	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
 
 
 func _on_preferencia_arquivo_selecionado(caminho: String, dialog: FileDialog) -> void:
@@ -1780,38 +1782,25 @@ func _abrir_config_posicionamento() -> void:
 		return
 	_avisar_compartilhadas(compartilhadas, nome_curso_filtro, diagnostico)
 
-# Aviso (3 saídas) exibido quando há disciplinas pendentes compartilhadas entre cursos. Como o
-# helper Dialogos.confirmar é sim/não, monta-se um ConfirmationDialog próprio (ver AGENTS.md): botão
-# OK = posicionar todas; botão extra = posicionar só as não compartilhadas; Cancelar = desistir.
+# Aviso (3 saídas) exibido quando há disciplinas pendentes compartilhadas entre cursos: a lista pode
+# ser longa, então usa Dialogos.escolha_lista (cabeçalho + lista rolável + ações), que não estoura a
+# tela. OK = posicionar todas; ação extra = posicionar só as não compartilhadas; Cancelar = desistir.
 func _avisar_compartilhadas(compartilhadas: Array[String], nome_curso_filtro: String, diagnostico: Array) -> void:
-	var texto: String = "As seguintes disciplinas pendentes são compartilhadas entre cursos:\n\n%s\n\n" % "\n".join(compartilhadas) \
-		+ "Como o horário delas é uma decisão conjunta dos cursos envolvidos, você pode preferir " \
-		+ "posicioná-las manualmente antes. O que deseja fazer?"
-	var dialog := ConfirmationDialog.new()
-	dialog.title = "Disciplinas compartilhadas entre cursos"
-	dialog.dialog_text = texto
-	dialog.wrap_controls = true
-	dialog.get_ok_button().text = "Posicionar todas"
-	dialog.get_cancel_button().text = "Cancelar"
-	# Largura fixa pela largura mínima do label (com autowrap), e não por min_size do Window — o mesmo
-	# truque de Dialogos.confirmar para mensagens longas não esticarem o diálogo na horizontal.
-	var label := dialog.get_label()
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size = Vector2(520, 0)
-	dialog.add_button("Apenas as não compartilhadas", true, "apenas_nao_compartilhadas")
-	dialog.confirmed.connect(func():
+	var cabecalho: String = "As seguintes disciplinas pendentes são compartilhadas entre cursos:"
+	var rodape: String = "Como o horário delas é uma decisão conjunta dos cursos envolvidos, você pode " \
+		+ "preferir posicioná-las manualmente antes. O que deseja fazer?"
+	var abrir_todas := func():
 		_excluir_compartilhadas_posic = false
-		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico))
-	dialog.custom_action.connect(func(acao: StringName):
-		if acao == "apenas_nao_compartilhadas":
-			dialog.hide()
-			_excluir_compartilhadas_posic = true
-			_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico))
-	dialog.visibility_changed.connect(func():
-		if not dialog.visible:
-			dialog.queue_free())
-	add_child(dialog)
-	dialog.popup_centered()
+		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico)
+	var abrir_nao_compartilhadas := func():
+		_excluir_compartilhadas_posic = true
+		_config_posic.abrir(_inicio_manha_posic, _permitir_sabado_posic, nome_curso_filtro, diagnostico)
+	var acoes: Array = [
+		{"texto": "Posicionar todas", "ao_acionar": abrir_todas},
+		{"texto": "Apenas as não compartilhadas", "ao_acionar": abrir_nao_compartilhadas},
+	]
+	Dialogos.escolha_lista(self, "Disciplinas compartilhadas entre cursos", cabecalho, \
+		compartilhadas, rodape, acoes, "Cancelar")
 
 # Monta o diagnóstico de pré-requisitos do posicionamento para [param cards_alvo] (já restritos ao
 # curso filtrado, quando há filtro). Cada item é { "texto": String, "token": String, "bloqueia": bool },
