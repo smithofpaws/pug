@@ -32,19 +32,44 @@ var general_functions := GeneralFunctions.new()
 ## Retorna informação de diversas grades.
 ## Formato de [param codigo_pesquisa] deve o código da disciplina (e.g. "al0001"). [br]
 ## Formato de [param informacao_desejada] deve ser o nome da informação em [code]/arquivos/grades[/code] (e.g. "nome"). [br]
-func info_grade(grades_disciplinas_curriculos: Dictionary, codigo_pesquisa: String, informacao_desejada: String, grade_nome: String = "") -> String:
+## Quando [param silencioso] é verdadeiro, não loga o "ERRO: Não foi encontrado código" caso o
+## código não exista em nenhuma grade — usado pelos chamadores do fluxo de planejamento/oferta,
+## onde códigos sem grade são esperados e tratados (o ruído é reportado de forma agregada).
+func info_grade(grades_disciplinas_curriculos: Dictionary, codigo_pesquisa: String, informacao_desejada: String, grade_nome: String = "", silencioso: bool = false) -> String:
 	if not grade_nome.is_empty():
 		var grade: Dictionary = grades_disciplinas_curriculos.get(grade_nome, {})
 		if grade.has(codigo_pesquisa):
 			return str(grade[codigo_pesquisa].get(informacao_desejada, "Informação não encontrada ("+informacao_desejada+")"))
-		print_debug("ERRO: Não foi encontrado código ", codigo_pesquisa, "!")
+		if not silencioso:
+			print_debug("ERRO: Não foi encontrado código ", codigo_pesquisa, "!")
 		return "Codigo não encontrado"
 	for grade in grades_disciplinas_curriculos.keys():
 		for codigo in grades_disciplinas_curriculos[grade].keys():
 			if codigo == codigo_pesquisa:
 				return grades_disciplinas_curriculos[grade][codigo].get(informacao_desejada, "Informação não encontrada ("+informacao_desejada+")")
-	print_debug("ERRO: Não foi encontrado código ", codigo_pesquisa, "!")
+	if not silencioso:
+		print_debug("ERRO: Não foi encontrado código ", codigo_pesquisa, "!")
 	return "Codigo não encontrado"
+
+## Retorna se [param codigo] existe em alguma grade de [param grades_disciplinas_curriculos], sem
+## logar nada. Útil para verificações em massa (e.g. quais códigos do planejamento não têm grade).
+func existe_codigo(grades_disciplinas_curriculos: Dictionary, codigo: String) -> bool:
+	for grade in grades_disciplinas_curriculos.keys():
+		if grades_disciplinas_curriculos[grade].has(codigo):
+			return true
+	return false
+
+## Dada uma lista de [param codigos], retorna os que NÃO existem em nenhuma grade, sem duplicatas e
+## preservando a ordem de aparição. Base do aviso agregado de "disciplinas sem grade".
+func codigos_ausentes(grades_disciplinas_curriculos: Dictionary, codigos: Array) -> Array[String]:
+	var ausentes: Array[String] = []
+	for codigo in codigos:
+		var cod: String = str(codigo)
+		if cod == "" or ausentes.has(cod):
+			continue
+		if not existe_codigo(grades_disciplinas_curriculos, cod):
+			ausentes.append(cod)
+	return ausentes
 
 ## Monta a matriz da grade curricular de um discente para apresentação no componente [GradeCurricular]/[Grade]. [br]
 ## Posiciona cada disciplina obrigatória conforme sua chave [code]posicao_grade[/code] ([linha, coluna]) e

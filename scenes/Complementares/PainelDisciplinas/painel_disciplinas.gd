@@ -234,7 +234,7 @@ func _obter_info_disciplina(codigo: String, semestre: String) -> Dictionary:
 			grade_nome = str(grades_list[-1])
 
 	if not grade_nome.is_empty():
-		var sem: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "semestre", grade_nome)
+		var sem: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "semestre", grade_nome, true)
 		complementar = (sem == "0")
 
 	return {"complementar": complementar, "prefixo": prefixo}
@@ -329,7 +329,7 @@ func popular(planejamento_csv: Dictionary, terminal: Node, limpar_antes: bool = 
 			var ch_disc: String = dados.get("ch_disciplina", "0")
 			if int(ch_disc) > 0:
 				chs = [ch_disc]
-		var nome: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome")
+		var nome: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome", "", true)
 		if nome.begins_with("Codigo"):
 			nome = codigo
 		var card: CardDisciplina = _card_disciplina_scene.instantiate()

@@ -235,7 +235,7 @@ func _nome_disciplina(aloc: Dictionary) -> String:
 	var nome: String = card.nome if card else ""
 	if nome.is_empty():
 		var codigo: String = aloc.get("codigo", "")
-		nome = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome")
+		nome = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome", "", true)
 		if nome.begins_with("Codigo"):
 			nome = codigo
 	return nome

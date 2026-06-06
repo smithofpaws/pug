@@ -545,6 +545,15 @@ func _on_cursos_selecionados_planejamento(cods: Array[String]) -> void:
 func _importar_planejamento_csv(prefixos_semestre: Array[String]) -> void:
 	if _dados.carregar_planejamento(GV.dir_saida, prefixos_semestre):
 		_dados.adicionar_planejamento()
+		# Aviso agregado: disciplinas do planejamento que nao constam em nenhuma grade carregada.
+		var codigos_plan: Array = []
+		for k in _dados._planejamento_csv:
+			codigos_plan.append(_dados._planejamento_csv[k].get("codigo", ""))
+		var sem_grade: Array[String] = analise_grades.codigos_ausentes(grades_disciplinas_curriculos, codigos_plan)
+		if not sem_grade.is_empty():
+			$"%Terminal".text_edit("Disciplinas do planejamento sem grade carregada (exibidas pelo codigo): " \
+				+ ", ".join(sem_grade) + " — confira se falta um arquivo de grade ou se o codigo esta correto.", \
+				"aviso", true, false)
 		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
 		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 		_sincronizar_referencias()
@@ -1828,7 +1837,7 @@ func _diagnostico_posicionamento(cards_alvo: Dictionary) -> Array:
 			com_ch += 1
 		else:
 			sem_ch += 1
-		var nome_grade: String = analise_grades.info_grade(grades_disciplinas_curriculos, card.codigo, "nome")
+		var nome_grade: String = analise_grades.info_grade(grades_disciplinas_curriculos, card.codigo, "nome", "", true)
 		if nome_grade.begins_with("Codigo") or nome_grade.begins_with("Informa"):
 			fora_grade += 1
 		for p in card.professores:

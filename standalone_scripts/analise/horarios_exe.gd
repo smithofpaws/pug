@@ -286,7 +286,7 @@ func exportar_planejamento(planejamento_csv: Dictionary, grades_disciplinas_curr
 				horariosexe_txt[linhas].append(info_formatada({}, "dia"))
 				# Determina o nome da disciplina a partir do código e do arquivo de grades
 				var codigo: String = planejamento_csv[key].get("codigo", key)
-				var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome")
+				var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome", "", true)
 				var disciplina: String = nome + " (" + codigo + ")"
 				horariosexe_txt[linhas].append(info_formatada({"disciplina": disciplina}, "disciplina"))
 				horariosexe_txt[linhas].append(info_formatada({}, "tipo"))
@@ -374,7 +374,7 @@ func exportar_horarios_ref(alocacoes: Dictionary, planejamento_csv: Dictionary, 
 			# Disciplina — fonte canônica: horarios.ini [Disciplinas]
 			var disc_str: String = _buscar_disciplina_ini(codigo, horarios_ini)
 			if disc_str.is_empty():
-				var nome: String = analise_grades.info_grade(grades, codigo, "nome")
+				var nome: String = analise_grades.info_grade(grades, codigo, "nome", "", true)
 				if nome.begins_with("Codigo"):
 					nome = codigo
 				disc_str = nome + " " + codigo.to_upper()

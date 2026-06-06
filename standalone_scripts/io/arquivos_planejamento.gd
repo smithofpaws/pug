@@ -217,7 +217,7 @@ func planejamento_para_horarios_txt(numero_linha: int = 0) -> Array:
 				localhorarios_txt[linhas]["semestre"] = _horarios_exe.info_formatada({"semestre":_planejamento_csv[key]["semestre"]},"semestre")
 				localhorarios_txt[linhas]["horario"] = _horarios_exe.info_formatada({}, "horario")
 				localhorarios_txt[linhas]["dia"] = _horarios_exe.info_formatada({}, "dia")
-			var nome: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, _planejamento_csv[key]["codigo"], "nome")
+			var nome: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, _planejamento_csv[key]["codigo"], "nome", "", true)
 			var disciplina: String = nome + " (" + _planejamento_csv[key]["codigo"] + ")"
 			localhorarios_txt[linhas]["disciplina"] = _horarios_exe.info_formatada({"disciplina": disciplina}, "disciplina")
 			localhorarios_txt[linhas]["tipo"] = _horarios_exe.info_formatada({}, "tipo")
@@ -371,7 +371,7 @@ func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, chave: St
 	var profs: Array[String] = []
 	var ch_total: int
 	if dados_csv.size() > 0:
-		nome = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome")
+		nome = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome", "", true)
 		if nome.begins_with("Codigo"):
 			nome = codigo
 		profs.assign(dados_csv.get("professor", []))
@@ -526,7 +526,7 @@ func mesclar_planejamento_com_horarios_txt(caminho_horarios_txt: String) -> Dict
 		var sem: String = dados.get("semestre", "")
 		var chave_base: String = codigo.to_lower() + "_" + sem.to_lower()
 		chaves_novas[chave_base] = true
-		var nome_disc: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome")
+		var nome_disc: String = _analise_grades.info_grade(_grades_disciplinas_curriculos, codigo, "nome", "", true)
 		if nome_disc.begins_with("Codigo"):
 			nome_disc = codigo
 		for b in dados.get("professor", []).size():

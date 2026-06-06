@@ -384,6 +384,9 @@ func _atualizar_status_bar() -> void:
 func _popular_alocacoes_do_csv() -> void:
 	_alocacoes.clear()
 	_todos_professores.clear()
+	# Acumula os codigos do planejamento sem grade carregada para um unico aviso agregado ao final,
+	# em vez de um log por disciplina (que poluia o terminal).
+	var codigos_sem_grade: Array[String] = []
 	for chave in _planejamento:
 		var entrada: Dictionary = _planejamento[chave]
 		var codigo: String = str(entrada.get("codigo", "")).to_lower()
@@ -392,9 +395,10 @@ func _popular_alocacoes_do_csv() -> void:
 			continue
 		var semestre: String = str(entrada.get("semestre", ""))
 		var ch_total: int = int(entrada.get("ch_disciplina", 0))
-		var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome")
+		var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome", "", true)
 		if nome.begins_with("Codigo"):
-			_log("Codigo %s nao encontrado em nenhuma grade curricular." % codigo, "aviso")
+			if not codigos_sem_grade.has(codigo):
+				codigos_sem_grade.append(codigo)
 			nome = codigo.to_upper()
 		var profs_array: Array = entrada.get("professor", [])
 		var chs_array: Array = entrada.get("ch", [])
@@ -419,6 +423,9 @@ func _popular_alocacoes_do_csv() -> void:
 			if not ps.is_empty() and not ps in _todos_professores:
 				_todos_professores.append(ps)
 	_todos_professores.sort_custom(func(a, b): return a < b)
+	if not codigos_sem_grade.is_empty():
+		_log("Disciplinas sem grade carregada (exibidas pelo codigo): " + ", ".join(codigos_sem_grade) \
+			+ " — confira se falta um arquivo de grade ou se o codigo esta correto.", "aviso", true, true)
 	# Atualiza o dropdown do painel de atribuicoes.
 	_painel_atribuicoes.configurar(_todos_professores)
 
@@ -886,11 +893,11 @@ func _mesclar_alocacoes(backup: Dictionary, backup_profs: Array[String], card_di
 # Se o codigo nao estiver em nenhuma grade: nome cai em [param codigo].to_upper(),
 # [code]ch_creditos[/code] cai em 0 — o card mostrara "Sem CH definida".
 func _resolver_codigo_via_grade(codigo: String) -> Dictionary:
-	var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome")
+	var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome", "", true)
 	# info_grade devolve strings com prefixo "Codigo" ou "Informa..." quando nao acha — caem para o codigo.
 	if nome.begins_with("Codigo") or nome.begins_with("Informa"):
 		nome = codigo.to_upper()
-	var ch_str: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "ch")
+	var ch_str: String = analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "ch", "", true)
 	var ch_horas: int = int(ch_str) if ch_str.is_valid_int() else 0
 	var horas_por_credito: int = int(config_oferta.get("horas_por_credito", 15))
 	var ch_creditos: int = ch_horas / horas_por_credito if horas_por_credito > 0 else 0
