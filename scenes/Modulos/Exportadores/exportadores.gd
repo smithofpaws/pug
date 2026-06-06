@@ -168,13 +168,21 @@ func _popular_seletor_condicoes() -> void:
 
 # Carrega historico e horarios, computa condicoes para todos os alunos.
 func _carregar_dados_choques() -> void:
-	_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-	analise_historico.simplificar_historico(_historico, "situacao", ["aprovado", "dispensado", "matr"])
+	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
+	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	if not GV.dados_discentes.is_empty():
+		_historico = GV.dados_discentes["historico"]
+		_lista_alunos = GV.dados_discentes["lista_alunos"]
+		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+	else:
+		_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
+		analise_historico.simplificar_historico(_historico, "situacao", ["aprovado", "dispensado", "matr"])
+		_lista_alunos = analise_historico.criar_lista_alunos(_historico)
+		_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
+			grades_disciplinas_curriculos, equivalencias)
+	# Lê os horários (arquivos pequenos; mantidos locais ao módulo).
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida, "horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida, "horarios.txt", posicoes_horarios_txt)
-	_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-		grades_disciplinas_curriculos, equivalencias)
 	
 	# Popula SeletorAluno
 	var alunos_itens: Array[String] = ["Todos os alunos"]

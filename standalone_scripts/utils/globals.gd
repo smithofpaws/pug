@@ -47,3 +47,13 @@ var ch_exigida: Dictionary
 ## Dicas de funcionalidade do programa, carregadas de [code]arquivos/dicas.json[/code].
 ## Chaves aninhadas por modulo. Usado por [DicasPrograma].
 var dicas: Dictionary = {}
+
+## Cache compartilhado dos dados discentes pre-computados, para que a troca de modulo nao
+## recalcule o pipeline caro (ler hist.csv -> reprovacoes -> simplificar -> condicoes_discentes).
+## Preenchido por [code]main.gd:_garantir_dados_discentes[/code] e consumido pelos modulos que
+## fazem analise de historico/aproveitamento. Conteudo: [br]
+## [code]{ historico, lista_alunos, condicoes_discentes, reprovacoes }[/code].
+var dados_discentes: Dictionary = {}
+## Assinatura que valida o cache [member dados_discentes] (timestamp de modificacao do hist.csv).
+## Quando o hist.csv muda, a assinatura difere e o cache e recomputado.
+var dados_discentes_assinatura: String = ""

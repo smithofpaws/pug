@@ -46,16 +46,23 @@ var _lista_alunos: Array[Array]
 var _condicoes_discentes: Dictionary
 
 func _ready() -> void:
-	# Lê o historico
-	_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-	# Simplifica para conter apenas as linhas aprovadas, dispensadas e em matrícula.
-	analise_historico.simplificar_historico(_historico, "situacao", \
-		["aprovado", "dispensado", "matr"])
-	# Prepara a lista de alunos.
-	_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-	# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
-	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-	grades_disciplinas_curriculos, equivalencias)
+	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
+	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	if not GV.dados_discentes.is_empty():
+		_historico = GV.dados_discentes["historico"]
+		_lista_alunos = GV.dados_discentes["lista_alunos"]
+		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+	else:
+		# Lê o historico
+		_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
+		# Simplifica para conter apenas as linhas aprovadas, dispensadas e em matrícula.
+		analise_historico.simplificar_historico(_historico, "situacao", \
+			["aprovado", "dispensado", "matr"])
+		# Prepara a lista de alunos.
+		_lista_alunos = analise_historico.criar_lista_alunos(_historico)
+		# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
+		_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
+		grades_disciplinas_curriculos, equivalencias)
 	# Imprime os alunos em situação irregular no terminal.
 	_imprimir_irregulares()
 

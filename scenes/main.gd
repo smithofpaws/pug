@@ -21,6 +21,13 @@ extends ReferenceRect
 
 # Classes instanciadas
 var file_handling := FileHandling.new()
+## Usada para pre-computar os dados discentes compartilhados (cache em [member GV.dados_discentes]).
+var analise_historico := AnaliseHistorico.new()
+## Sobreposicao de progresso, exibida durante o calculo das condicoes discentes.
+var _overlay_progresso: OverlayProgresso
+## Modulos que consomem o cache de dados discentes (disparam [method _garantir_dados_discentes]).
+const _MODULOS_COM_DADOS_DISCENTES: Array[String] = ["situacao_alunos", "situacao_disciplinas", \
+	"matricula_irregular", "exportadores", "planejamento_horario", "planejamento_oferta"]
 ## Flag para evitar loop ao redirecionar para o módulo Principal
 var _redirecionando := false
 var _ajustando_janela := false
@@ -61,6 +68,9 @@ func _ready() -> void:
 	var chaves: Array[String] = []
 	chaves.assign(GV.configuracao_base["modulos"].keys())
 	$BarraPrincipal.lista = chaves
+	# Sobreposicao de progresso (acima de tudo) para os calculos demorados.
+	_overlay_progresso = OverlayProgresso.new()
+	add_child(_overlay_progresso)
 	_on_barra_principal_modulo_selecionado("principal")
 
 ## Aplica escala (DPI × multiplicador manual), tamanho da janela, oversampling de fonte e tema
@@ -327,6 +337,59 @@ func _verificar_arquivos(modulo_nome: String) -> Dictionary:
 
 	return resultado
 
+## Garante que [member GV.dados_discentes] reflita o hist.csv atual, recomputando o pipeline caro
+## (reprovacoes -> simplificacao -> condicoes_discentes) apenas quando o arquivo muda; caso contrario
+## reutiliza o cache (caminho rapido das trocas de modulo). Mostra a barra de progresso durante o
+## calculo e mantem a UI responsiva (processa em blocos com [code]await[/code]). Retorna true se ha
+## dados disponiveis (false quando o hist.csv nao existe).
+func _garantir_dados_discentes() -> bool:
+	var caminho_hist: String = GV.dir_saida + "hist.csv"
+	if not FileAccess.file_exists(caminho_hist):
+		GV.dados_discentes = {}
+		GV.dados_discentes_assinatura = ""
+		return false
+	var assinatura: String = str(FileAccess.get_modified_time(caminho_hist))
+	# Cache valido: reutiliza sem recalcular (o que torna a troca de modulo praticamente instantanea).
+	if assinatura == GV.dados_discentes_assinatura and not GV.dados_discentes.is_empty():
+		return true
+	# Recalcula. Le e prepara o historico com a mesma sequencia usada pelos modulos.
+	var posicoes_histcsv: Dictionary = GV.configuracao_base["histfile"]
+	var condicoes: Array[String] = []
+	condicoes.assign(GV.configuracao_base["condicoes"])
+	var historico: Dictionary = file_handling.ler_dados(GV.dir_saida, "hist.csv", \
+		posicoes_histcsv, false, GV.grades)
+	# Guarda os avisos de validacao do cabecalho para o modulo exibir (a leitura agora e central).
+	var avisos_leitura: Array = file_handling.avisos_leitura.duplicate()
+	# Reprovacoes sao extraidas do historico completo, ANTES da simplificacao.
+	var lista_situacoes: Dictionary = analise_historico.listar_situacao(historico, \
+		["reprovado com nota", "Reprovado por Frequência"])
+	var reprovacoes: Dictionary = analise_historico.processar_reprovacoes(lista_situacoes)
+	# Mantem apenas aprovadas/dispensadas/matriculadas (mesma regra adotada por todos os modulos).
+	analise_historico.simplificar_historico(historico, "situacao", ["aprovado", "dispensado", "matr"])
+	var lista_alunos: Array[Array] = analise_historico.criar_lista_alunos(historico)
+	# Calcula as condicoes discentes em blocos, atualizando a barra e cedendo um frame para repintar.
+	_overlay_progresso.mostrar("Calculando matrículas dos discentes…")
+	var condicoes_discentes: Dictionary = {}
+	var total: int = lista_alunos.size()
+	for i in total:
+		var matricula: String = lista_alunos[i][0]
+		condicoes_discentes[matricula] = analise_historico.disciplinas_cursaveis(matricula, \
+			GV.grades, historico, condicoes, GV.equivalencias)
+		if i % 25 == 0 or i == total - 1:
+			_overlay_progresso.definir_progresso(float(i + 1) / float(maxi(total, 1)), \
+				"Discente %d de %d" % [i + 1, total])
+			await get_tree().process_frame
+	_overlay_progresso.ocultar()
+	GV.dados_discentes = {
+		"historico": historico,
+		"lista_alunos": lista_alunos,
+		"condicoes_discentes": condicoes_discentes,
+		"reprovacoes": reprovacoes,
+		"avisos_leitura": avisos_leitura,
+	}
+	GV.dados_discentes_assinatura = assinatura
+	return true
+
 func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 	if _redirecionando:
 		_redirecionando = false
@@ -343,6 +406,11 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo_selecionado = "principal"
 			_redirecionando = true
 			$BarraPrincipal/HBoxContainer/SeletorModulos.selecionar_item(0)
+
+	# Pre-computa (ou reutiliza) o cache de dados discentes antes de instanciar os modulos que
+	# fazem analise de historico/aproveitamento, eliminando o recalculo a cada troca de modulo.
+	if modulo_selecionado in _MODULOS_COM_DADOS_DISCENTES:
+		await _garantir_dados_discentes()
 
 	match modulo_selecionado:
 		"principal":

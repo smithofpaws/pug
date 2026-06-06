@@ -132,25 +132,36 @@ var _pronto := false
 func _ready() -> void:
 	$"%Horarios".formatos_grade = formatos_grade
 	$"%Horarios".condicoes = condicoes
-	# Lê o historico
-	_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-	# Exibe avisos de validação do cabeçalho, se houver.
-	for aviso in file_handling.avisos_leitura:
-		$"%Terminal".text_edit(aviso, cores_terminal["aviso"], true, true)
-	# Analisa as reprovações de cada discente
-	var _lista_situacoes = analise_historico.listar_situacao(_historico, ["reprovado com nota", "Reprovado por Frequência"])
-	_analisado_reprov = analise_historico.processar_reprovacoes(_lista_situacoes)
-	# Simplifica para conter apenas as linhas aprovadas.
-	analise_historico.simplificar_historico(_historico, "situacao", ["aprovado","dispensado","matr"])
-	# Lê os horários.
+	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
+	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	if not GV.dados_discentes.is_empty():
+		_historico = GV.dados_discentes["historico"]
+		_analisado_reprov = GV.dados_discentes["reprovacoes"]
+		_lista_alunos_todos = GV.dados_discentes["lista_alunos"]
+		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+		# Exibe avisos de validação do cabeçalho, se houver.
+		for aviso in GV.dados_discentes.get("avisos_leitura", []):
+			$"%Terminal".text_edit(aviso, cores_terminal["aviso"], true, true)
+	else:
+		# Lê o historico
+		_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
+		# Exibe avisos de validação do cabeçalho, se houver.
+		for aviso in file_handling.avisos_leitura:
+			$"%Terminal".text_edit(aviso, cores_terminal["aviso"], true, true)
+		# Analisa as reprovações de cada discente
+		var _lista_situacoes = analise_historico.listar_situacao(_historico, ["reprovado com nota", "Reprovado por Frequência"])
+		_analisado_reprov = analise_historico.processar_reprovacoes(_lista_situacoes)
+		# Simplifica para conter apenas as linhas aprovadas.
+		analise_historico.simplificar_historico(_historico, "situacao", ["aprovado","dispensado","matr"])
+		# Prepara a lista completa de alunos (todos os cursos do hist.csv).
+		_lista_alunos_todos = analise_historico.criar_lista_alunos(_historico)
+		# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
+		# Computado sobre a lista COMPLETA para que a troca de curso em runtime não exija recálculo.
+		_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos_todos, _historico, condicoes, \
+		grades_disciplinas_curriculos, equivalencias)
+	# Lê os horários (arquivos pequenos; mantidos locais ao módulo).
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida,"horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida,"horarios.txt", posicoes_horarios_txt)
-	# Prepara a lista completa de alunos (todos os cursos do hist.csv).
-	_lista_alunos_todos = analise_historico.criar_lista_alunos(_historico)
-	# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
-	# Computado sobre a lista COMPLETA para que a troca de curso em runtime não exija recálculo.
-	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos_todos, _historico, condicoes, \
-	grades_disciplinas_curriculos, equivalencias)
 	# Mapeia cada matrícula ao seu cod_curso (uma única vez) para alimentar o filtro de curso.
 	_mapear_cursos()
 

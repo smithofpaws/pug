@@ -1179,6 +1179,13 @@ func _atualizar_status_bar() -> void:
 # de alunos). Feito uma vez no _ready, espelhando o módulo Situação Disciplinas. Falha graciosamente
 # se hist.csv estiver ausente: o indicador apenas reportará zero.
 func _carregar_dados_discentes() -> void:
+	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
+	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	if not GV.dados_discentes.is_empty():
+		_historico = GV.dados_discentes["historico"]
+		_lista_alunos = GV.dados_discentes["lista_alunos"]
+		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+		return
 	if not FileAccess.file_exists(GV.dir_saida + "hist.csv"):
 		return
 	_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)

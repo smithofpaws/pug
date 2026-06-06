@@ -1261,6 +1261,12 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 func _carregar_dados_discentes(exigir: bool = true) -> bool:
 	if not _condicoes_discentes.is_empty():
 		return true
+	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
+	# modulo). Fallback (abaixo): se o cache estiver vazio, computa local.
+	if not GV.dados_discentes.is_empty():
+		_historico_discentes = GV.dados_discentes["historico"]
+		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+		return true
 	if not FileAccess.file_exists(GV.dir_saida + "hist.csv"):
 		if exigir:
 			_log("hist.csv nao encontrado em " + GV.dir_saida + \

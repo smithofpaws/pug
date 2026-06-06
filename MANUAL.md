@@ -56,6 +56,8 @@ Cada módulo indica, ao ser aberto, quais desses arquivos são obrigatórios par
 
 Use o **menu suspenso** no topo da janela para trocar de módulo a qualquer momento. O módulo anterior é descarregado e o novo é carregado em seu lugar.
 
+Ao abrir o **primeiro** módulo que analisa o histórico (Situação de Alunos/Disciplinas, Matrícula Irregular, Exportadores, Planejamento de Horário/Oferta), o programa calcula a situação de matrícula de todos os discentes e mostra uma **barra de progresso** — o tempo depende do tamanho do `hist.csv`. Esse resultado fica em cache, então as trocas seguintes entre esses módulos são praticamente **instantâneas**. O cálculo só é refeito (com nova barra) quando o `hist.csv` é reimportado ou alterado.
+
 ---
 
 ## 3. Interface Principal
