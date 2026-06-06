@@ -249,6 +249,13 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 			for cond in condicoes:
 				if cond.ends_with("_aproveitamento"):
 					continue
+				if cond == "matriculado_agora":
+					# Matrícula-equivalente já é tratada pela injeção (_aproveitar_equivalencias) + o
+					# pós-processamento abaixo, que produzem o código-ALVO (da grade atual) em
+					# matriculado_agora_aproveitamento. Adicionar aqui o código-FONTE (de outra grade)
+					# duplicaria a disciplina (caso aproveitamento) ou criaria entradas-fantasma (caso a
+					# matrícula seja NORMAL, cursada direto na grade do aluno).
+					continue
 				if cursaveis.has(cond) and cod_alvo in cursaveis[cond]:
 					var cond_aprov: String = cond + "_aproveitamento"
 					if not cursaveis.has(cond_aprov):

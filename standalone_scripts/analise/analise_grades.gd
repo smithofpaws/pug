@@ -383,7 +383,12 @@ func obter_equivalencias(cursaveis: Dictionary, equivalencias: Dictionary, versa
 	for cond in range(0,condicoes.size(),1):
 		lista_disciplinas_equivalentes = []
 		var condicao_atual: String = condicoes[cond]
-		if condicao_atual != "matriculado_agora":
+		# Pula ambas as formas de matrícula: "matriculado_agora" e "matriculado_agora_aproveitamento"
+		# já vêm completas do pós-processamento de disciplinas_cursaveis (com os códigos da grade ATUAL,
+		# necessários para colorir a célula na Grade Curricular e casar em matriculada_com_turma).
+		# Reprocessá-las aqui converteria esses códigos-alvo de volta para os códigos-fonte de outra
+		# grade (via codigos_origem_equivalencia), que não existem na grade atual e somem da indicação.
+		if condicao_atual != "matriculado_agora" and condicao_atual != "matriculado_agora_aproveitamento":
 			for b in cursaveis[condicao_atual].size():
 				lista_disciplinas_equivalentes.append_array(
 					codigos_origem_equivalencia(cursaveis[condicao_atual][b], equivalencias, versao_grade)
