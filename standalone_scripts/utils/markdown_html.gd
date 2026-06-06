@@ -79,12 +79,22 @@ static func converter(md: String) -> String:
 			saida.append(_lista(bloco_lista))
 			continue
 
+		# Blockquote (linhas iniciadas por '>'), incluindo callouts GFM '> [!TIPO]'.
+		if _eh_blockquote(linha):
+			var bloco_bq: Array[String] = []
+			while i < linhas.size() and _eh_blockquote(linhas[i]):
+				bloco_bq.append(linhas[i])
+				i += 1
+			saida.append(_blockquote(bloco_bq))
+			continue
+
 		# Paragrafo: agrupa linhas consecutivas que nao iniciam outro bloco.
 		var paragrafo: Array[String] = []
 		while i < linhas.size():
 			var l: String = linhas[i]
 			var ls: String = l.strip_edges()
 			if ls.is_empty() or _nivel_titulo(ls) > 0 or ls == "---" or _eh_item_lista(l) \
+					or _eh_blockquote(l) \
 					or (ls.begins_with("|") and i + 1 < linhas.size() and _eh_separador_tabela(linhas[i + 1])):
 				break
 			paragrafo.append(ls)
@@ -155,6 +165,61 @@ static func _texto_item(linha: String) -> String:
 	if ponto > 0 and s.substr(0, ponto).is_valid_int():
 		return s.substr(ponto + 2)
 	return s
+
+
+# Verdadeiro se [param linha] inicia um blockquote ('>' no comeco, apos espacos de indentacao).
+static func _eh_blockquote(linha: String) -> bool:
+	return linha.strip_edges().begins_with(">")
+
+
+# Converte um bloco de linhas '>' em <blockquote> ou, se a 1a linha for '[!TIPO]', num callout
+# GFM (<div class="callout callout-tipo">). O conteudo vira um ou mais <p> (linha '>' vazia separa).
+static func _blockquote(bloco: Array[String]) -> String:
+	# Remove o prefixo '>' (e um espaco opcional) de cada linha.
+	var conteudo: Array[String] = []
+	for linha in bloco:
+		var s: String = linha.strip_edges().substr(1)  # tira o '>'
+		if s.begins_with(" "):
+			s = s.substr(1)
+		conteudo.append(s)
+
+	# Callout GFM: 1a linha no formato '[!TIPO]'.
+	var tipo: String = ""
+	if not conteudo.is_empty():
+		var primeira: String = conteudo[0].strip_edges()
+		if primeira.begins_with("[!") and primeira.ends_with("]"):
+			tipo = primeira.substr(2, primeira.length() - 3).strip_edges()
+			conteudo.remove_at(0)
+
+	var corpo: String = _paragrafos(conteudo)
+	if tipo.is_empty():
+		return "<blockquote>\n" + corpo + "\n</blockquote>"
+	return "<div class=\"callout callout-%s\">\n<p class=\"callout-titulo\">%s</p>\n%s\n</div>" \
+		% [_slug(tipo), _escapar(_titulo_callout(tipo)), corpo]
+
+
+# Agrupa linhas em um ou mais <p>; uma linha em branco separa paragrafos. Reusa _inline em cada um.
+static func _paragrafos(linhas: Array[String]) -> String:
+	var paragrafos: Array[String] = []
+	var atual: Array[String] = []
+	for linha in linhas:
+		if linha.strip_edges().is_empty():
+			if not atual.is_empty():
+				paragrafos.append("<p>" + _inline(" ".join(atual)) + "</p>")
+				atual = []
+		else:
+			atual.append(linha.strip_edges())
+	if not atual.is_empty():
+		paragrafos.append("<p>" + _inline(" ".join(atual)) + "</p>")
+	return "\n".join(paragrafos)
+
+
+# Titulo legivel do callout: capitaliza so a 1a letra (ex.: 'ATENCAO' -> 'Atencao', 'NOTA' -> 'Nota').
+static func _titulo_callout(tipo: String) -> String:
+	var t: String = tipo.strip_edges().to_lower()
+	if t.is_empty():
+		return ""
+	return t.substr(0, 1).to_upper() + t.substr(1)
 
 
 # Verdadeiro se a linha e a separadora de cabecalho de tabela GFM (ex.: '|---|---|').

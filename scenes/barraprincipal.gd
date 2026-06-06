@@ -96,6 +96,8 @@ func _css_tema() -> String:
 	var fundo: Color = PaletaSemantica.fundo()
 	var texto: Color = PaletaSemantica.cor("padrao")
 	var realce: Color = PaletaSemantica.cor("selecao")
+	# Cor de destaque das caixas de atencao (callouts), adaptada ao fundo/texto do tema.
+	var alerta: Color = PaletaSemantica.cor_adaptada("alerta", fundo, texto)
 	# Tons derivados do par fundo/texto, garantindo contraste em qualquer tema (claro ou escuro).
 	var borda: Color = fundo.lerp(texto, 0.30)
 	var fundo_codigo: Color = fundo.lerp(texto, 0.10)
@@ -136,6 +138,24 @@ th { background: %s; }
 tr:nth-child(even) td { background: %s; }
 strong { color: %s; }
 em { color: %s; }
+blockquote {
+	margin: 1em 0;
+	padding: .4em 1em;
+	border-left: 4px solid %s;
+	background: %s;
+	color: %s;
+}
+.callout {
+	margin: 1.2em 0;
+	padding: .8em 1em;
+	border: 1px solid %s;
+	border-left: 4px solid %s;
+	border-radius: 6px;
+	background: %s;
+}
+.callout-titulo { margin: 0 0 .4em; font-weight: bold; color: %s; }
+.callout p { margin: .4em 0; }
+.callout p:last-child { margin-bottom: 0; }
 """ % [
 		h.call(fundo), h.call(texto),
 		h.call(realce), h.call(borda),
@@ -143,4 +163,7 @@ em { color: %s; }
 		h.call(fundo_codigo),
 		h.call(borda), h.call(fundo_cabecalho), h.call(fundo_codigo),
 		h.call(texto), h.call(sutil),
+		h.call(borda), h.call(fundo_codigo), h.call(sutil),
+		h.call(borda), h.call(alerta), h.call(fundo_codigo),
+		h.call(alerta),
 	]
