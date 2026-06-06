@@ -40,8 +40,12 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 	# integrado, aparece integrado como matriculável com corequisito. Porém, se a pessoa for matriculada em fundações
 	# deixa de aparecer como matriculável com corequisito.
 
-	# Cria uma cópia temporária do histórico para a análise, pois serão aproveitadas algumas disciplinas.
-	var historico_da_matricula: Dictionary = historico.duplicate(true)
+	# Cria uma cópia temporária APENAS do aluno em análise, pois serão aproveitadas algumas
+	# disciplinas (a injeção de equivalências muta este histórico temporário). Copiar o histórico
+	# inteiro aqui custava O(N) por aluno -> O(N²) no batch; a função só usa [matricula].
+	var historico_da_matricula: Dictionary = {}
+	if historico.has(matricula):
+		historico_da_matricula[matricula] = historico[matricula].duplicate(true)
 
 	# Obtem a lista de codigo de disciplinas que o discente não cursou mas está apto a cursar e
 	#  as disciplinas que estará apto a cursar caso aprovado em uma disciplina em andamento.
@@ -76,16 +80,17 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 
 	# Cria uma função lambda que verifica a situação para um determinado código de disciplina
 	# e.g. Para AL0223, verifica se está matriculado, se pode se matricular, etc.
-	var my_lambda: Callable = func(cod_disc: String, hist_temp: Dictionary) -> void:
+	# [param idx_hist] é o índice codigo_lower -> Array de entradas do histórico do aluno
+	# (ver montagem antes do laço que a invoca), evitando varrer toda a lista de dados por requisito.
+	var my_lambda: Callable = func(cod_disc: String, idx_hist: Dictionary) -> void:
 		# Primeiro verifica se a disciplina já consta como aprovada/dispensada ou em matrícula.
 		var situacao: String = ""
-		for a in hist_temp[matricula]["dados"].size():
-			if hist_temp[matricula]["dados"][a]["codigocurriculo"].to_lower() == cod_disc:
-				if hist_temp[matricula]["dados"][a]["situacao"].begins_with("matr"):
-					situacao = "matricula"
-				else:
-					situacao = "aprovado/dispensado"
-				break
+		for dado in idx_hist.get(cod_disc, []):
+			if dado["situacao"].begins_with("matr"):
+				situacao = "matricula"
+			else:
+				situacao = "aprovado/dispensado"
+			break
 		# Depois compara todas disciplinas do curso para ver qual pode cursar agora ou se aprovado.
 		if situacao != "aprovado/dispensado":
 			var i: int = 0
@@ -113,12 +118,11 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 				# Verifica quantos dos prerequisitos foram concluidos e se estão em matrícula.
 				var lista_requisitos_aprov: Array[String] = []
 				for a in lista_prerequisito.size():
-					for b in hist_temp[matricula]["dados"].size():
-						if hist_temp[matricula]["dados"][b]["codigocurriculo"].to_lower() == lista_prerequisito[a].to_lower():
-							lista_requisitos_aprov.append(hist_temp[matricula]["dados"][b]["codigocurriculo"].to_lower())
-							if hist_temp[matricula]["dados"][b]["situacao"].begins_with("matr"):
-								matriculado = true
-							break
+					for dado in idx_hist.get(lista_prerequisito[a].to_lower(), []):
+						lista_requisitos_aprov.append(str(dado["codigocurriculo"]).to_lower())
+						if dado["situacao"].begins_with("matr"):
+							matriculado = true
+						break
 				# Se não foi aprovado em todos prerequisitos, verifica se tem corequisitos e se este poderá 
 				# ser cursado (deve ter o prerequisito do corequisito ou estar matriculado nele).
 				# if lista_requisitos_aprov.size() != lista_prerequisito.size():
@@ -128,11 +132,10 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 						var j: int = 0
 						while grades_disciplinas_curriculos[versao_grade][lista_corequisito[a]].has("prerequisito"+str(j)):
 							var prereq_do_corequisito: String = grades_disciplinas_curriculos[versao_grade][lista_corequisito[a]]["prerequisito"+str(j)]
-							for b in hist_temp[matricula]["dados"].size():
-								if hist_temp[matricula]["dados"][b]["codigocurriculo"].to_lower() == prereq_do_corequisito.to_lower():
-									lista_coreq_cursaveis.append(lista_corequisito[a])
-									if hist_temp[matricula]["dados"][b]["situacao"].begins_with("matr"):
-										matr_prereq_do_correc = true
+							for dado in idx_hist.get(prereq_do_corequisito.to_lower(), []):
+								lista_coreq_cursaveis.append(lista_corequisito[a])
+								if dado["situacao"].begins_with("matr"):
+									matr_prereq_do_correc = true
 							j += 1
 					# Se existem correquisitos cursaveis, prossegue.
 					if lista_coreq_cursaveis.size() > 0:
@@ -237,9 +240,18 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 		matricula, historico_da_matricula, equivalencias, disciplinas_a_serem_aproveitadas
 		)
 
+	# Índice codigo_lower -> Array de entradas do histórico (já com as equivalências injetadas),
+	# montado uma única vez para a lambda consultar diretamente em vez de varrer a lista por requisito.
+	var idx_historico: Dictionary = {}
+	for dado in historico_da_matricula.get(matricula, {}).get("dados", []):
+		var cod_l: String = str(dado.get("codigocurriculo", "")).to_lower()
+		if not idx_historico.has(cod_l):
+			idx_historico[cod_l] = []
+		idx_historico[cod_l].append(dado)
+
 	# Chama a função lambda para cada código de uma grade curricular.
 	for cod_disc in grades_disciplinas_curriculos[versao_grade].keys():
-		my_lambda.call(cod_disc, historico_da_matricula)
+		my_lambda.call(cod_disc, idx_historico)
 
 	# Verifica disciplinas de outros cursos/versões com equivalência para esta grade.
 	var equiv_para_versao: Array[String] = analise_grades.determinar_aproveitaveis(equivalencias, versao_grade)
