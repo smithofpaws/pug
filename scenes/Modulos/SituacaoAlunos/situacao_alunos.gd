@@ -203,18 +203,25 @@ func _rodar_análise() -> void:
 	_grade_ativa = analise_historico.detectar_versao_grade(_matricula_atual, _historico)
 	if not _validar_grade_ativa():
 		return
-	_ch_exigida = cargas_exigidas[_grade_ativa]
-	_ch_exigida = analise_grades.ajustarch_tccestagio(grades_disciplinas_curriculos[_grade_ativa], _ch_exigida)
+	# Carga exigida é opcional: se a grade não tiver arquivo em cargaexigida/, a análise segue
+	# (grade, horários e condições não dependem dela) — apenas o percentual de conclusão fica
+	# indisponível. Aviso discreto no terminal para a coordenação saber como habilitá-lo.
+	if cargas_exigidas.has(_grade_ativa):
+		_ch_exigida = cargas_exigidas[_grade_ativa]
+		_ch_exigida = analise_grades.ajustarch_tccestagio(grades_disciplinas_curriculos[_grade_ativa], _ch_exigida)
+	else:
+		_ch_exigida = {}
+		$"%Terminal".item("Carga horária exigida não cadastrada para a grade " + _grade_ativa \
+			+ " (crie arquivos/cargaexigida/" + _grade_ativa + ".json). Percentual de conclusão indisponível.", \
+			0, cores_terminal["aviso"])
 	_analisar_matricula(_matricula_atual)
 
-# Verifica se [_grade_ativa] e chave valida nos dicionarios de grade e carga. [br]
+# Verifica se [_grade_ativa] e chave valida no dicionario de grades (requisito real da analise).
+# A carga exigida NAO e verificada aqui: e opcional (ver [method _rodar_análise]).
 # Retorna true se valido; caso contrario loga erro e retorna false.
 func _validar_grade_ativa() -> bool:
 	if not grades_disciplinas_curriculos.has(_grade_ativa):
 		print_debug("ERRO: Grade '" + _grade_ativa + "' nao encontrada em grades_disciplinas_curriculos.")
-		return false
-	if not cargas_exigidas.has(_grade_ativa):
-		print_debug("ERRO: Grade '" + _grade_ativa + "' nao encontrada em cargas_exigidas.")
 		return false
 	return true
 
@@ -227,7 +234,9 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 	var ch_data: Dictionary = analise_historico.ch_vencida(matricula, \
 		grades_disciplinas_curriculos[_grade_ativa], _historico)
 	var ch_vencida: Dictionary = ch_data["ch"]
-	var percentual_tcc: float = analise_historico.percentagem_curso(_ch_exigida, ch_vencida)
+	# Percentual só é calculado quando há carga exigida cadastrada (evita divisão por zero).
+	var percentual_tcc: float = analise_historico.percentagem_curso(_ch_exigida, ch_vencida) \
+		if not _ch_exigida.is_empty() else 0.0
 	# Exibe divergencias entre CH do historico e da grade
 	if ch_data.has("divergencias"):
 		for div in ch_data["divergencias"]:
@@ -905,8 +914,12 @@ func _exportar() -> void:
 		_grade_ativa = analise_historico.detectar_versao_grade(matricula, _historico)
 		if not _validar_grade_ativa():
 			continue
-		_ch_exigida = cargas_exigidas[_grade_ativa]
-		_ch_exigida = analise_grades.ajustarch_tccestagio(grades_disciplinas_curriculos[_grade_ativa], _ch_exigida)
+		# Carga exigida opcional: ausência não exclui o aluno da exportação (só o percentual).
+		if cargas_exigidas.has(_grade_ativa):
+			_ch_exigida = cargas_exigidas[_grade_ativa]
+			_ch_exigida = analise_grades.ajustarch_tccestagio(grades_disciplinas_curriculos[_grade_ativa], _ch_exigida)
+		else:
+			_ch_exigida = {}
 
 		# Computa os dados
 		var ch_data: Dictionary = analise_historico.ch_vencida(matricula, \

@@ -16,6 +16,9 @@ func percentagem_curso(ch_exigida: Dictionary, ch_vencida: Dictionary) -> float:
 		soma_chexigida += int(ch_exigida[nucleo])
 	for nucleo in ch_vencida.keys():
 		soma_chvencida += int(ch_vencida[nucleo])
+	# Sem carga exigida cadastrada (soma zero) nao ha denominador: retorna 0 em vez de NaN/inf.
+	if soma_chexigida == 0:
+		return 0.0
 	var percentagem: float = soma_chvencida/soma_chexigida * 100.0
 	return percentagem
 
