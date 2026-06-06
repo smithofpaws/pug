@@ -296,17 +296,62 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 	if sem_grade_nao_matriculadas.size() > 0:
 		secoes.append({"tipo": "sem_grade_nao_matriculadas", "itens": sem_grade_nao_matriculadas})
 
+	# Matrículas reais em OUTRA grade que não entram na grade do aluno e não são aproveitamento
+	# completo (ex.: disciplina dividida cursada só pela metade — al0391 sem al0399). São matrículas
+	# de fato (ocupam horário), mas ficariam invisíveis: não estão na grade (não viram
+	# matriculado_agora), não estão "sem grade" (existem em outra grade) e o alvo delas não entra no
+	# matriculado_agora_aproveitamento. Ganham seção própria para a análise de horários.
+	var matriculada_outra_grade: Array[Array] = []
+	var maa_alvos: Dictionary = {}
+	for t in disc_cursaveis.get("matriculado_agora_aproveitamento", []):
+		maa_alvos[str(t).to_lower()] = true
+	var vistos_outra: Dictionary = {}
+	for entry in dados_aluno:
+		if not str(entry.get("situacao", "")).begins_with("matr"):
+			continue
+		var cod: String = str(entry.get("codigocurriculo", ""))
+		var cl: String = cod.to_lower()
+		if vistos_outra.has(cl):
+			continue
+		# Pula se está na grade do aluno (já aparece como matriculado_agora).
+		if grades_disciplinas_curriculos.get(_grade_ativa, {}).has(cl):
+			continue
+		# Pula se não está em nenhuma OUTRA grade (essas são "sem grade", já listadas acima).
+		var em_outra_grade: bool = false
+		for g in grades_disciplinas_curriculos.keys():
+			if g != _grade_ativa and grades_disciplinas_curriculos[g].has(cl):
+				em_outra_grade = true
+				break
+		if not em_outra_grade:
+			continue
+		# Pula se é aproveitamento completo (algum alvo dela está no matriculado_agora_aproveitamento).
+		var completo: bool = false
+		for alvo in analise_grades.para_o_codigo_qual_a_equivalencia(cod, equivalencias, _grade_ativa):
+			if maa_alvos.has(str(alvo).to_lower()):
+				completo = true
+				break
+		if completo:
+			continue
+		vistos_outra[cl] = true
+		var nome_outra: String = str(analise_grades.info_grade(grades_disciplinas_curriculos, cod, "nome"))
+		matriculada_outra_grade.append([cod, nome_outra])
+	if matriculada_outra_grade.size() > 0:
+		secoes.append({"tipo": "matriculada_outra_grade", "itens": matriculada_outra_grade})
+
 	# Aviso sobre reprovações
 	secoes.append({"tipo": "aviso_reprovacoes"})
 
 	# Disciplinas nas condições
 	var limiar_presenca: float = GV.configuracao_base.get("choque", {}).get("limiar_presenca", 0.75)
-	# Constroi slots das disciplinas ja matriculadas (para calculo de choque de horario)
+	# Constroi slots das disciplinas ja matriculadas (para calculo de choque de horario).
+	# Usa os codigos REAIS de matricula do historico (situacao "matr"), que casam com a oferta
+	# (_horarios_txt). Os codigos-alvo da grade em matriculado_agora_aproveitamento NAO batem com a
+	# oferta (ela usa o codigo sob o qual o aluno se matriculou, de outra grade). Cobre tambem as
+	# matriculas irregulares, que no historico tambem tem situacao "matricula".
 	var codigos_matriculados: Array[String] = []
-	for cond_matr in ["matriculado_agora", "matriculado_agora_aproveitamento", "matricula_irregular", "matricula_irregular_aproveitamento"]:
-		if disc_cursaveis.has(cond_matr):
-			for cod in disc_cursaveis[cond_matr]:
-				codigos_matriculados.append(cod.to_lower())
+	for dado in _historico.get(matricula, {}).get("dados", []):
+		if str(dado.get("situacao", "")).begins_with("matr"):
+			codigos_matriculados.append(str(dado.get("codigocurriculo", "")).to_lower())
 	var slots_matriculadas: Array[Dictionary] = []
 	for entry in _horarios_txt:
 		var cod_entry: String = horarios_exe.extrair_cod_horarios_txt(entry.get("disciplina", "")).to_lower()
@@ -429,6 +474,11 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 				for item in secao["itens"]:
 					$"%Terminal".item(item[0] + " " + item[1], 0, cores_terminal["alerta"])
 				$"%Terminal".espaco()
+			"matriculada_outra_grade":
+				$"%Terminal".secao("Matriculada em outra grade (aproveitamento incompleto)")
+				for item in secao["itens"]:
+					$"%Terminal".item(item[0] + ": " + item[1], 0, cores_terminal["alerta"])
+				$"%Terminal".espaco()
 			"aviso_reprovacoes":
 				$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas.")
 				$"%Terminal".espaco()
@@ -499,6 +549,10 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 				md.append("### Disciplinas sem grade (nao matriculadas)")
 				for item in secao["itens"]:
 					md.append("- " + item[0] + " " + item[1])
+			"matriculada_outra_grade":
+				md.append("### Matriculada em outra grade (aproveitamento incompleto)")
+				for item in secao["itens"]:
+					md.append("- " + item[0] + ": " + item[1])
 			"aviso_reprovacoes":
 				md.append("*Valores entre parenteses indicam reprovacoes por nota e por faltas.*")
 			"condicao":

@@ -425,27 +425,39 @@ func _inferir_cod_curso_por_semestre(semestre: String, cursos: Dictionary) -> St
 	return ""
 
 ## Obtem, para uma matricula, a relação de disciplinas com código da turma. [br]
-## Formato de [param disc_cursaveis] deve ser um dicionário com as chaves de condições 
+## Formato de [param disc_cursaveis] deve ser um dicionário com as chaves de condições
 ## que vem do arquivo [code]base_config.json[/code]. [br]
-## Formato de [param historico_matricula] deve ser um extrato do [param historico] porém apenas de uma matrícula 
+## Formato de [param historico_matricula] deve ser um extrato do [param historico] porém apenas de uma matrícula
 ## (e.g. {"nomedoaluno": "adriane arruda", "dados": [matriz_do_historico]}). [br]
-## Retorna um dicionário separado nas chaves "matriculado_agora" e "matriculado_agora_aproveitamento", 
-## cada chave contendo matrizes, como [[cod_disciplina1, turma1], [cod_disciplina2, turma2]].
+## Retorna um dicionário separado nas chaves "matriculado_agora" e "matriculado_agora_aproveitamento",
+## cada chave contendo matrizes, como [[cod_disciplina1, turma1], [cod_disciplina2, turma2]]. [br]
+## IMPORTANTE: usa os códigos REAIS sob os quais o aluno se matriculou (do histórico), que casam com a
+## oferta ([code]horarios.txt[/code]) — e NÃO os códigos-alvo da grade que ficam em
+## [code]matriculado_agora_aproveitamento[/code] (esses servem à Grade Curricular, mas não batem com a
+## oferta). Classifica em [code]matriculado_agora[/code] quando o código está na grade do aluno
+## ([code]disc_cursaveis["matriculado_agora"][/code]) e em [code]matriculado_agora_aproveitamento[/code]
+## caso contrário (matrícula cursada via outra grade — inclui aproveitamento completo e divisões
+## incompletas/sem equivalência). Assim, toda matrícula real aparece nos horários e no choque.
 func matriculada_com_turma(disc_cursaveis: Dictionary, historico_matricula: Dictionary) -> Dictionary:
-	var matriculada_com_turma: Dictionary = {}
-	var situacoes_locais: Array[String] = ["matriculado_agora", "matriculado_agora_aproveitamento"]
-	for a in situacoes_locais.size():
-		matriculada_com_turma[situacoes_locais[a]] = []
-	for a in historico_matricula["dados"].size():
-		for b in situacoes_locais.size():
-			if disc_cursaveis.has(situacoes_locais[b]):
-				for c in disc_cursaveis.get(situacoes_locais[b]).size():
-					if historico_matricula["dados"][a]["situacao"].begins_with("matr"):
-						if historico_matricula["dados"][a]["codigocurriculo"] == disc_cursaveis.get(situacoes_locais[b])[c]:
-							var cod_disciplina = historico_matricula["dados"][a]["codigocurriculo"]
-							var cod_turma = historico_matricula["dados"][a]["codturma"]
-							matriculada_com_turma[situacoes_locais[b]].append([cod_disciplina,cod_turma])
-	return matriculada_com_turma
+	var resultado: Dictionary = {"matriculado_agora": [], "matriculado_agora_aproveitamento": []}
+	var na_grade: Dictionary = {}
+	for c in disc_cursaveis.get("matriculado_agora", []):
+		na_grade[str(c).to_lower()] = true
+	var ja_incluidos: Dictionary = {}
+	for dado in historico_matricula.get("dados", []):
+		if not str(dado.get("situacao", "")).begins_with("matr"):
+			continue
+		var cod_disciplina: String = str(dado.get("codigocurriculo", ""))
+		var cod_lower: String = cod_disciplina.to_lower()
+		if ja_incluidos.has(cod_lower):
+			continue
+		ja_incluidos[cod_lower] = true
+		var cod_turma = dado.get("codturma", "")
+		if na_grade.has(cod_lower):
+			resultado["matriculado_agora"].append([cod_disciplina, cod_turma])
+		else:
+			resultado["matriculado_agora_aproveitamento"].append([cod_disciplina, cod_turma])
+	return resultado
 
 # Aproveita as disciplinas encontradas em [param historico] que foram feitas em grade diferente da atual, usando equivalencias.
 # Formato de [param lista_aproveitar] deve ser um Array de Dictionary, cada um com as chaves de uma
