@@ -11,6 +11,10 @@ var _cursos: Dictionary = {}
 var _equivalencias: Dictionary = {}
 var _janela: int = 15
 
+# Turmas globais (oferecidas a todos os cursos, ex.: T90), de base_config.json:turmas_globais.
+# Set para lookup O(1): { turma_int: true }.
+var _turmas_globais: Dictionary = {}
+
 # Indice reverso de afinidade: { codigo → [{ nome, score, entradas:[{ano, semestre, peso, turmas}] }] }.
 # O score e o somatorio dos pesos da janela deslizante (antes do bonus de curso). As entradas
 # armazenam dados brutos para calculo do bonus de turma sob demanda.
@@ -30,11 +34,16 @@ var _prof_curso_cache: Dictionary = {}
 
 ## Injeta os dados e (re)constroi o indice e os caches. [param janela] e o tamanho da janela
 ## de afinidade (de [code]base_config.json:planejamento_oferta.janela_afinidade[/code]).
-func configurar(historico: Dictionary, cursos: Dictionary, equivalencias: Dictionary, janela: int) -> void:
+## [param turmas_globais] e a lista [code]base_config.json:turmas_globais[/code] (turmas
+## oferecidas a todos os cursos, ex.: T90); vem como float do JSON e e convertida para int.
+func configurar(historico: Dictionary, cursos: Dictionary, equivalencias: Dictionary, janela: int, turmas_globais: Array = []) -> void:
 	_historico_professores = historico
 	_cursos = cursos
 	_equivalencias = equivalencias
 	_janela = janela
+	_turmas_globais.clear()
+	for t in turmas_globais:
+		_turmas_globais[int(t)] = true
 	_equiv_cache.clear()
 	_por_prof_cache.clear()
 	_por_prof_construido = false
@@ -167,7 +176,7 @@ func obter_afinidade(codigo: String, semestre: String = "") -> Array[Dictionary]
 					for e in entrada.get("entradas", []):
 						var turmas: Array = e.get("turmas", [])
 						for t in turmas:
-							if turma_para_curso(t) == curso_alvo:
+							if turma_e_global(t) or turma_para_curso(t) == curso_alvo:
 								score_bonus += int(e.get("peso", 0))
 								break
 				var score_total: int = score_base + score_bonus
@@ -255,6 +264,12 @@ func turma_para_curso(turma: Variant) -> String:
 	return ""
 
 
+## Indica se [param turma] e uma turma global (oferecida a todos os cursos), definida em
+## [code]base_config.json:turmas_globais[/code] (ex.: T90). Comparacao numerica via [code]int()[/code].
+func turma_e_global(turma: Variant) -> bool:
+	return _turmas_globais.has(int(turma))
+
+
 ## Conjunto de professores (nomes normalizados) que ja lecionaram ao curso [param cod_curso],
 ## detectados pelo codigo de turma do historico (via [method turma_para_curso]). Formato:
 ## [code]{ nome_normalizado: true }[/code]. Retorna dict vazio quando [param cod_curso] e vazio
@@ -284,7 +299,7 @@ func _prof_leciona_curso(disciplinas: Dictionary, cod_curso: String) -> bool:
 				if not (entrada_sem is Array):
 					continue
 				for t in _extrair_turmas(entrada_sem):
-					if turma_para_curso(t) == cod_curso:
+					if turma_e_global(t) or turma_para_curso(t) == cod_curso:
 						return true
 	return false
 

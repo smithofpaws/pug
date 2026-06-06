@@ -229,7 +229,9 @@ func _ready() -> void:
 
 	_inicializar_professores_historico()
 	_inicializar_lista_professores()
-	_afinidade.configurar(historico_professores, cursos, equivalencias, int(config_oferta.get("janela_afinidade", 15)))
+	_afinidade.configurar(historico_professores, cursos, equivalencias,
+		int(config_oferta.get("janela_afinidade", 15)),
+		GV.configuracao_base.get("turmas_globais", []))
 	_relatorios.configurar(_terminal, _afinidade, analise_historico, grades_disciplinas_curriculos, condicoes, config_oferta, cursos, equivalencias)
 
 	# Grade curricular (toggle via OnOffGrade): seletor de grade embutido + forma de apresentacao.

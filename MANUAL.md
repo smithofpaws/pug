@@ -233,6 +233,8 @@ Ao clicar em uma disciplina, o painel lateral mostra:
 - **Afinidade** — professores com histórico de oferta desta disciplina aparecem destacados no topo, com percentual de afinidade calculado automaticamente.
 - **Carga horária** — exibe a carga total semanal de cada professor alocado, com indicação visual de status: verde (dentro do ideal), amarelo (abaixo do ideal) e vermelho (acima do máximo ou abaixo do mínimo).
 
+> **Turmas globais.** Algumas turmas do histórico (ex.: a turma 90) são ofertadas a **todos os cursos** ao mesmo tempo. Elas contam para qualquer curso ao identificar "professores que já lecionaram para o curso" e ao somar o bônus de afinidade. A lista dessas turmas fica em `base_config.json:turmas_globais`.
+
 #### Ações disponíveis
 
 - **Determinar demanda** — analisa o histórico para contar quantos alunos precisam de cada disciplina neste semestre.

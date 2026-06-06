@@ -11,7 +11,7 @@
 ## A IMPLEMENTAR
 
 - [ ] **Talvez usar Kinto** (https://github.com/Kinto/kinto) para salvar jsons em servidor próprio.
-- [ ] **T90 (turma multi-curso)** — Turma 90 significa "oferecida para todos os cursos". Não implementado: requer alterações no `turma_para_curso()` em `analise_afinidade.gd:242` e possível seção `turmas_globais` no `base_config.json`. Não prioritário pois T90 não aparece no `horarios.txt` atual.
+- [x] **T90 (turma multi-curso)** — Turma 90 significa "oferecida para todos os cursos". Implementado: chave `turmas_globais` no `base_config.json` + helper `turma_e_global()` em `analise_afinidade.gd`, aplicado nos call sites de bônus de afinidade (`obter_afinidade`) e de atribuição de professores ao curso (`_prof_leciona_curso`). T90 aparece 162× no histórico de professores e antes era ignorada.
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
 - [ ] Ao importar o hist.csv, assume-se apenas um curso. Mas e se o hist.csv vier de diversos cursos, como fica? O programa está preparado para tal situação?
 

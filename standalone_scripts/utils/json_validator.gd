@@ -56,7 +56,8 @@ static func _schema_base_config() -> Dictionary:
 				"turmas": ARR,
 				"?grades": ARR
 			}
-		}
+		},
+		"?turmas_globais": ARR
 	}
 
 
