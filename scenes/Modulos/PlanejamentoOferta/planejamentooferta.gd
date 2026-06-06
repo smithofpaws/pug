@@ -385,8 +385,10 @@ func _popular_alocacoes_do_csv() -> void:
 	_alocacoes.clear()
 	_todos_professores.clear()
 	# Acumula os codigos do planejamento sem grade carregada para um unico aviso agregado ao final,
-	# em vez de um log por disciplina (que poluia o terminal).
+	# em vez de um log por disciplina (que poluia o terminal). [param nomes_sem_grade] guarda, em
+	# paralelo, o nome embutido no proprio planejamento.csv para exibir "codigo (Nome)".
 	var codigos_sem_grade: Array[String] = []
+	var nomes_sem_grade: Array[String] = []
 	for chave in _planejamento:
 		var entrada: Dictionary = _planejamento[chave]
 		var codigo: String = str(entrada.get("codigo", "")).to_lower()
@@ -399,6 +401,7 @@ func _popular_alocacoes_do_csv() -> void:
 		if nome.begins_with("Codigo"):
 			if not codigos_sem_grade.has(codigo):
 				codigos_sem_grade.append(codigo)
+				nomes_sem_grade.append(str(entrada.get("nome_csv", "")))
 			nome = codigo.to_upper()
 		var profs_array: Array = entrada.get("professor", [])
 		var chs_array: Array = entrada.get("ch", [])
@@ -424,7 +427,11 @@ func _popular_alocacoes_do_csv() -> void:
 				_todos_professores.append(ps)
 	_todos_professores.sort_custom(func(a, b): return a < b)
 	if not codigos_sem_grade.is_empty():
-		_log("Disciplinas sem grade carregada (exibidas pelo codigo): " + ", ".join(codigos_sem_grade) \
+		var itens: Array[String] = []
+		for i in codigos_sem_grade.size():
+			var nm: String = nomes_sem_grade[i].capitalize()
+			itens.append(codigos_sem_grade[i] + (" (" + nm + ")" if nm != "" else ""))
+		_log("Disciplinas sem grade carregada: " + ", ".join(itens) \
 			+ " — confira se falta um arquivo de grade ou se o codigo esta correto.", "aviso", true, true)
 	# Atualiza o dropdown do painel de atribuicoes.
 	_painel_atribuicoes.configurar(_todos_professores)

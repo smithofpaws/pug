@@ -137,6 +137,12 @@ func carregar_planejamento(diretorio: String, arquivo: String, prefixos_semestre
 					+ "Linha problemática: " + str(temp[lines]))
 		var temp_string: String = temp[lines][cod_pos]
 		var cod_disciplina: String = general_functions.split(temp_string, " ")[0]
+		# A coluna do codigo no planejamento.csv costuma trazer "CODIGO NOME" (ex.: "AL0490 DESENHO
+		# DIGITAL"). Preserva o nome embutido (o que vier depois do codigo) para uso em avisos/exibicao.
+		var nome_disciplina: String = ""
+		var idx_espaco: int = temp_string.find(" ")
+		if idx_espaco != -1:
+			nome_disciplina = temp_string.substr(idx_espaco + 1).strip_edges()
 		if cod_disciplina.to_lower().begins_with("al"):
 			for semestre in semestres:
 				semestre = semestre.strip_edges()
@@ -164,6 +170,7 @@ func carregar_planejamento(diretorio: String, arquivo: String, prefixos_semestre
 				planejamento[chave]["ch"] = []
 				planejamento[chave]["oferta"] = celula_semestre
 				planejamento[chave]["ch_disciplina"] = str(temp[lines][col_ch_total])
+				planejamento[chave]["nome_csv"] = nome_disciplina
 				for a in range(dividor_lista_prof, temp[lines].size()):
 					if int(temp[lines][a]) > 0:
 						planejamento[chave]["professor"].append(temp[0][a])

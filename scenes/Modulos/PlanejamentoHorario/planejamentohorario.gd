@@ -546,13 +546,19 @@ func _importar_planejamento_csv(prefixos_semestre: Array[String]) -> void:
 	if _dados.carregar_planejamento(GV.dir_saida, prefixos_semestre):
 		_dados.adicionar_planejamento()
 		# Aviso agregado: disciplinas do planejamento que nao constam em nenhuma grade carregada.
-		var codigos_plan: Array = []
+		# Mostra "codigo (Nome)" usando o nome embutido no proprio planejamento.csv.
+		var nome_por_codigo: Dictionary = {}
 		for k in _dados._planejamento_csv:
-			codigos_plan.append(_dados._planejamento_csv[k].get("codigo", ""))
-		var sem_grade: Array[String] = analise_grades.codigos_ausentes(grades_disciplinas_curriculos, codigos_plan)
+			var dk: Dictionary = _dados._planejamento_csv[k]
+			nome_por_codigo[str(dk.get("codigo", ""))] = str(dk.get("nome_csv", ""))
+		var sem_grade: Array[String] = analise_grades.codigos_ausentes(grades_disciplinas_curriculos, nome_por_codigo.keys())
 		if not sem_grade.is_empty():
-			$"%Terminal".text_edit("Disciplinas do planejamento sem grade carregada (exibidas pelo codigo): " \
-				+ ", ".join(sem_grade) + " — confira se falta um arquivo de grade ou se o codigo esta correto.", \
+			var itens: Array[String] = []
+			for cod in sem_grade:
+				var nm: String = str(nome_por_codigo.get(cod, "")).capitalize()
+				itens.append(cod + (" (" + nm + ")" if nm != "" else ""))
+			$"%Terminal".text_edit("Disciplinas do planejamento sem grade carregada: " \
+				+ ", ".join(itens) + " — confira se falta um arquivo de grade ou se o codigo esta correto.", \
 				"aviso", true, false)
 		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
 		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
