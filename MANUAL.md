@@ -34,12 +34,20 @@ O programa é organizado em **módulos independentes**, acessíveis pela barra d
 
 ### 2.1 Arquivos necessários
 
-O programa lê arquivos externos fornecidos pelo usuário. Antes de usar qualquer módulo, verifique quais arquivos ele exige e coloque-os na pasta `dados/` dentro do diretório do programa.
+O programa lê arquivos externos fornecidos pelo usuário. Antes de usar qualquer módulo, verifique quais arquivos ele exige e importe-os para o programa. Isto pode ser realizado diretamente na tela principal do programa.
+
+Arquivos importados serão copiados para a pasta `dados/` dentro do diretório do programa.
+
+> [!ATENÇÃO]
+> Arquivos importados diferem de arquivos abertos temporariamente. Os importados são convertidos para UTF-8 e salvos na pasta do programa para uso posterior, sendo sempre sobrescritos a cada nova importação.
+>
+> Já os arquivos abertos ficam numa pasta temporária, apenas para análise pontual: as conversões são descartadas a cada inicialização do programa.
 
 | Arquivo | Descrição |
 |---|---|
 | `hist.csv` | Histórico acadêmico exportado do GURI: matrículas, disciplinas, notas e situações |
 | `horarios.txt` | Grade de horários do semestre atual: professor, sala, horário, turma e vagas |
+| `horarios.ini` | Complemento do `horarios.txt`, no formato INI: nomes canônicos de professores e disciplinas, gerado pelo programa de horários do campus |
 | `planejamento.csv` | Oferta de disciplinas: código, carga horária e professor(es) alocado(s) |
 
 Cada módulo indica, ao ser aberto, quais desses arquivos são obrigatórios para seu funcionamento.
@@ -58,7 +66,6 @@ Localizada no topo da janela. Contém:
 
 - **Seletor de módulo** — menu suspenso para escolher o módulo ativo.
 - **Ícone de configurações** — abre a janela de configurações do programa.
-- **Indicador de problemas** — exibe alertas quando algum arquivo necessário está ausente ou com erro.
 
 ### 3.2 Terminal
 
@@ -71,8 +78,6 @@ Vários módulos têm botões que mostram ou ocultam painéis — terminal, grad
 - **Clique normal:** alterna apenas aquele painel (mostra se estava oculto, oculta se estava visível); os demais não mudam.
 - **Shift + clique:** *isola* o painel — deixa visível somente o painel clicado e oculta todos os outros do módulo. Repetir o Shift + clique no painel já isolado **restaura** todos os painéis. Útil para focar rapidamente em um painel sem ter de ocultar os demais um a um.
 
-Cada botão indica seu estado: aparece **pressionado (afundado)** quando o painel que ele controla está visível e **solto** quando o painel está oculto. O realce acompanha o tema em uso.
-
 ### 3.4 Dicas flutuantes
 
 Ao posicionar o cursor sobre elementos da interface, uma dica flutuante pode aparecer explicando a função daquele elemento.
@@ -83,7 +88,7 @@ Ao posicionar o cursor sobre elementos da interface, uma dica flutuante pode apa
 
 ### 4.1 Tela Principal
 
-A tela inicial do programa. Exibe o nome do programa e os módulos disponíveis. Quando algum arquivo necessário está ausente ou há erros de carregamento, as informações de diagnóstico aparecem aqui.
+A tela inicial do programa. Exibe os módulos disponíveis. Quando algum arquivo necessário está ausente ou há erros de carregamento, as informações de diagnóstico aparecem aqui.
 
 ---
 
@@ -212,7 +217,7 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
   - **Abrir planejamento.json** — retoma um planejamento salvo anteriormente pelo próprio programa (formato `.json`).
   - **Abrir planejamento.csv** — carrega o `planejamento.csv` do diretório de saída como ponto de partida (oferta anterior, por exemplo).
   - **Salvar planejamento.json** — salva o estado atual em formato `.json` para retomar depois.
-- **Grades** — usa a grade de um curso como sugestão de disciplinas a ofertar.
+- **Grades** — usa a grade de um curso específico para selecionar disciplinas a ofertar.
 - **Importar**
   - **planejamento.csv** — seleciona um `planejamento.csv` externo, converte para UTF-8 e o salva no diretório de saída.
 - **Exportar**
@@ -464,11 +469,15 @@ Para analisar **vários cursos** ao mesmo tempo, o botão **Historico** (na tela
 
 Grade de horários do semestre. Cada linha representa uma aula com professor, sala, disciplina, turno, dia, horário, tipo (T/P/L) e número de vagas. O formato exato é definido no `base_config.json`.
 
-### 6.3 planejamento.csv
+### 6.3 horarios.ini
+
+Complemento do `horarios.txt`, no formato INI, também gerado pelo programa de horários do campus. Traz os **nomes canônicos** de professores (seção `[Professores]`) e disciplinas (seção `[Disciplinas]`), usados como fonte de referência ao montar a grade. Nem todas as chaves do arquivo são lidas.
+
+### 6.4 planejamento.csv
 
 Oferta de disciplinas para o semestre planejado. Contém código da disciplina, carga horária e o(s) professor(es) alocado(s). Pode ser gerado pelo módulo Planejamento de Oferta ou editado manualmente em planilha.
 
-### 6.4 Grades curriculares (`arquivos/grades/`)
+### 6.5 Grades curriculares (`arquivos/grades/`)
 
 Cada grade é um arquivo JSON nomeado `<cod_curso>_<versao>.json` (ex.: `alec_2023.json`, `alem_2023.json`), onde `cod_curso` é o código do curso definido em `base_config.json`. O programa **detecta automaticamente** as grades disponíveis a partir desses arquivos na inicialização — para adicionar uma nova versão de currículo, basta colocar o arquivo na pasta e reabrir o programa; não é preciso editar o `base_config.json`. O sufixo `_0000` é um placeholder para "disciplinas sem grade".
 
@@ -493,19 +502,19 @@ A seguir, um exemplo de uso completo do programa para preparar um semestre letiv
 
 ### Etapa 1 — Análise da situação atual
 
-1. Exporte o `hist.csv` do GURI e o `horarios.txt` do semestre corrente. Coloque ambos em `dados/`.
-2. Abra **Matrícula Irregular** para identificar e corrigir problemas de matrícula antes do início das aulas.
-3. Abra **Trancamentos** para verificar alunos que atingiram ou estão próximos do limite.
-4. Abra **Situação de Alunos** para analisar individualmente alunos com situações específicas.
+1. Exporte o `hist.csv` do GURI.
+2. Baixe os `horarios.txt` e `horarios.ini` enviados pela coordenação.
+3. Importe todos pela tela inicial.
 
 ### Etapa 2 — Planejamento da oferta
 
 1. Abra **Planejamento de Oferta**.
-2. Importe o `planejamento.csv` do semestre anterior como base.
-3. Use **Determinar demanda** para ver quantos alunos precisam de cada disciplina.
-4. Use **Sugerir oferta** para obter uma recomendação automática.
-5. Ajuste manualmente a alocação de professores, verificando a carga horária de cada um.
-6. Exporte o planejamento como `.csv` para usar na próxima etapa.
+2. Baixe a planilha de planejamento em formato CSV — apenas a aba do planejamento, não as demais.
+3. Importe o `planejamento.csv` do semestre anterior como base.
+4. Use **Determinar demanda** para ver quantos alunos precisam de cada disciplina.
+5. Use **Sugerir oferta** para obter uma recomendação automática.
+6. Ajuste manualmente a alocação de professores, verificando a carga horária de cada um.
+7. Exporte o planejamento como `.csv` para usar na próxima etapa.
 
 ### Etapa 3 — Montagem da grade de horários
 
