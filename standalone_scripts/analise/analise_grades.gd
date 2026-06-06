@@ -424,6 +424,44 @@ func codigos_origem_equivalencia(codigo_alvo: String, equivalencias: Dictionary,
 				codigos_origem.append(src_codigo)
 	return codigos_origem
 
+## Retorna true se [param cod_alvo] é "completo" para o aluno: existe ao menos um grupo de
+## equivalência (mesma grade-fonte, i.e. mesma chave em [member equivalencias]) cujas TODAS as fontes
+## que mapeiam para [param cod_alvo] estão em [param codigos_presentes] ([code]{ cod_lower: true }[/code]).
+## [br]
+## Trata o caso de "disciplina dividida": quando a grade nova quebra uma disciplina antiga em duas
+## (ex.: Saneamento Básico → I + II), o aluno só aproveita a antiga cursando ambas as partes.
+## Para alvos 1:1 (fonte única) basta a fonte. Agrupar por grade-fonte preserva rotas alternativas
+## (OR entre grupos, AND dentro do grupo). Sem nenhuma fonte mapeando para o alvo, retorna true (não
+## bloqueia — caso normal sem equivalência).
+func alvo_completo(cod_alvo: String, equivalencias: Dictionary, versao_grade: String, codigos_presentes: Dictionary) -> bool:
+	var equiv_keys: Array[String] = determinar_aproveitaveis(equivalencias, versao_grade)
+	var houve_grupo: bool = false
+	for key in equiv_keys:
+		var fontes: Array[String] = []
+		for src_codigo in equivalencias[key].keys():
+			var valor = equivalencias[key][src_codigo]
+			var bate: bool = false
+			if valor is String and valor.to_lower() == cod_alvo.to_lower():
+				bate = true
+			elif valor is Array:
+				for v in valor:
+					if str(v).to_lower() == cod_alvo.to_lower():
+						bate = true
+						break
+			if bate:
+				fontes.append(str(src_codigo).to_lower())
+		if fontes.is_empty():
+			continue
+		houve_grupo = true
+		var todas: bool = true
+		for f in fontes:
+			if not codigos_presentes.has(f):
+				todas = false
+				break
+		if todas:
+			return true
+	return not houve_grupo
+
 ## Pega cada código de disciplina contido em ~equivalencias_para_versao e obtem a equivalencia para a [param versao_grade]. [br]
 ## Formato de [param cod_disciplina] deve ser o código da disciplina em String (e.g. "al0001").
 func para_o_codigo_qual_a_equivalencia(cod_disciplina: String, equivalencias: Dictionary, versao_grade: String) -> Array[String]:

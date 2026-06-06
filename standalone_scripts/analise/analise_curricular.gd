@@ -66,6 +66,14 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 		if not dado.get("situacao", "").begins_with("matr"):
 			ch_total_concluida += float(dado.get("cargahoraria", "0"))
 
+	# Conjunto de disciplinas que o aluno efetivamente tem no histórico (cursadas: matrícula, aprovado
+	# ou dispensado), em snake_case minúsculo. Usado pela regra de "disciplina dividida"
+	# ([method AnaliseGrades.alvo_completo]): um alvo de equivalência só é aproveitado se TODAS as suas
+	# fontes estiverem aqui. Calculado do histórico ORIGINAL, antes da injeção de equivalências.
+	var codigos_presentes: Dictionary = {}
+	for dado in historico.get(matricula, {}).get("dados", []):
+		codigos_presentes[str(dado.get("codigocurriculo", "")).to_lower()] = true
+
 	# Cria uma função lambda que verifica a situação para um determinado código de disciplina
 	# e.g. Para AL0223, verifica se está matriculado, se pode se matricular, etc.
 	var my_lambda: Callable = func(cod_disc: String, hist_temp: Dictionary) -> void:
@@ -209,6 +217,11 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 				disciplinas_outras_grades[key][a]["codigocurriculo"],equivalencias, versao_grade
 				)
 			for b in disc_temp.size():
+				# Disciplina dividida: só aproveita o alvo se o aluno tiver TODAS as fontes dele
+				# (ex.: Saneamento Básico 2010 exige Saneamento I + II da 2023). Caso contrário, o alvo
+				# não é injetado e cai na classificação normal da grade do aluno.
+				if not analise_grades.alvo_completo(disc_temp[b], equivalencias, versao_grade, codigos_presentes):
+					continue
 				var entry: Dictionary = disciplinas_outras_grades[key][a].duplicate()
 				entry["codigocurriculo"] = disc_temp[b]
 				disciplinas_a_serem_aproveitadas.append(entry)
