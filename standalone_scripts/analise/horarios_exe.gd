@@ -76,8 +76,17 @@ func carregar_horarios_txt(diretorio: String, arquivo: String, posicoes_horarios
 		return []
 	var f: FileAccess = safe.get_file()
 	var section: String = ""
+	# Numero da linha fisica no arquivo (1-based) e contagem de linhas problematicas, para o
+	# diagnostico apontar exatamente onde esta o problema (toda linha deveria ter disciplina + codigo).
+	var num_linha: int = 0
+	var problemas: int = 0
+	# Padrao de codigo de disciplina (e.g. "al0496"), aceito tanto entre parenteses "(al0496)" quanto
+	# anexado ao nome "Calculo I Al0496". Compilado uma vez para o diagnostico de cada linha.
+	var re_codigo := RegEx.new()
+	re_codigo.compile("(?i)al\\d+")
 	while not f.eof_reached():
 		var line: String = f.get_line()
+		num_linha += 1
 		var split_arr: PackedStringArray = line.split(",")
 		var line_arr: Array[String] = []
 		# Aqui, para a linha em análise, é necessário verificar se existem aspas no texto. Um exemplo 
@@ -123,9 +132,33 @@ func carregar_horarios_txt(diretorio: String, arquivo: String, posicoes_horarios
 				temp_dict[key] = line_arr[posicoes_horarios_txt[key]]
 		if line_arr.size() > 1:
 			horarios_txt.append(temp_dict)
-	
+			if _diagnosticar_linha_horarios(num_linha, line, line_arr, temp_dict, posicoes_horarios_txt, re_codigo):
+				problemas += 1
+
+	if problemas > 0:
+		print_debug("Horarios TXT: ", problemas, " linha(s) com disciplina/codigo ausente. Veja os avisos acima.")
 	print_debug("Horarios TXT carregado.")
 	return horarios_txt
+
+# Verifica uma linha ja carregada do horarios.txt e, se houver problema, emite um aviso claro com
+# numero da linha, conteudo bruto e motivo. Em principio toda linha deveria ter a coluna disciplina
+# com um codigo de disciplina (e.g. "Algoritmos (al0005)" ou "Algoritmos Al0005"). Retorna true se
+# detectou problema.
+func _diagnosticar_linha_horarios(num_linha: int, linha_bruta: String, line_arr: Array, \
+	temp_dict: Dictionary, posicoes: Dictionary, re_codigo: RegEx) -> bool:
+	var bruta: String = linha_bruta.strip_edges()
+	if not temp_dict.has("disciplina"):
+		var pos_disc: int = int(posicoes.get("disciplina", -1))
+		print_debug("AVISO horarios.txt linha ", num_linha, ": sem coluna de disciplina (", \
+			line_arr.size(), " campos; esperado indice ", pos_disc, "). Conteudo: ", bruta)
+		return true
+	var disc: String = str(temp_dict["disciplina"])
+	if re_codigo.search(disc) == null:
+		print_debug("AVISO horarios.txt linha ", num_linha, \
+			": disciplina sem codigo identificavel (esperado algo como 'al0123'): '", disc, \
+			"'. Conteudo: ", bruta)
+		return true
+	return false
 
 ## Extrai do nome da disciplina no arquivo [code]horarios.txt[/code] o código da disciplina (e.g. para o
 ## nome "Projeto Integrado (al0164)", extrai apenas "al0164". [br]
@@ -187,15 +220,14 @@ func info_formatada(dicionario: Dictionary, key: String) -> String:
 		"disciplina":
 			info = dicionario.get(key, "ERRO: SEM DISCIPLINA")
 			# A sequência abaixo adequa o nome das disciplinas conforme necessário para o programa de horários
+			# O diagnostico de linhas sem disciplina/codigo e feito no carregamento
+			# (ver [method _diagnosticar_linha_horarios]); aqui apenas formatamos o nome.
 			var begin: int = info.find("(")
 			var end: int = info.find(")")
 			if begin != -1 and end != -1:
 				var codigo: String = info.substr(begin+1, end-begin-1).to_pascal_case()
 				info = info.erase(begin+1, end-begin-1)
 				info = info.replace("()", codigo)
-				print("disciplina: ", info, ", codigo: ", codigo)
-			else:
-				print("not found in ", info)
 		"tipo":
 			if dicionario.keys().size() == 0:
 				info = "Teorica"
