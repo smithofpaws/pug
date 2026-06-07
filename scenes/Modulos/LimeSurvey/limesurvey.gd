@@ -92,12 +92,10 @@ func _lista_disciplinas(historico: Dictionary) -> Array:
 
 func _lss_out(caminho_arquivoentrada: String, caminho_saida: String, disciplina: String, professor: String) -> void:
 	# Lê o arquivo .lss base, injeta os dados e salva um novo .lss
-	var safe_out := FileHandling.SafeFileAccess.new(caminho_saida + "survey.lss", FileAccess.WRITE)
-	var safe_in := FileHandling.SafeFileAccess.new(caminho_arquivoentrada, FileAccess.READ)
-	if not safe_out.is_valid() or not safe_in.is_valid():
+	var lss_output := FileAccess.open(caminho_saida + "survey.lss", FileAccess.WRITE)
+	var f := FileAccess.open(caminho_arquivoentrada, FileAccess.READ)
+	if lss_output == null or f == null:
 		return
-	var lss_output := safe_out.get_file()
-	var f := safe_in.get_file()
 	while not f.eof_reached():
 		var line = f.get_line()
 		
@@ -121,17 +119,15 @@ func _lss_out(caminho_arquivoentrada: String, caminho_saida: String, disciplina:
 func _lst_out(caminho_arquivoentrada: String, caminho_saida: String, user_data: Array[Dictionary]) -> void:
 	# Lê o arquivo .lst base, injeta os dados e salva um novo lst. [br]
 	# [param user_data] deve ser Array[Dictionary] com chaves "nome" e "email".
-	var safe_out := FileHandling.SafeFileAccess.new(caminho_saida + "survey_tokens.lst", FileAccess.WRITE)
-	var safe_in := FileHandling.SafeFileAccess.new(caminho_arquivoentrada, FileAccess.READ)
-	if not safe_out.is_valid() or not safe_in.is_valid():
+	var lst_output := FileAccess.open(caminho_saida + "survey_tokens.lst", FileAccess.WRITE)
+	var f := FileAccess.open(caminho_arquivoentrada, FileAccess.READ)
+	if lst_output == null or f == null:
 		return
-	var lst_output := safe_out.get_file()
 
 	var reached_userdata: bool = false
 	var row_over: bool = false
 	var row_info: Array[String] = []
 
-	var f := safe_in.get_file()
 	while not f.eof_reached():
 		var line = f.get_line()
 		

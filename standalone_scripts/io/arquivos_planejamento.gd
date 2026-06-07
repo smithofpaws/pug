@@ -99,12 +99,11 @@ func ler_regras_professores(arquivo_selecionado: String) -> Array[Array]:
 ## não existir ou não houver comentários.
 func ler_comentarios_professor(arquivo_selecionado: String) -> Array[String]:
 	var caminho: String = _diretorio_regras + "/" + arquivo_selecionado
-	var safe := FileHandling.SafeFileAccess.new(caminho, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(caminho, FileAccess.READ)
+	if f == null:
 		return []
-	var f := safe.get_file()
 	var raw: PackedByteArray = f.get_buffer(f.get_length())
-	safe.close()
+	f.close()
 
 	var texto_utf8: String
 	if _verifica_se_windows1252(raw):
@@ -246,10 +245,9 @@ func mesclar_horarios(h_lista: Array[Array]) -> Array:
 
 ## Faz o parse do arquivo [code]horarios.txt[/code] e retorna uma array de dicionários.
 func parse_horarios_txt(caminho: String) -> Array[Dictionary]:
-	var safe := FileHandling.SafeFileAccess.new(caminho, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(caminho, FileAccess.READ)
+	if f == null:
 		return []
-	var f := safe.get_file()
 	var resultado: Array[Dictionary] = []
 	var campos: Array[String] = ["linha", "professor", "sala", "semestre", "horario", "dia", "disciplina", "tipo", "turma", "vagas", "p", "s", "t"]
 	while not f.eof_reached():
@@ -419,11 +417,10 @@ func exportar_horarios(dir_exportacao: String, alocacoes: Dictionary, grades_dis
 	var linhas: Array[String] = _horarios_exe.exportar_horarios_ref(alocacoes, _planejamento_csv, _horarios_ini, grades_disciplinas_curriculos, dias, horas)
 	DirAccess.make_dir_recursive_absolute(dir_exportacao)
 	var caminho: String = dir_exportacao + "horarios.txt"
-	var safe := FileHandling.SafeFileAccess.new(caminho, FileAccess.WRITE)
-	if not safe.is_valid():
+	var file := FileAccess.open(caminho, FileAccess.WRITE)
+	if file == null:
 		terminal.text_edit("Erro ao criar arquivo: " + caminho, cores_terminal.get("erro", "red"), true, false)
 		return
-	var file := safe.get_file()
 	for linha in linhas:
 		file.store_buffer(_horarios_exe._para_cp1252(linha + "\r\n"))
 	terminal.text_edit("Exportado: " + caminho + " (" + str(linhas.size() - 1) + " linhas de dados).", cores_terminal.get("sucesso", "green"), true, false)
@@ -586,11 +583,10 @@ func escrever_horarios_txt(entries: Array[Dictionary], dir_exportacao: String, t
 	var horariosexe: Array[Array] = _horarios_exe.exportar_horariostxt(entries)
 	DirAccess.make_dir_recursive_absolute(dir_exportacao)
 	var caminho: String = dir_exportacao + "horarios.txt"
-	var safe := FileHandling.SafeFileAccess.new(caminho, FileAccess.WRITE)
-	if not safe.is_valid():
+	var file := FileAccess.open(caminho, FileAccess.WRITE)
+	if file == null:
 		terminal.text_edit("Erro ao criar arquivo: " + caminho, cores_terminal.get("erro", "red"), true, false)
 		return
-	var file := safe.get_file()
 	for linha in horariosexe:
 		var linha_str: String = ""
 		for campo in linha.size():

@@ -198,11 +198,10 @@ func carregar_planejamento(diretorio: String, arquivo: String, prefixos_semestre
 func ler_dados(diretorio: String, arquivo: String, regras_leitura: Dictionary, ignorar_verificacao: bool = false, grades: Dictionary = {}) -> Dictionary:
 	var dados: Dictionary = {}
 	print_debug("Lendo arquivo ", arquivo, " ...")
-	var safe := SafeFileAccess.new(diretorio + arquivo, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(diretorio + arquivo, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", diretorio + arquivo, "!")
 		return {}
-	var f := safe.get_file()
 	var linecount: int = 0
 	var matricula: String = ""
 	var _delimitador: String = ";"
@@ -430,11 +429,11 @@ func load_json(directory: String, filename: String) -> Dictionary:
 	if not check_directory(directory, filename):
 		print_debug("ERROR: File ", filename, "not found in directory ", directory, "!")
 		return {}
-	var safe := SafeFileAccess.new(directory + filename, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(directory + filename, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo JSON ", directory + filename, "!")
 		return {}
-	var text: String = safe.get_file().get_as_text()
+	var text: String = f.get_as_text()
 	var out: Variant = JSON.parse_string(text)
 	if out == null:
 		print_debug("CRITICO: Erro ao fazer parse do JSON ", filename, "! O arquivo pode estar mal formatado.")
@@ -452,11 +451,11 @@ func save_json(directory: String, filename: String, data: Dictionary) -> void:
 		if not DirAccess.dir_exists_absolute(directory):
 			print_debug("CRITICO: Diretorio ", directory, " nao existe!")
 			return
-	var safe := SafeFileAccess.new(directory + filename, FileAccess.WRITE)
-	if not safe.is_valid():
+	var f := FileAccess.open(directory + filename, FileAccess.WRITE)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo JSON para escrita ", directory + filename, "!")
 		return
-	safe.get_file().store_line(JSON.stringify(data, "\t", false))
+	f.store_line(JSON.stringify(data, "\t", false))
 
 ## Verifica se um dado diretorio e arquivo existem. [param filename] e opcional. [br]
 ## [param directory] formato deve ser como [code]c:/example_folder/[/code]. [br]
@@ -629,17 +628,16 @@ func read_csvfile(directory: String, filename: String, columns: Array[int] = [],
 	var temp_arr: Array[Array] = []
 
 	# If multiple [param splitter] informed, check which to use
-	var safe := SafeFileAccess.new(directory + filename, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(directory + filename, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", directory + filename, "!")
 		return []
 	if splitter is Array:
 		print_debug("Foram informados múltiplos splitter. O arquivo será testado com os múltiplos splitter e será usado " \
 		+ "o que resultar em multiplos dados na primeira linha.")
-		var f_detect := safe.get_file()
 		var splitter_determined: bool = false
 		for a in splitter.size():
-			var line: Array[String] = general_functions.split(f_detect.get_line().to_lower(), splitter[a])
+			var line: Array[String] = general_functions.split(f.get_line().to_lower(), splitter[a])
 			print_debug("Testando splitter ", splitter[a])
 			if line.size() > 1:
 				splitter = splitter[a]
@@ -649,14 +647,10 @@ func read_csvfile(directory: String, filename: String, columns: Array[int] = [],
 		if not splitter_determined:
 			print_debug("ERRO: Nenhum splitter definido na Array foi empregado. Leitura cancelada.")
 			return []
-	safe.close()
+		# Volta ao inicio para a leitura efetiva (o handle avancou durante a deteccao do splitter).
+		f.seek(0)
 
 	# Read file
-	safe = SafeFileAccess.new(directory + filename, FileAccess.READ)
-	if not safe.is_valid():
-		print_debug("CRITICO: Erro ao abrir arquivo ", directory + filename, "!")
-		return []
-	var f := safe.get_file()
 	var linecount: int = 0
 	while not f.eof_reached():
 		var skip_line: bool = false
@@ -697,11 +691,10 @@ func read_csvfile(directory: String, filename: String, columns: Array[int] = [],
 ## [param directory] formato deve ser como [code]c:/example_folder/[/code]. [br]
 ## [param filename] formato deve ser como [code]filename.csv[/code]. [br]
 func read_txt_file(directory: String, filename: String) -> Array[String]:
-	var safe := SafeFileAccess.new(directory + filename, FileAccess.READ)
-	if not safe.is_valid():
+	var f := FileAccess.open(directory + filename, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", directory + filename, "!")
 		return []
-	var f := safe.get_file()
 	var out: Array[String] = []
 	while not f.eof_reached():
 		out.append(f.get_line())
@@ -713,76 +706,13 @@ func read_txt_file(directory: String, filename: String) -> Array[String]:
 ## [param data] formato deve ser um array onde cada elemento e uma linha. [br]
 func save_text_file(directory: String, filename: String, data: Array[String]) -> void:
 	var file_path: String = directory + filename
-	var safe := SafeFileAccess.new(file_path, FileAccess.WRITE)
-	if not safe.is_valid():
+	var f := FileAccess.open(file_path, FileAccess.WRITE)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", file_path, "!")
 		return
-	var f := safe.get_file()
 	for a in data.size():
 		f.store_string(data[a])
 		f.store_string("\n")
 	print_debug("Arquivo texto salvo em:", file_path)
 
 #endregion
-
-
-class SafeFileAccess extends RefCounted:
-	## Wrapper para [FileAccess] com close garantido via RAII.
-	##
-	## O arquivo e aberto no construtor e fechado automaticamente quando o objeto
-	## e liberado (RefCounted atinge zero referencias). Garante que o handle do
-	## arquivo nunca vaze, mesmo com early returns. [br]
-	## [br]
-	## Uso basico: [br]
-	## [codeblock]
-	## var safe := FileHandling.SafeFileAccess.new("caminho/arquivo.txt", FileAccess.READ)
-	## if not safe.is_valid():
-	##     return {}
-	## var f := safe.get_file()
-	## while not f.eof_reached():
-	##     var line := f.get_line()
-	##     ...
-	## # safe.close() chamado automaticamente ao sair do escopo
-	## [/codeblock]
-	## [br]
-	## Metodo estatico para operacoes simples: [br]
-	## [codeblock]
-	## FileHandling.SafeFileAccess.with_file_read(path, func(f: FileAccess):
-	##     while not f.eof_reached():
-	##         var line := f.get_line()
-	##         ...
-	## )
-	## [/codeblock]
-
-	var path: String
-	var _file: FileAccess
-
-	func _init(p_path: String, p_mode: FileAccess.ModeFlags) -> void:
-		path = p_path
-		_file = FileAccess.open(p_path, p_mode)
-
-	func is_valid() -> bool:
-		return _file != null and is_instance_valid(_file)
-
-	func get_file() -> FileAccess:
-		return _file
-
-	func close() -> void:
-		_file = null
-
-	static func with_file_read(p_path: String, p_callback: Callable):
-		var f: FileAccess = FileAccess.open(p_path, FileAccess.READ)
-		if f == null:
-			print_debug("CRITICO: SafeFileAccess.with_file_read: erro ao abrir " + p_path)
-			return
-		var result = p_callback.call(f)
-		f.close()
-		return result
-
-	static func with_file_write(p_path: String, p_callback: Callable) -> void:
-		var f: FileAccess = FileAccess.open(p_path, FileAccess.WRITE)
-		if f == null:
-			print_debug("CRITICO: SafeFileAccess.with_file_write: erro ao abrir " + p_path)
-			return
-		p_callback.call(f)
-		f.close()

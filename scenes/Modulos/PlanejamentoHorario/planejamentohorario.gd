@@ -1507,11 +1507,10 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		csv_para_importar = temp_xlsx
 
 	var precisa_conversao: bool = false
-	var safe := FileHandling.SafeFileAccess.new(csv_para_importar, FileAccess.READ)
-	if safe.is_valid():
-		var f := safe.get_file()
+	var f := FileAccess.open(csv_para_importar, FileAccess.READ)
+	if f != null:
 		var raw: PackedByteArray = f.get_buffer(f.get_length())
-		safe.close()
+		f.close()
 		var teste_utf8: String = raw.get_string_from_utf8()
 		precisa_conversao = "\uFFFD" in teste_utf8
 
@@ -1521,25 +1520,25 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 		var temp_nome: String = nome_arquivo
 		file_handling.convertto_utf8(csv_para_importar.get_base_dir() + "/", nome_arquivo, GV.dir_temp, temp_nome)
 		var temp_path: String = GV.dir_temp + temp_nome
-		var utf8_safe := FileHandling.SafeFileAccess.new(temp_path, FileAccess.READ)
-		if not utf8_safe.is_valid():
+		var utf8_file := FileAccess.open(temp_path, FileAccess.READ)
+		if utf8_file == null:
 			$"%Terminal".text_edit("Erro ao ler arquivo convertido: " + temp_path, \
 				"erro", true, false)
 			if not temp_xlsx.is_empty():
 				DirAccess.remove_absolute(temp_xlsx)
 			return
-		var utf8_bytes: PackedByteArray = utf8_safe.get_file().get_buffer(utf8_safe.get_file().get_length())
-		utf8_safe.close()
+		var utf8_bytes: PackedByteArray = utf8_file.get_buffer(utf8_file.get_length())
+		utf8_file.close()
 		DirAccess.make_dir_recursive_absolute(diretorio_regras)
-		var destino := FileHandling.SafeFileAccess.new(diretorio_regras + "/" + nome_arquivo, FileAccess.WRITE)
-		if not destino.is_valid():
+		var destino := FileAccess.open(diretorio_regras + "/" + nome_arquivo, FileAccess.WRITE)
+		if destino == null:
 			$"%Terminal".text_edit("Erro ao salvar arquivo em " + diretorio_regras, \
 				"erro", true, false)
 			DirAccess.remove_absolute(temp_path)
 			if not temp_xlsx.is_empty():
 				DirAccess.remove_absolute(temp_xlsx)
 			return
-		destino.get_file().store_buffer(utf8_bytes)
+		destino.store_buffer(utf8_bytes)
 		destino.close()
 		DirAccess.remove_absolute(temp_path)
 		destino_final = diretorio_regras + "/" + nome_arquivo

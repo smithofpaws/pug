@@ -36,11 +36,10 @@ var analise_grades := AnaliseGrades.new()
 func carregar_horarios_ini(diretorio: String, arquivo: String) -> Dictionary:
 	print_debug("Carregando horarios INI...")
 	var horarios_ini: Dictionary
-	var safe := FileHandling.SafeFileAccess.new(diretorio + arquivo, FileAccess.READ)
-	if not safe.is_valid():
+	var f: FileAccess = FileAccess.open(diretorio + arquivo, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", diretorio + arquivo, "!")
 		return {}
-	var f: FileAccess = safe.get_file()
 	var section: String = ""
 	while not f.eof_reached():
 		var line: String = f.get_line()
@@ -70,11 +69,10 @@ func carregar_horarios_ini(diretorio: String, arquivo: String) -> Dictionary:
 func carregar_horarios_txt(diretorio: String, arquivo: String, posicoes_horarios_txt: Dictionary) -> Array:
 	print_debug("Carregando Horarios TXT...")
 	var horarios_txt: Array[Dictionary]
-	var safe := FileHandling.SafeFileAccess.new(diretorio + arquivo, FileAccess.READ)
-	if not safe.is_valid():
+	var f: FileAccess = FileAccess.open(diretorio + arquivo, FileAccess.READ)
+	if f == null:
 		print_debug("CRITICO: Erro ao abrir arquivo ", diretorio + arquivo, "!")
 		return []
-	var f: FileAccess = safe.get_file()
 	var section: String = ""
 	# Numero da linha fisica no arquivo (1-based) e contagem de linhas problematicas, para o
 	# diagnostico apontar exatamente onde esta o problema (toda linha deveria ter disciplina + codigo).

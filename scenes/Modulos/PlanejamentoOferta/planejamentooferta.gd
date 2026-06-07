@@ -1097,11 +1097,10 @@ func _exportar_planejamento_csv() -> void:
 
 	file_handling.check_create_dir(diretorio_exportacao)
 	var caminho: String = diretorio_exportacao + "planejamento.csv"
-	var safe := FileHandling.SafeFileAccess.new(caminho, FileAccess.WRITE)
-	if not safe.is_valid():
+	var file := FileAccess.open(caminho, FileAccess.WRITE)
+	if file == null:
 		_log("Erro ao criar planejamento.csv em " + caminho, "erro", true, true)
 		return
-	var file := safe.get_file()
 	for linha in linhas:
 		file.store_line(linha)
 	_log("Planejamento exportado para %splanejamento.csv (%d linhas)." % \
