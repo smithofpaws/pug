@@ -15,6 +15,7 @@
    - [Exportadores](#47-exportadores)
    - [Matrícula Irregular](#48-matrícula-irregular)
    - [Trancamentos](#49-trancamentos)
+   - [Avaliação Limesurvey](#410-avaliação-limesurvey)
 5. [Configurações](#5-configurações)
 6. [Arquivos de Entrada](#6-arquivos-de-entrada)
 7. [Arquivos de Saída](#7-arquivos-de-saída)
@@ -84,6 +85,13 @@ Vários módulos têm botões que mostram ou ocultam painéis — terminal, grad
 
 Ao posicionar o cursor sobre elementos da interface, uma dica flutuante pode aparecer explicando a função daquele elemento.
 
+### 3.5 Menus suspensos (seletores)
+
+Os menus suspensos do programa — seletores de aluno, curso, grade, filtros, etc. — aceitam dois atalhos além do clique normal:
+
+- **Roda do mouse sobre o seletor:** com o cursor sobre o menu (sem precisar abri-lo), girar a roda **avança ou retrocede** a opção selecionada. Útil para percorrer rapidamente alunos, disciplinas ou semestres.
+- **Clique do meio nos filtros do Painel de Disciplinas** (Curso, Semestre, Professor): **limpa** aquele filtro, voltando a exibir todos os itens. Aplica-se aos filtros usados em Planejamento de Oferta e Planejamento de Horário.
+
 ---
 
 ## 4. Módulos
@@ -123,7 +131,7 @@ O terminal mostra, para cada aluno analisado:
 
 ### 4.3 Situação de Alunos
 
-**Arquivos necessários:** `hist.csv`, `horarios.txt`
+**Arquivos necessários:** `hist.csv`, `horarios.txt`, `horarios.ini`
 
 Módulo central de análise individual. Permite examinar em detalhes a situação acadêmica de qualquer aluno do histórico.
 
@@ -176,7 +184,7 @@ O botão **Exportar** gera um arquivo Markdown com a situação dos alunos, incl
 
 ### 4.4 Situação de Disciplinas
 
-**Arquivos necessários:** `hist.csv`, `horarios.txt`
+**Arquivos necessários:** `hist.csv` (`horarios.txt` opcional, para a grade de horários consolidada)
 
 Analisa o perfil de discentes vinculados a uma ou duas disciplinas.
 
@@ -364,7 +372,7 @@ As saídas ficam no menu **Arquivo** (descrito acima): **Salvar planejamento.jso
 
 ### 4.7 Exportadores
 
-**Arquivos necessários:** variam por tipo de exportação (veja abaixo)
+**Arquivos necessários para abrir o módulo:** `hist.csv`, `horarios.txt`, `horarios.ini`. Cada ferramenta de exportação usa um subconjunto desses dados (indicado abaixo).
 
 Reúne ferramentas para gerar relatórios e documentos avulsos.
 
@@ -420,6 +428,9 @@ Use este módulo para identificar casos que exigem correção de matrícula ou f
 
 ### 4.9 Trancamentos
 
+> [!NOTA]
+> Módulo **em desenvolvimento**. Encontra-se temporariamente **desativado** na configuração padrão; a descrição abaixo reflete o comportamento previsto.
+
 **Arquivos necessários:** `hist.csv`
 
 Verifica o histórico de trancamentos de cada aluno e avalia se os limites regulamentares foram atingidos.
@@ -435,6 +446,24 @@ Escolha o aluno no menu suspenso. O módulo exibe:
 Os limites verificados (quantidade total de trancamentos, limite de trancamentos consecutivos e restrição para ingressantes) são configuráveis e baseados na Resolução 29, Art. 48.
 
 O módulo também exibe o trecho da legislação aplicável ao caso do aluno selecionado.
+
+---
+
+### 4.10 Avaliação Limesurvey
+
+> [!NOTA]
+> Módulo **desativado temporariamente** na configuração padrão. A descrição abaixo reflete o comportamento previsto quando reativado.
+
+**Arquivos necessários:** `hist.csv`, `email.csv`
+
+Gera os arquivos de importação para o **LimeSurvey** usados na avaliação semestral de disciplinas e professores, evitando a montagem manual de cada questionário.
+
+A partir do histórico, o módulo identifica as combinações de **disciplina + professor + turma** do semestre e produz, para cada avaliação:
+
+- **Questionário (`survey.lss`)** — arquivo LimeSurvey com os dados do administrador, datas de início e expiração e o semestre já preenchidos.
+- **Lista de participantes (`survey_tokens.lst`)** — relação de alunos com seus e-mails (vinda do `email.csv`), pronta para importar como participantes do questionário.
+
+Os campos de administrador (e-mail, datas, semestre) podem ser ajustados na interface antes da geração. Os arquivos são salvos no diretório de *surveys* definido em `base_config.json`.
 
 ---
 
