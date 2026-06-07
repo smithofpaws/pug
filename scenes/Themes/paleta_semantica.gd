@@ -41,6 +41,8 @@ const PALETA: Dictionary = {
 	# Chrome de interface (indicadores neutros e realce de seleção/arraste).
 	"neutro": Color(0.5, 0.5, 0.5),
 	"selecao": Color(0.3, 0.7, 1.0),
+	# Disciplinas de outro curso sobrepostas como referência (somente-leitura).
+	"referencia": Color(0.62, 0.52, 0.88),
 	# Mensagens do terminal.
 	"alerta": Color.GOLDENROD,
 	"erro": Color.RED,

@@ -134,6 +134,10 @@ var _disciplina_destacada: String = ""
 # Ultimo total de alunos em choque entre disciplinas sobrepostas (par a par), para a barra de status.
 var _ultimo_total_alunos_choque: int = 0
 
+# Ultimo total de disciplinas compartilhadas em horario divergente entre o seu plano e a referencia
+# (outro curso sobreposto), para a barra de status. Zero quando nao ha referencia.
+var _ultimo_total_compartilhadas_div: int = 0
+
 # Dados de histórico/discentes carregados sob _ready (necessários ao indicador de choque de alunos).
 var _historico: Dictionary = {}
 var _lista_alunos: Array[Array] = []
@@ -273,8 +277,8 @@ func _ready() -> void:
 		"Importar_retorno": ["importar_csv", "horarios.txt", "professor.xlsx (.csv)"],
 		"Exportar": ["horarios.txt"],
 		"Exportar_retorno": ["exportar_horarios_txt"],
-		"Servidor": ["Enviar ao servidor", "Baixar do servidor", "Configurar servidor…"],
-		"Servidor_retorno": ["enviar_servidor", "baixar_servidor", "config_servidor"],
+		"Servidor": ["Enviar ao servidor", "Baixar do servidor", "Ver outros cursos (referência)…", "Limpar referências", "Configurar servidor…"],
+		"Servidor_retorno": ["enviar_servidor", "baixar_servidor", "ver_referencias", "limpar_referencias", "config_servidor"],
 	}
 	$"%SeletorImportar".opcao_selecionada.connect(_on_importar_opcao_selecionada)
 
@@ -282,6 +286,8 @@ func _ready() -> void:
 	# lidas de GV (mesmo padrao do ppc_principal) e configuradas sob demanda em _garantir_sync_config.
 	_sync = SyncKinto.new()
 	add_child(_sync)
+	# Verifica em segundo plano se ha versao mais recente do curso no servidor (avisa, nao baixa).
+	_verificar_atualizacao_servidor.call_deferred()
 
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	var altura_seletor: int = 30
@@ -303,6 +309,7 @@ func _ready() -> void:
 		"completas": "Completas: 0",
 		"choques": "Choques: 0",
 		"alunos_choque": "Alunos em choque: 0",
+		"compartilhadas_div": "",
 	})
 
 	$"%GradeHorarios".drop_realizado.connect(_on_grade_drop_realizado)
@@ -382,6 +389,7 @@ func _recalcular_grade(reportar: bool = true, celulas_relato: Array = []) -> voi
 	var res_carga: Dictionary = _verif_carga.verificar(horas, $"%PainelDisciplinas".filtro_professor)
 	var sem_prof: Dictionary = _ger_alocacoes.celulas_sem_professor()
 	_ultimo_total_choques = res_choques.get("total", 0)
+	_ultimo_total_compartilhadas_div = _verificar_compartilhadas_divergentes().size()
 	_mapa_condicoes = _montar_mapa_condicoes(res_choques, res_carga, sem_prof)
 	for chave_celula in _ger_alocacoes.alocacoes:
 		var partes: PackedStringArray = chave_celula.split("_")
@@ -909,6 +917,13 @@ func _semestre_da_aloc(aloc: Dictionary) -> String:
 			s = card.semestre
 	return s
 
+# Verdadeiro se a alocação/disciplina é de outro curso sobreposto como referência (somente-leitura).
+# Consulta tanto o marcador na própria alocação quanto a entrada de _planejamento_csv pela chave.
+func _aloc_e_referencia(aloc: Dictionary) -> bool:
+	if aloc.get("referencia", false):
+		return true
+	return _dados._planejamento_csv.get(aloc.get("chave", ""), {}).get("referencia", false)
+
 func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> void:
 	if linha == 0 or coluna == 0:
 		return
@@ -924,6 +939,10 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 			return
 		var idx: int = _indice_com_filtro(arr_orig)
 		var aloc: Dictionary = arr_orig[idx]
+		if _aloc_e_referencia(aloc):
+			$"%Terminal".text_edit("%s é de outro curso (somente-leitura): não pode ser movida." \
+				% str(aloc.get("codigo", "?")).to_upper(), "aviso", true, false)
+			return
 		var chave_card: String = aloc.get("chave", "")
 		var card_src: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave_card, null)
 		# O bloco é seguido pela chave da disciplina escolhida por _indice_com_filtro,
@@ -955,6 +974,10 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 		return
 	var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave, null)
 	if not card:
+		return
+	if _dados._planejamento_csv.get(chave, {}).get("referencia", false):
+		$"%Terminal".text_edit("%s é de outro curso (somente-leitura): não pode ser alocada aqui." \
+			% codigo.to_upper(), "aviso", true, false)
 		return
 	if card.ch_alocada >= card.ch_total and not card.permite_extra:
 		$"%Terminal".text_edit("Disciplina %s já com CH completa (%d/%d)." % \
@@ -1027,17 +1050,30 @@ func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
 	var arr: Array = _ger_alocacoes.obter_alocacoes(chave_celula)
 	if arr.is_empty():
 		return
+	# Remove apenas as SUAS alocações; as de referência (outro curso) são somente-leitura e ficam.
 	var codigos: Array[String] = []
+	var mantidas: Array = []
 	for a_dict in arr:
 		var aloc: Dictionary = a_dict
+		if _aloc_e_referencia(aloc):
+			mantidas.append(aloc)
+			continue
 		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""), null)
 		if card:
 			card.ch_alocada -= 1
 			if aloc.get("is_extra", false):
 				card.ch_extra -= 1
 		codigos.append(aloc.get("codigo", "?").to_upper())
+	if codigos.is_empty():
+		$"%Terminal".text_edit("Alocação de outro curso (somente-leitura): use 'Limpar referências' para removê-la.", \
+			"aviso", true, false)
+		return
 	_ger_alocacoes.limpar_celula(linha, coluna)
-	_ger_alocacoes.remover(chave_celula)
+	if mantidas.is_empty():
+		_ger_alocacoes.remover(chave_celula)
+	else:
+		_ger_alocacoes.alocacoes[chave_celula] = mantidas
+		_ger_alocacoes.atualizar_celula(linha, coluna)
 	var codigos_str: String = " + ".join(codigos)
 	$"%Terminal".text_edit("Removida alocação: %s ← [%d, %d]." % \
 		[codigos_str, linha, coluna], \
@@ -1211,6 +1247,15 @@ func _atualizar_status_bar() -> void:
 		"erro" if _ultimo_total_choques > 0 else "")
 	status_bar.atualizar("alunos_choque", "Alunos em choque: %d" % _ultimo_total_alunos_choque, \
 		"aviso" if _ultimo_total_alunos_choque > 0 else "")
+	# Segmento de compartilhadas divergentes: so aparece quando ha referencia (outro curso) sobreposta.
+	if _ha_referencia():
+		if _ultimo_total_compartilhadas_div > 0:
+			status_bar.atualizar("compartilhadas_div", \
+				"Compart. divergentes: %d" % _ultimo_total_compartilhadas_div, "aviso")
+		else:
+			status_bar.atualizar("compartilhadas_div", "Compart. alinhadas ✓", "")
+	else:
+		status_bar.atualizar("compartilhadas_div", "")
 
 # Carrega hist.csv e pré-computa as condições de cada discente (necessário ao indicador de choque
 # de alunos). Feito uma vez no _ready, espelhando o módulo Situação Disciplinas. Falha graciosamente
@@ -1452,6 +1497,10 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 			_enviar_para_servidor()
 		"baixar_servidor":
 			_baixar_do_servidor()
+		"ver_referencias":
+			_ver_outros_cursos_referencia()
+		"limpar_referencias":
+			_limpar_referencias()
 		"config_servidor":
 			_configurar_sincronizacao()
 
@@ -1469,6 +1518,77 @@ func _garantir_sync_config() -> bool:
 		_configurar_sincronizacao()
 		return false
 	return true
+
+
+# Ao abrir o modulo, consulta o servidor em segundo plano e avisa se houver uma versao do curso do
+# PPC principal que valha a pena baixar. So avisa quando AMBAS as condicoes valem:
+#   1) e uma versao que este usuario ainda nao sincronizou (last_modified do Kinto > marcador local
+#      em config_usuario.json:sincronizacao.versoes_sincronizadas.<curso>, atualizado a cada
+#      envio/baixa) — evita reavisar a propria versao recem-enviada/baixada;
+#   2) a versao do servidor e mais recente, POR DATA, do que o planejamento.json local (comparando
+#      o campo "exportado_em" dos dois) — evita avisar quando o trabalho local ainda nao enviado e
+#      mais novo que o que esta no servidor.
+# Silencioso em todo o resto (sem credenciais, offline, curso ainda nao enviado, ou ja em dia).
+func _verificar_atualizacao_servidor() -> void:
+	var sinc: Dictionary = GV.configuracao_base.get("sincronizacao", {})
+	_sync.configurar(str(sinc.get("url", "")), str(sinc.get("usuario", "")), str(sinc.get("token", "")))
+	if not _sync.esta_configurado():
+		return
+	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
+	if ppc.is_empty():
+		return
+	var r: Dictionary = await _sync.baixar(ppc)
+	if not r.get("ok", false):
+		return
+	var record: Dictionary = {}
+	if r.get("dados") is Dictionary:
+		record = r["dados"].get("data", {})
+
+	# Condicao 1: versao do servidor ainda nao sincronizada por este usuario.
+	var lm_servidor: int = int(record.get("last_modified", 0))
+	var versoes: Dictionary = sinc.get("versoes_sincronizadas", {})
+	if lm_servidor <= int(versoes.get(ppc, 0)):
+		return
+
+	# Condicao 2: servidor mais recente, por data, do que o planejamento.json local. Os dois lados
+	# usam "exportado_em", mas em formatos diferentes (o modulo Oferta grava "AAAA-MM-DD HH:MM" e o
+	# Horario/SyncKinto "AAAA-MM-DDTHH:MM:SS"); converte ambos para tempo Unix antes de comparar.
+	var plano_servidor: Dictionary = record.get("planejamento", {}) if record.get("planejamento") is Dictionary else {}
+	var data_servidor: String = str(plano_servidor.get("exportado_em", record.get("enviado_em", "")))
+	var data_local: String = ""
+	if FileAccess.file_exists(diretorio_exportacao + "planejamento.json"):
+		var plano_local: Dictionary = file_handling.load_json(diretorio_exportacao, "planejamento.json")
+		data_local = str(plano_local.get("exportado_em", ""))
+	if _data_para_unix(data_servidor) <= _data_para_unix(data_local):
+		return
+
+	var por: String = str(record.get("enviado_por", "?"))
+	var em: String = str(record.get("enviado_em", "?"))
+	Dialogos.confirmar(self, "Versão nova no servidor", \
+		"Há uma versão mais recente do planejamento de %s no servidor (enviada por %s em %s). " \
+		% [ppc, por, em] + "Deseja baixá-la agora? Isso substitui o planejamento local.", \
+		_baixar_curso.bind(ppc), "Baixar agora", "Agora não")
+
+
+# Marca localmente (config_usuario.json via override) qual versao do servidor este usuario tem para
+# o curso, usando o last_modified do record retornado por enviar/baixar. Assim a verificacao
+# automatica nao acusa como "nova" a propria versao que o usuario acabou de enviar ou baixar.
+func _registrar_versao_sincronizada(chave_curso: String, resposta: Dictionary) -> void:
+	if not resposta.get("dados") is Dictionary:
+		return
+	var record: Dictionary = resposta["dados"].get("data", {})
+	var lm: int = int(record.get("last_modified", 0))
+	if lm <= 0:
+		return
+	override_config.emit(["sincronizacao", "versoes_sincronizadas", chave_curso], lm)
+
+
+# Converte uma data "exportado_em" (nos formatos "AAAA-MM-DD HH:MM" ou "AAAA-MM-DDTHH:MM:SS") em
+# tempo Unix para comparacao numerica robusta. Vazio ou invalido vira 0 (mais antigo que tudo).
+func _data_para_unix(data: String) -> int:
+	if data.strip_edges().is_empty():
+		return 0
+	return int(Time.get_unix_time_from_datetime_string(data.strip_edges().replace(" ", "T")))
 
 
 # Envia o planejamento do curso do PPC principal ao servidor (apos confirmacao).
@@ -1490,6 +1610,7 @@ func _enviar_para_servidor_confirmado(ppc: String) -> void:
 	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % ppc, "padrao", true, false)
 	var r: Dictionary = await _sync.enviar(ppc, json)
 	if r.get("ok", false):
+		_registrar_versao_sincronizada(ppc, r)
 		$"%Terminal".text_edit("Enviado: %s (%d disciplinas) para o servidor." \
 			% [ppc, json.get("disciplinas", []).size()], "sucesso", true, false)
 	else:
@@ -1577,9 +1698,266 @@ func _baixar_curso(chave_curso: String) -> void:
 		return
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", planejamento)
 	_importar_planejamento_json()
+	_registrar_versao_sincronizada(chave_curso, r)
 	$"%Terminal".text_edit("Baixado: %s (enviado por %s em %s)." \
 		% [chave_curso, str(record.get("enviado_por", "?")), str(record.get("enviado_em", "?"))], \
 		"sucesso", true, false)
+
+
+# ───────────────────────── Camada de referencia (ver outros cursos) ─────────────────────────
+# Permite sobrepor na grade o planejamento de OUTROS cursos como somente-leitura, para co-planejar
+# disciplinas compartilhadas. As alocacoes/disciplinas de referencia recebem os marcadores
+# "referencia": true e "curso_origem": <chave_curso>; o resto do programa (edicao, export) usa esses
+# marcadores como guarda. So fica em memoria — nunca entra no planejamento.json do usuario (Fase 3).
+
+# Lista os cursos no servidor (exceto o PPC principal) e abre um dialogo de selecao multipla para
+# escolher quais sobrepor como referencia. Reusa _sync.listar() (um GET traz todos com planejamento).
+func _ver_outros_cursos_referencia() -> void:
+	if not _garantir_sync_config():
+		return
+	$"%Terminal".text_edit("Consultando cursos no servidor...", "padrao", true, false)
+	var r: Dictionary = await _sync.listar()
+	if not r.get("ok", false):
+		$"%Terminal".text_edit("Falha ao consultar: %s" % r.get("erro", ""), "erro", true, true)
+		return
+	var registros: Array = []
+	if r.get("dados") is Dictionary:
+		registros = r["dados"].get("data", [])
+	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
+	var outros: Array = []
+	for rec in registros:
+		if rec is Dictionary and str(rec.get("id", "")) != ppc:
+			outros.append(rec)
+	if outros.is_empty():
+		$"%Terminal".text_edit("Nenhum outro curso disponivel no servidor para referencia.", "aviso", true, true)
+		return
+	_abrir_selecao_referencia(outros)
+
+
+# Dialogo (AGENTS.md) com selecao MULTIPLA dos cursos a sobrepor como referencia.
+func _abrir_selecao_referencia(registros: Array) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Ver outros cursos (referência)"
+	dialog.get_ok_button().text = "Sobrepor"
+	dialog.get_cancel_button().text = "Cancelar"
+	dialog.min_size = Vector2i(540, 340)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog.add_child(vbox)
+	var lbl := Label.new()
+	lbl.text = "Escolha os cursos a sobrepor na grade (somente-leitura; não altera o seu plano). " + \
+		"Segure Ctrl/Shift para selecionar vários:"
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(lbl)
+
+	var lista := ItemList.new()
+	lista.select_mode = ItemList.SELECT_MULTI
+	lista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lista.custom_minimum_size = Vector2(500, 240)
+	vbox.add_child(lista)
+	for rec in registros:
+		var id_curso: String = str(rec.get("id", ""))
+		var por: String = str(rec.get("enviado_por", "?"))
+		var em: String = str(rec.get("enviado_em", "?"))
+		lista.add_item("%s — enviado por %s em %s" % [id_curso, por, em])
+
+	dialog.confirmed.connect(func():
+		var sel: PackedInt32Array = lista.get_selected_items()
+		if sel.is_empty():
+			return
+		var escolhidos: Array = []
+		for i in sel:
+			escolhidos.append(registros[i])
+		_aplicar_referencia(escolhidos))
+	dialog.visibility_changed.connect(func():
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
+
+
+# Mescla o planejamento dos cursos escolhidos na grade como referencia (somente-leitura), sem apagar
+# o plano do usuario. Reusa a logica de _importar_planejamento_json, mas: nao da clear(), nao
+# sobrescreve chaves ja existentes (a sua tem prioridade) e marca tudo como referencia.
+func _aplicar_referencia(registros: Array) -> void:
+	# Recomeca da referencia limpa para a operacao ser idempotente (re-selecionar nao duplica).
+	_remover_dados_referencia()
+	var dias_json: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas_json: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+
+	# Passo 1: adiciona as disciplinas de referencia ao _planejamento_csv (sem sobrescrever as suas).
+	for rec in registros:
+		if not rec is Dictionary:
+			continue
+		var curso_origem: String = str(rec.get("id", ""))
+		var plano: Dictionary = rec.get("planejamento", {}) if rec.get("planejamento") is Dictionary else {}
+		for disc in plano.get("disciplinas", []):
+			if not disc is Dictionary:
+				continue
+			var codigo: String = str(disc.get("codigo", "")).to_lower()
+			var semestre: String = str(disc.get("semestre", ""))
+			if codigo.is_empty():
+				continue
+			var chave: String = codigo + "_" + semestre.to_lower()
+			if _dados._planejamento_csv.has(chave):
+				continue  # a sua (ou outra referencia ja adicionada) tem prioridade
+			var nomes: Array[String] = []
+			var chs: Array[String] = []
+			var ch_total: int = 0
+			for p in disc.get("professores", []):
+				if p is Dictionary:
+					var pn: String = str(p.get("nome", ""))
+					if not pn.is_empty():
+						nomes.append(pn)
+						chs.append(str(int(p.get("ch", 0))))
+						ch_total += int(p.get("ch", 0))
+			_dados._planejamento_csv[chave] = {
+				"codigo": codigo,
+				"semestre": semestre,
+				"professor": nomes,
+				"ch": chs,
+				"oferta": str(disc.get("oferta", semestre)),
+				"ch_disciplina": str(ch_total),
+				"referencia": true,
+				"curso_origem": curso_origem,
+			}
+
+	# Repopula o painel (recria cards; ch_alocada e recomputada adiante) e reconfigura as referencias.
+	_sincronizar_referencias()
+	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
+
+	# Passo 2: aplica na grade as alocacoes das disciplinas de referencia (so as marcadas como tal).
+	var cont_aloc: int = 0
+	for rec in registros:
+		if not rec is Dictionary:
+			continue
+		var curso_origem: String = str(rec.get("id", ""))
+		var plano: Dictionary = rec.get("planejamento", {}) if rec.get("planejamento") is Dictionary else {}
+		for disc in plano.get("disciplinas", []):
+			if not disc is Dictionary:
+				continue
+			var codigo_json: String = str(disc.get("codigo", "")).to_lower()
+			var semestre_json: String = str(disc.get("semestre", ""))
+			if codigo_json.is_empty():
+				continue
+			var chave_json: String = codigo_json + "_" + semestre_json.to_lower()
+			var entrada: Dictionary = _dados._planejamento_csv.get(chave_json, {})
+			if not entrada.get("referencia", false):
+				continue  # chave que colidiu com a sua: nao aplica a versao de referencia
+			for aloc_item in disc.get("alocacoes", []):
+				if not aloc_item is Dictionary:
+					continue
+				var col_idx: int = dias_json.find(str(aloc_item.get("dia", ""))) + 1
+				var row_idx: int = horas_json.find(str(aloc_item.get("horario", ""))) + 1
+				if col_idx <= 0 or row_idx <= 0:
+					continue
+				_ger_alocacoes.alocar("%d_%d" % [row_idx, col_idx], {
+					"chave": chave_json,
+					"codigo": codigo_json,
+					"professor": str(aloc_item.get("professor", "")),
+					"semestre": semestre_json,
+					"sala": str(aloc_item.get("sala", "")),
+					"tipo": str(aloc_item.get("tipo", "")),
+					"turma": str(aloc_item.get("turma", "")),
+					"vagas": str(aloc_item.get("vagas", "Vagas")),
+					"p": str(aloc_item.get("p", "1")),
+					"s": str(aloc_item.get("s", "1")),
+					"t": str(aloc_item.get("t", "1")),
+					"referencia": true,
+					"curso_origem": curso_origem,
+				})
+				cont_aloc += 1
+
+	_recomputar_ch_alocada()
+	_sincronizar_referencias()
+	# Dica de origem nos cards de referencia (somente-leitura).
+	for chave in $"%PainelDisciplinas".cards_disciplinas:
+		var entrada: Dictionary = _dados._planejamento_csv.get(chave, {})
+		if entrada.get("referencia", false):
+			DicaFlutuante.vincular($"%PainelDisciplinas".cards_disciplinas[chave], \
+				"Disciplina de outro curso (somente-leitura): %s" % str(entrada.get("curso_origem", "")))
+	_ger_alocacoes.reaplicar_todas()
+	_detectar_choques()
+	var nomes_cursos: Array[String] = []
+	for rec in registros:
+		if rec is Dictionary:
+			nomes_cursos.append(str(rec.get("id", "")))
+	$"%Terminal".text_edit("Referência sobreposta: %s (%d alocações). Somente-leitura." \
+		% [", ".join(nomes_cursos), cont_aloc], "sucesso", true, false)
+
+	# Sinaliza disciplinas compartilhadas em horario divergente entre o seu plano e a referencia.
+	var divergencias: Array[String] = _verificar_compartilhadas_divergentes()
+	if not divergencias.is_empty():
+		$"%Terminal".text_edit("%d disciplina(s) compartilhada(s) em horário divergente." \
+			% divergencias.size(), "aviso", true, true)
+		Dialogos.escolha_lista(self, "Compartilhadas em horário divergente", \
+			"Estas disciplinas compartilhadas estão em horários diferentes entre o seu plano e o " + \
+			"curso de referência. Alinhe-as com o(s) coordenador(es):", \
+			divergencias, "", [{ "texto": "Entendi", "ao_acionar": Callable() }], "")
+
+
+# Remove da grade e do _planejamento_csv todos os dados marcados como referencia, redesenhando.
+func _limpar_referencias() -> void:
+	if not _ha_referencia():
+		$"%Terminal".text_edit("Não há cursos de referência sobrepostos.", "aviso", true, false)
+		return
+	_remover_dados_referencia()
+	_sincronizar_referencias()
+	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
+	_recomputar_ch_alocada()
+	_sincronizar_referencias()
+	_ger_alocacoes.reaplicar_todas()
+	_detectar_choques()
+	$"%Terminal".text_edit("Referências removidas.", "sucesso", true, false)
+
+
+# Remove apenas os DADOS de referencia (alocacoes + _planejamento_csv), sem redesenhar. Usado por
+# _aplicar_referencia (recomeco) e _limpar_referencias (que redesenha depois).
+func _remover_dados_referencia() -> void:
+	for chave_celula in _ger_alocacoes.alocacoes.keys():
+		var arr: Array = _ger_alocacoes.alocacoes[chave_celula]
+		var mantidas: Array = []
+		for aloc in arr:
+			if not (aloc is Dictionary and aloc.get("referencia", false)):
+				mantidas.append(aloc)
+		if mantidas.is_empty():
+			_ger_alocacoes.alocacoes.erase(chave_celula)
+		else:
+			_ger_alocacoes.alocacoes[chave_celula] = mantidas
+	# Libera os cards de referencia do painel ANTES de apagar o _planejamento_csv (usa o flag para
+	# identifica-los). popular(false) so removeria cards cujo codigo ainda esteja no dicionario, entao
+	# disciplinas que so existiam na referencia ficariam orfas se nao fossem liberadas aqui.
+	var painel := $"%PainelDisciplinas"
+	for chave in painel.cards_disciplinas.keys():
+		if _dados._planejamento_csv.get(chave, {}).get("referencia", false):
+			painel.cards_disciplinas[chave].queue_free()
+			painel.cards_disciplinas.erase(chave)
+	for chave in _dados._planejamento_csv.keys():
+		if _dados._planejamento_csv[chave].get("referencia", false):
+			_dados._planejamento_csv.erase(chave)
+
+
+# Verdadeiro se ha alguma disciplina de referencia sobreposta no momento.
+func _ha_referencia() -> bool:
+	for chave in _dados._planejamento_csv:
+		if _dados._planejamento_csv[chave].get("referencia", false):
+			return true
+	return false
+
+
+# Recomputa ch_alocada de TODOS os cards a partir das alocacoes atuais (suas + referencia). Necessario
+# apos popular(), que recria os cards zerando ch_alocada.
+func _recomputar_ch_alocada() -> void:
+	var cards: Dictionary = $"%PainelDisciplinas".cards_disciplinas
+	for chave in cards:
+		cards[chave].ch_alocada = 0
+	for chave_celula in _ger_alocacoes.alocacoes:
+		for aloc in _ger_alocacoes.alocacoes[chave_celula]:
+			var card: CardDisciplina = cards.get((aloc as Dictionary).get("chave", ""))
+			if card:
+				card.ch_alocada += 1
 
 
 # Dialogo customizado para informar/editar URL, usuario e token do servidor. Persiste via override
@@ -1774,6 +2152,9 @@ func _importar_planejamento_json() -> void:
 			"erro", true, true)
 		return
 
+	# Remove qualquer camada de referencia (outros cursos) antes de carregar o proprio plano, para
+	# nao deixar alocacoes de referencia orfas na grade (o clear() abaixo so limpa o _planejamento_csv).
+	_remover_dados_referencia()
 	# Converte o JSON para o formato _planejamento_csv.
 	_dados._planejamento_csv.clear()
 	var disciplinas: Array = dados["disciplinas"]
@@ -1971,6 +2352,74 @@ func _curso_de_semestre(sem: String) -> String:
 			if sem_upper.begins_with(str(prefixo).to_upper()):
 				return cod
 	return ""
+
+
+# Compara, para cada disciplina compartilhada entre cursos, as células do SEU lado (editável) com as
+# do lado de cada curso de REFERÊNCIA (somente-leitura). Quando os horários não coincidem, gera uma
+# linha de divergência. Vazio quando não há referência ou quando todas estão alinhadas.
+func _verificar_compartilhadas_divergentes() -> Array[String]:
+	if not _ha_referencia():
+		return []
+	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	# por_codigo[cod] = { "seu": {cel:true}, "ref": { curso_origem: {cel:true} } }
+	var por_codigo: Dictionary = {}
+	for chave_celula in _ger_alocacoes.alocacoes:
+		for a in _ger_alocacoes.alocacoes[chave_celula]:
+			var aloc: Dictionary = a
+			var cod: String = str(aloc.get("codigo", "")).to_lower()
+			if cod.is_empty():
+				continue
+			var oferta: String = _dados._planejamento_csv.get(aloc.get("chave", ""), {}).get("oferta", "")
+			if not _oferta_cruza_cursos(oferta):
+				continue
+			if not por_codigo.has(cod):
+				por_codigo[cod] = { "seu": {}, "ref": {} }
+			if _aloc_e_referencia(aloc):
+				var curso: String = str(aloc.get("curso_origem", "?"))
+				if not por_codigo[cod]["ref"].has(curso):
+					por_codigo[cod]["ref"][curso] = {}
+				por_codigo[cod]["ref"][curso][chave_celula] = true
+			else:
+				por_codigo[cod]["seu"][chave_celula] = true
+	var divergencias: Array[String] = []
+	for cod in por_codigo:
+		var seu: Dictionary = por_codigo[cod]["seu"]
+		var refs: Dictionary = por_codigo[cod]["ref"]
+		if seu.is_empty() or refs.is_empty():
+			continue  # precisa dos dois lados para comparar
+		for curso in refs:
+			if not _mesmas_celulas(seu, refs[curso]):
+				divergencias.append("• %s — você: %s · %s: %s" % [cod.to_upper(), \
+					_descrever_celulas(seu, dias, horas), curso, \
+					_descrever_celulas(refs[curso], dias, horas)])
+	return divergencias
+
+
+# Verdadeiro se os dois conjuntos de células ("linha_coluna") são exatamente iguais.
+func _mesmas_celulas(a: Dictionary, b: Dictionary) -> bool:
+	if a.size() != b.size():
+		return false
+	for chave in a:
+		if not b.has(chave):
+			return false
+	return true
+
+
+# Converte um conjunto de células ("linha_coluna") em texto legível "Dia HH:MM", ordenado.
+func _descrever_celulas(celulas: Dictionary, dias: Array[String], horas: Array[String]) -> String:
+	var partes: Array[String] = []
+	for chave_celula in celulas:
+		var p: PackedStringArray = chave_celula.split("_")
+		if p.size() != 2:
+			continue
+		var linha: int = int(p[0])
+		var coluna: int = int(p[1])
+		var dia: String = dias[coluna - 1] if coluna > 0 and coluna <= dias.size() else "?"
+		var hora: String = horas[linha - 1] if linha > 0 and linha <= horas.size() else "?"
+		partes.append("%s %s" % [dia, hora])
+	partes.sort()
+	return ", ".join(partes) if not partes.is_empty() else "(não alocada)"
 
 # Abre o diálogo de configuração do posicionamento automático, se houver disciplinas pendentes
 # (restritas ao curso filtrado, quando há filtro ativo).

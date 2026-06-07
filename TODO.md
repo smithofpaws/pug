@@ -11,6 +11,7 @@
 ## A IMPLEMENTAR
 
 - [x] **Usar Kinto** (https://github.com/Kinto/kinto) para salvar jsons em servidor próprio. — MVP implementado: módulo Planejamento de horário envia/baixa o planejamento de oferta (Enviar/Baixar/Configurar servidor no menu Arquivo › Servidor), via `SyncKinto` (`standalone_scripts/io/sincronizacao.gd`). Servidor Kinto na rede Tailscale; 1 record por curso, login por coordenador com token revogável. Futuro: filtrar planejamento multi-curso por curso, migrar servidor para infra da Unipampa.
+- [ ] **Sincronização JSON** Cada coordenador controla um arquivo json e não pode editar as disciplinas dos outros coordenadores e seus JSON. As disciplinas compartilhadas, porém, podem ser editadas por qualquer coordenador que seja do curso da disciplina. Exemplo: Tanto o coordenador da Engenharia Civil quanto o coordenador da Engenharia Mecânica podem alterar os horários de EM01;EC02. — Parcial: camada de referência **somente-leitura** (Servidor › Ver outros cursos) sobrepõe o plano de outros cursos na grade, sinaliza compartilhadas em horário divergente e detecta choques de professor/sala entre cursos; export/envio nunca incluem a referência. Falta: permitir **editar** a compartilhada por qualquer coordenador do curso dela (escrita coordenada no record do dono).
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
 - [ ] Ao importar o hist.csv, assume-se apenas um curso. Mas e se o hist.csv vier de diversos cursos, como fica? O programa está preparado para tal situação?
 

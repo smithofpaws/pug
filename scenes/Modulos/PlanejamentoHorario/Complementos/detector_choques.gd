@@ -43,6 +43,11 @@ func detectar(celulas_afetadas: Array[String] = []) -> Dictionary:
 			var profs: Array = dados_csv.get("professor", [])
 			var sala: String = aloc.get("sala", "")
 			var sem: String = dados_csv.get("semestre", "")
+			# Alocacao de outro curso sobreposta como referencia (somente-leitura). Choque de
+			# professor/sala CONTINUA valendo (conflito de recurso entre cursos e justamente o que
+			# interessa co-planejar). Ja choque de semestre (interno de um curso) nao e contado para
+			# a referencia — nao e responsabilidade deste coordenador.
+			var eh_ref: bool = aloc.get("referencia", false) or dados_csv.get("referencia", false)
 			# Acumula UMA ocorrência por alocação (sem deduplicar a célula): é a contagem de
 			# ocorrências por célula que revela o choque em _contar_choques (n > 1). Deduplicar
 			# aqui zeraria a detecção de sobreposição na mesma célula.
@@ -55,7 +60,7 @@ func detectar(celulas_afetadas: Array[String] = []) -> Dictionary:
 				if not sala_por_celula.has(sala):
 					sala_por_celula[sala] = []
 				sala_por_celula[sala].append(chave_celula)
-			if not sem.is_empty():
+			if not sem.is_empty() and not eh_ref:
 				if not sem_por_celula.has(sem):
 					sem_por_celula[sem] = []
 				sem_por_celula[sem].append(chave_celula)
@@ -75,6 +80,9 @@ func detectar(celulas_afetadas: Array[String] = []) -> Dictionary:
 				extras_por_chave[chave] = extras_por_chave.get(chave, 0) + 1
 	var chaves_excedidas: Dictionary = {}
 	for chave in _cards_disciplinas:
+		# CH excedida de disciplina de outro curso (referencia) nao e responsabilidade deste usuario.
+		if _planejamento_csv.get(chave, {}).get("referencia", false):
+			continue
 		var card: CardDisciplina = _cards_disciplinas[chave]
 		var extras: int = extras_por_chave.get(chave, 0)
 		if card.ch_alocada - extras > card.ch_total:

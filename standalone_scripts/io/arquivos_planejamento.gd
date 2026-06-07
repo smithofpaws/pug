@@ -441,6 +441,10 @@ func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
 	var chave_para_nomes: Dictionary = {}
 	for chave in _planejamento_csv.keys():
 		var dados: Dictionary = _planejamento_csv[chave]
+		# Disciplinas de outro curso sobrepostas como referência (somente-leitura) nunca entram no
+		# planejamento.json do usuário — não devem ser salvas nem enviadas ao servidor como se fossem dele.
+		if dados.get("referencia", false):
+			continue
 		var professores_json: Array[Dictionary] = []
 		for i in dados.get("professor", []).size():
 			professores_json.append({
@@ -465,6 +469,8 @@ func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
 			var linha_idx: int = int(partes[0])
 			var coluna_idx: int = int(partes[1])
 			for aloc in alocacoes[chave_celula]:
+				if aloc.get("referencia", false):
+					continue
 				if aloc.get("chave", "") == chave:
 					disc["alocacoes"].append({
 						"professor": professores_json[0]["nome"] if professores_json.size() > 0 else "",

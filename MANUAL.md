@@ -286,9 +286,15 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
 - **Servidor** — sincronização do planejamento entre coordenadores (servidor compartilhado).
   - **Enviar ao servidor** — envia o planejamento do **curso do PPC principal** (definido em _Configurações › Geral_) para o servidor, substituindo a versão que estiver lá. Só funciona para o curso do qual você é o coordenador responsável.
   - **Baixar do servidor** — lista os planejamentos disponíveis (mostrando quem enviou e quando) e permite baixar o de um curso; isso **substitui** o `planejamento.json` local e o conteúdo da grade.
+  - **Ver outros cursos (referência)…** — lista os demais cursos no servidor e permite **sobrepor** um ou mais deles na sua grade como **camada de referência** (somente-leitura). Serve para co-planejar **disciplinas compartilhadas** entre cursos (ex.: `EC01;EM02`): você passa a ver onde os colegas alocaram as disciplinas, sem poder editá-las.
+  - **Limpar referências** — remove da grade os cursos sobrepostos como referência, deixando só o seu plano.
   - **Configurar servidor…** — informa o endereço do servidor, o seu usuário e o seu token de acesso. As credenciais ficam salvas localmente (o token pode ser revogado no servidor).
 
+> **Aviso automático de versão nova:** ao **abrir o módulo**, o programa consulta o servidor em segundo plano e exibe um aviso (com **quem enviou e quando**, oferecendo baixar na hora) **somente** quando o servidor tem uma versão do curso do PPC principal que você ainda não sincronizou **e** que seja mais recente, **por data**, do que o seu `planejamento.json` local. Ou seja: se o seu trabalho local for o mais novo, o aviso não aparece. Também fica em silêncio se o servidor não estiver configurado, estiver fora do ar, ou você já estiver em dia.
+
 Ao abrir o `planejamento.csv`/`horarios.txt`, um diálogo permite selecionar quais **cursos** incluir, e é possível **mesclar** os dados com os existentes ou **substituir**.
+
+> **Camada de referência (co-planejamento):** os cursos sobrepostos via _Ver outros cursos_ aparecem na grade com cor própria e o marcador `»`, são **somente-leitura** (tentar mover/remover/alocar exibe um aviso) e **nunca** entram no seu `planejamento.json` nem são reenviados ao servidor — ao salvar ou enviar, só vai o seu plano. Com a referência sobreposta, o programa: (1) **sinaliza disciplinas compartilhadas em horário divergente** — quando os dois lados de uma compartilhada (ex.: `EC01;EM02`) estão em horários diferentes, abre um aviso listando-as e mostra a contagem na barra de status (_Compart. divergentes_); e (2) passa a **detectar choques de professor/sala entre cursos** no mesmo horário. Use _Limpar referências_ para voltar a ver só o seu plano.
 
 > **Sobre a sincronização:** cada coordenador trabalha de forma assíncrona no seu próprio curso. Apenas o **planejamento de oferta** (disciplinas e professores) trafega — nunca dados de alunos. O acesso é autenticado por usuário/token e restrito à rede privada (Tailscale).
 

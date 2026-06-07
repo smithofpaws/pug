@@ -133,7 +133,11 @@ func atualizar_celula(linha: int, coluna: int) -> void:
 			else: esmaecer = true
 		if ocultar:
 			continue
-		if esmaecer:
+		# Disciplina de outro curso (referência, somente-leitura): cor própria e marcador, com
+		# precedência sobre o esmaecido dos filtros — sempre fica reconhecível como referência.
+		if aloc.get("referencia", false):
+			rotulo = "[color=referencia]» %s[/color]" % rotulo
+		elif esmaecer:
 			rotulo = "[color=neutro]%s[/color]" % rotulo
 		partes.append(rotulo)
 	celula.texto_central = "\n".join(partes)
