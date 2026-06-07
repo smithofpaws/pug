@@ -10,8 +10,7 @@
 
 ## A IMPLEMENTAR
 
-- [ ] **Talvez usar Kinto** (https://github.com/Kinto/kinto) para salvar jsons em servidor próprio.
-- [x] **T90 (turma multi-curso)** — Turma 90 significa "oferecida para todos os cursos". Implementado: chave `turmas_globais` no `base_config.json` + helper `turma_e_global()` em `analise_afinidade.gd`, aplicado nos call sites de bônus de afinidade (`obter_afinidade`) e de atribuição de professores ao curso (`_prof_leciona_curso`). T90 aparece 162× no histórico de professores e antes era ignorada.
+- [x] **Usar Kinto** (https://github.com/Kinto/kinto) para salvar jsons em servidor próprio. — MVP implementado: módulo Planejamento de horário envia/baixa o planejamento de oferta (Enviar/Baixar/Configurar servidor no menu Arquivo › Servidor), via `SyncKinto` (`standalone_scripts/io/sincronizacao.gd`). Servidor Kinto na rede Tailscale; 1 record por curso, login por coordenador com token revogável. Futuro: filtrar planejamento multi-curso por curso, migrar servidor para infra da Unipampa.
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
 - [ ] Ao importar o hist.csv, assume-se apenas um curso. Mas e se o hist.csv vier de diversos cursos, como fica? O programa está preparado para tal situação?
 

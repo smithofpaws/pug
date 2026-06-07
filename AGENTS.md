@@ -62,6 +62,22 @@ O repositório guarda **código**, não dados pessoais. Já gitignorados, **nunc
 `arquivos/` (grades, cargas, equivalências) **é** versionado. Antes de qualquer `push`/commit,
 conferir `git status` para garantir que nenhum CSV de `dados/` ou token entrou.
 
+#### Exceção controlada: sincronização de planejamento (servidor Kinto)
+
+O módulo **Planejamento de horário** pode enviar/baixar o planejamento de oferta para um servidor
+[Kinto](https://github.com/Kinto/kinto) compartilhado entre coordenadores (`SyncKinto` em
+`standalone_scripts/io/sincronizacao.gd`). Esta é a **única** exceção à regra "nada pessoal sai do
+PC", e é controlada:
+
+- **Só o planejamento de oferta** trafega (disciplinas + nomes de professores, dado funcional).
+  **Nunca** enviar `hist.csv`, `email.csv` ou qualquer dado de aluno.
+- Acesso **sempre autenticado** (Basic Auth `usuario:token`, sem leitura pública) e restrito à
+  **rede privada Tailscale** (o transporte já é cifrado pelo WireGuard).
+- Credenciais ficam em `config_usuario.json:sincronizacao` (gitignorado); o **token é revogável**
+  no servidor. Modelo: bucket `pug` / collection `planejamentos` / 1 record por curso
+  (`id = <cod_curso>_<versao>`), com escrita restrita ao coordenador dono.
+- **Plano:** migrar o servidor para a infraestrutura da Unipampa. **Ao concluir, atualizar aqui.**
+
 ## Ferramentas
 
 - Godot 4.x com GL Compatibility

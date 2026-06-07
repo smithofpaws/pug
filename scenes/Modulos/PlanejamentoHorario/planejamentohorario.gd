@@ -13,6 +13,11 @@ class_name PlanejamentoHorario extends ReferenceRect
 ##   (movido para [code]standalone_scripts/io/arquivos_planejamento.gd[/code]) [br]
 ## - [PainelDisciplinas]: painel de cards e filtros cascata (compartilhado)
 
+## Emitido quando o usuario altera uma configuracao persistente (ex.: credenciais de sincronizacao).
+## O [code]main.gd[/code] conecta este sinal e centraliza a gravacao em config_usuario.json via
+## override — espelha o [signal JanelaConfiguracoes.parametro_alterado].
+signal override_config(caminho: Array, valor: Variant)
+
 # Classes instanciadas.
 var file_handling := FileHandling.new()
 var analise_grades := AnaliseGrades.new()
@@ -28,6 +33,9 @@ var _verif_carga: VerificadorCarga
 var _aplicador: AplicadorVisualGrade
 var _relatorios: RelatoriosHorario
 var _posicionador: PosicionadorAutomatico
+
+# Cliente de sincronizacao do planejamento com o servidor Kinto (instanciado no _ready).
+var _sync: SyncKinto
 
 ## Recebido pelo main em sua criação e vem do arquivo base_config.json.
 ## Contém o endereço completo para o diretório com os arquivos csv das opções dos professores.
@@ -265,8 +273,15 @@ func _ready() -> void:
 		"Importar_retorno": ["importar_csv", "horarios.txt", "professor.xlsx (.csv)"],
 		"Exportar": ["horarios.txt"],
 		"Exportar_retorno": ["exportar_horarios_txt"],
+		"Servidor": ["Enviar ao servidor", "Baixar do servidor", "Configurar servidor…"],
+		"Servidor_retorno": ["enviar_servidor", "baixar_servidor", "config_servidor"],
 	}
 	$"%SeletorImportar".opcao_selecionada.connect(_on_importar_opcao_selecionada)
+
+	# Cliente de sincronizacao (Kinto). As credenciais ficam em config_usuario.json:sincronizacao,
+	# lidas de GV (mesmo padrao do ppc_principal) e configuradas sob demanda em _garantir_sync_config.
+	_sync = SyncKinto.new()
+	add_child(_sync)
 
 	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
 	var altura_seletor: int = 30
@@ -1433,6 +1448,181 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 			_importar_preferencias_professor()
 		"exportar_horarios_txt":
 			_on_exportar_button_up()
+		"enviar_servidor":
+			_enviar_para_servidor()
+		"baixar_servidor":
+			_baixar_do_servidor()
+		"config_servidor":
+			_configurar_sincronizacao()
+
+
+# ───────────────────────── Sincronizacao com o servidor (Kinto) ─────────────────────────
+
+# Configura o _sync com as credenciais salvas (lidas de GV, como o ppc_principal). Se faltar algo,
+# avisa e abre o dialogo de configuracao, retornando false.
+func _garantir_sync_config() -> bool:
+	var sinc: Dictionary = GV.configuracao_base.get("sincronizacao", {})
+	_sync.configurar(str(sinc.get("url", "")), str(sinc.get("usuario", "")), str(sinc.get("token", "")))
+	if not _sync.esta_configurado():
+		$"%Terminal".text_edit("Configure o servidor primeiro (Importar > Configurar servidor).", \
+			"aviso", true, true)
+		_configurar_sincronizacao()
+		return false
+	return true
+
+
+# Envia o planejamento do curso do PPC principal ao servidor (apos confirmacao).
+func _enviar_para_servidor() -> void:
+	if not _garantir_sync_config():
+		return
+	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
+	if ppc.is_empty():
+		$"%Terminal".text_edit("Defina o PPC principal em Configuracoes > Geral antes de enviar.", \
+			"aviso", true, true)
+		return
+	Dialogos.confirmar(self, "Enviar ao servidor", \
+		"Enviar o planejamento do curso %s ao servidor? Isso substitui a versao que estiver la." % ppc, \
+		_enviar_para_servidor_confirmado.bind(ppc), "Enviar")
+
+
+func _enviar_para_servidor_confirmado(ppc: String) -> void:
+	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes)
+	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % ppc, "padrao", true, false)
+	var r: Dictionary = await _sync.enviar(ppc, json)
+	if r.get("ok", false):
+		$"%Terminal".text_edit("Enviado: %s (%d disciplinas) para o servidor." \
+			% [ppc, json.get("disciplinas", []).size()], "sucesso", true, false)
+	else:
+		$"%Terminal".text_edit("Falha ao enviar: %s" % r.get("erro", ""), "erro", true, true)
+
+
+# Lista os planejamentos no servidor e abre um dialogo para escolher qual baixar.
+func _baixar_do_servidor() -> void:
+	if not _garantir_sync_config():
+		return
+	$"%Terminal".text_edit("Consultando planejamentos no servidor...", "padrao", true, false)
+	var r: Dictionary = await _sync.listar()
+	if not r.get("ok", false):
+		$"%Terminal".text_edit("Falha ao consultar: %s" % r.get("erro", ""), "erro", true, true)
+		return
+	var registros: Array = []
+	if r.get("dados") is Dictionary:
+		registros = r["dados"].get("data", [])
+	if registros.is_empty():
+		$"%Terminal".text_edit("Nenhum planejamento disponivel no servidor.", "aviso", true, true)
+		return
+	_abrir_selecao_download(registros)
+
+
+# Dialogo customizado (AGENTS.md) com a lista dos cursos disponiveis no servidor; ao confirmar,
+# baixa o curso selecionado. Mostra quem enviou e quando para orientar a escolha.
+func _abrir_selecao_download(registros: Array) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Baixar planejamento do servidor"
+	dialog.get_ok_button().text = "Baixar"
+	dialog.get_cancel_button().text = "Cancelar"
+	dialog.min_size = Vector2i(520, 320)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog.add_child(vbox)
+	var lbl := Label.new()
+	lbl.text = "Escolha o curso a baixar (substitui o planejamento.json local e a grade):"
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(lbl)
+
+	var lista := ItemList.new()
+	lista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lista.custom_minimum_size = Vector2(480, 220)
+	vbox.add_child(lista)
+	var ids: Array[String] = []
+	for rec in registros:
+		if not rec is Dictionary:
+			continue
+		var id_curso: String = str(rec.get("id", ""))
+		var por: String = str(rec.get("enviado_por", "?"))
+		var em: String = str(rec.get("enviado_em", "?"))
+		lista.add_item("%s — enviado por %s em %s" % [id_curso, por, em])
+		ids.append(id_curso)
+	if lista.item_count > 0:
+		lista.select(0)
+
+	dialog.confirmed.connect(func():
+		var sel: PackedInt32Array = lista.get_selected_items()
+		if sel.is_empty():
+			return
+		_baixar_curso(ids[sel[0]]))
+	dialog.visibility_changed.connect(func():
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
+
+
+# Baixa o record do curso, salva como planejamento.json (reaproveitando file_handling) e reimporta
+# na grade pelo fluxo ja existente (_importar_planejamento_json).
+func _baixar_curso(chave_curso: String) -> void:
+	$"%Terminal".text_edit("Baixando %s do servidor..." % chave_curso, "padrao", true, false)
+	var r: Dictionary = await _sync.baixar(chave_curso)
+	if not r.get("ok", false):
+		$"%Terminal".text_edit("Falha ao baixar: %s" % r.get("erro", ""), "erro", true, true)
+		return
+	var record: Dictionary = {}
+	if r.get("dados") is Dictionary:
+		record = r["dados"].get("data", {})
+	var planejamento: Variant = record.get("planejamento", {})
+	if not planejamento is Dictionary or not planejamento.has("disciplinas"):
+		$"%Terminal".text_edit("O planejamento recebido esta vazio ou em formato invalido.", "erro", true, true)
+		return
+	file_handling.save_json(diretorio_exportacao, "planejamento.json", planejamento)
+	_importar_planejamento_json()
+	$"%Terminal".text_edit("Baixado: %s (enviado por %s em %s)." \
+		% [chave_curso, str(record.get("enviado_por", "?")), str(record.get("enviado_em", "?"))], \
+		"sucesso", true, false)
+
+
+# Dialogo customizado para informar/editar URL, usuario e token do servidor. Persiste via override
+# (sinal override_config -> main.gd grava em config_usuario.json:sincronizacao).
+func _configurar_sincronizacao() -> void:
+	var sinc: Dictionary = GV.configuracao_base.get("sincronizacao", {})
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Configurar servidor de sincronizacao"
+	dialog.get_ok_button().text = "Salvar"
+	dialog.get_cancel_button().text = "Cancelar"
+
+	var vbox := VBoxContainer.new()
+	dialog.add_child(vbox)
+	var ed_url := LineEdit.new()
+	ed_url.placeholder_text = "http://host:8888/v1"
+	ed_url.text = str(sinc.get("url", ""))
+	ed_url.custom_minimum_size = Vector2(380, 0)
+	var ed_user := LineEdit.new()
+	ed_user.text = str(sinc.get("usuario", ""))
+	var ed_token := LineEdit.new()
+	ed_token.secret = true
+	ed_token.text = str(sinc.get("token", ""))
+	for par in [["Endereco do servidor (URL da API):", ed_url], ["Usuario:", ed_user], ["Token:", ed_token]]:
+		var rotulo := Label.new()
+		rotulo.text = par[0]
+		vbox.add_child(rotulo)
+		vbox.add_child(par[1])
+
+	dialog.confirmed.connect(func():
+		var u: String = ed_url.text.strip_edges()
+		var us: String = ed_user.text.strip_edges()
+		var tk: String = ed_token.text.strip_edges()
+		override_config.emit(["sincronizacao", "url"], u)
+		override_config.emit(["sincronizacao", "usuario"], us)
+		override_config.emit(["sincronizacao", "token"], tk)
+		_sync.configurar(u, us, tk)
+		$"%Terminal".text_edit("Configuracao de sincronizacao salva.", "sucesso", true, false))
+	dialog.visibility_changed.connect(func():
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
 
 
 ## Abre um [FileDialog] para selecionar um CSV externo, converte para UTF-8 e o salva

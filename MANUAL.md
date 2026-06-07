@@ -283,8 +283,14 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
   - **professor.xlsx (.csv)** — importa as preferências de horário de um professor (Excel ou CSV).
 - **Exportar**
   - **horarios.txt** — gera o `horarios.txt` da grade atual.
+- **Servidor** — sincronização do planejamento entre coordenadores (servidor compartilhado).
+  - **Enviar ao servidor** — envia o planejamento do **curso do PPC principal** (definido em _Configurações › Geral_) para o servidor, substituindo a versão que estiver lá. Só funciona para o curso do qual você é o coordenador responsável.
+  - **Baixar do servidor** — lista os planejamentos disponíveis (mostrando quem enviou e quando) e permite baixar o de um curso; isso **substitui** o `planejamento.json` local e o conteúdo da grade.
+  - **Configurar servidor…** — informa o endereço do servidor, o seu usuário e o seu token de acesso. As credenciais ficam salvas localmente (o token pode ser revogado no servidor).
 
 Ao abrir o `planejamento.csv`/`horarios.txt`, um diálogo permite selecionar quais **cursos** incluir, e é possível **mesclar** os dados com os existentes ou **substituir**.
+
+> **Sobre a sincronização:** cada coordenador trabalha de forma assíncrona no seu próprio curso. Apenas o **planejamento de oferta** (disciplinas e professores) trafega — nunca dados de alunos. O acesso é autenticado por usuário/token e restrito à rede privada (Tailscale).
 
 #### Painel de disciplinas (cards)
 

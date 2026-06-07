@@ -498,6 +498,9 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.config_interface = GV.configuracao_base["interface"]
 			modulo.formatos_grade = GV.configuracao_base.get("formatos_grade", {})
 			modulo.config_posicionamento = GV.configuracao_base.get("posicionamento_auto", {})
+			# Persistencia das credenciais de sincronizacao: o modulo emite override_config e o main
+			# grava em config_usuario.json (mesmo caminho da JanelaConfiguracoes.parametro_alterado).
+			modulo.override_config.connect(_on_config_parametro_alterado)
 			$Modulo.add_child(modulo)
 		"exportadores":
 			var modulo = load("res://scenes/Modulos/Exportadores/Exportadores.tscn").instantiate()
