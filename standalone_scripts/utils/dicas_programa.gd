@@ -20,6 +20,18 @@ static func vincular(control: Control, caminho: Array, args: Dictionary = {}) ->
 	DicaFlutuante.vincular(control, texto_dica)
 
 
+## Aplica, item a item, a dica de cada valor de [param valores] a um [SeletorAvancado]. A dica de
+## cada item e buscada em [param base_caminho] + valor (ex.: [code]["condicoes_matricula"][/code] +
+## [code]"matriculavel"[/code]). Assume que o item de indice [code]i[/code] do dropdown corresponde a
+## [code]valores[i][/code] -- valido quando a lista nao tem separador antes dos itens (chave iniciada
+## com [code]_[/code]). Valor sem dica cadastrada e ignorado (texto vazio remove a dica do item).
+static func vincular_itens(seletor: SeletorAvancado, valores: Array, base_caminho: Array) -> void:
+	if not is_instance_valid(seletor):
+		return
+	for i in valores.size():
+		seletor.definir_dica_item(i, texto(base_caminho + [valores[i]]))
+
+
 ## Retorna o texto da dica em [param caminho] (sequencia de chaves em [code]GV.dicas[/code]), com
 ## [param args] substituindo marcadores [code]{chave}[/code]. Devolve "" se o caminho nao levar a uma
 ## String. Util quando a dica nao se prende a um [Control] (ex.: item de [PopupMenu], exibido via

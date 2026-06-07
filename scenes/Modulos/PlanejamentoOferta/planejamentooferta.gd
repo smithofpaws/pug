@@ -176,6 +176,13 @@ func _ready() -> void:
 			"detectar_problema_oferta",
 		],
 	}
+	# Dicas por item (indices contam separadores: 0 sep "Demanda", 3 sep "Carga horária", 5 sep "Oferta").
+	_seletor_acoes.definir_dica_item(1, DicasPrograma.texto(["planejamento_oferta_acoes", "determinar_demanda"]))
+	_seletor_acoes.definir_dica_item(2, DicasPrograma.texto(["planejamento_oferta_acoes", "determinar_demanda_ignorar_oferta"]))
+	_seletor_acoes.definir_dica_item(4, DicasPrograma.texto(["planejamento_oferta_acoes", "verificar_carga_horaria"]))
+	_seletor_acoes.definir_dica_item(6, DicasPrograma.texto(["planejamento_oferta_acoes", "sugerir_oferta"]))
+	_seletor_acoes.definir_dica_item(7, DicasPrograma.texto(["planejamento_oferta_acoes", "verificar_erro_afinidade"]))
+	_seletor_acoes.definir_dica_item(8, DicasPrograma.texto(["planejamento_oferta_acoes", "detectar_problema_oferta"]))
 	_seletor_acoes.opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
 	_status_bar.definir_segmentos({

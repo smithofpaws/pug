@@ -241,6 +241,11 @@ func _ready() -> void:
 		"Filtros_": ["Curso", "Semestre", "Professor"],
 		"Filtros_retorno": ["ocultar_curso", "ocultar_semestre", "ocultar_professor"],
 	}
+	# Dicas dos filtros (ocultar vs. esmaecer). Indice = 1 separador + N formatos + 1 separador.
+	var base_filtros: int = valores_visualizacao.size() + 2
+	$"%SeletorVisualizacao".definir_dica_item(base_filtros, DicasPrograma.texto(["planejamento_horario", "ocultar_curso"]))
+	$"%SeletorVisualizacao".definir_dica_item(base_filtros + 1, DicasPrograma.texto(["planejamento_horario", "ocultar_semestre"]))
+	$"%SeletorVisualizacao".definir_dica_item(base_filtros + 2, DicasPrograma.texto(["planejamento_horario", "ocultar_professor"]))
 	var idx_visualizacao: int = valores_visualizacao.find("nome_reduzido")
 	$"%SeletorVisualizacao".selecionar_item(idx_visualizacao if idx_visualizacao >= 0 else 0)
 	var popup_viz: PopupMenu = $"%SeletorVisualizacao".get_node("MenuButton").get_popup()
@@ -273,6 +278,8 @@ func _ready() -> void:
 		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento"],
 	}
 	$"%SeletorAcoes".get_node("MenuButton").get_popup().set_item_disabled(2, true)
+	$"%SeletorAcoes".definir_dica_item(0, DicasPrograma.texto(["planejamento_horario", "posicionar_automatico"]))
+	$"%SeletorAcoes".definir_dica_item(1, DicasPrograma.texto(["planejamento_horario", "limpar_preenchimento"]))
 	$"%SeletorAcoes".definir_dica_item(2, DicasPrograma.texto(["planejamento_horario", "mesclar_horarios_planejamento"]))
 	$"%SeletorAcoes".opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
@@ -1219,6 +1226,7 @@ func _configurar_seletor_condicoes_choque() -> void:
 		lista_itens["_Condições choque_"].append(condicao.replacen("_", " ").capitalize())
 		lista_itens["_Condições choque_retorno"].append(condicao)
 	$"%SeletorCondicoesChoque".lista_itens = lista_itens
+	DicasPrograma.vincular_itens($"%SeletorCondicoesChoque", condicoes, ["condicoes_matricula"])
 	# Marca todas as condições exceto as de matrícula irregular.
 	_condicoes_choque_selecionadas = []
 	for i in condicoes.size():

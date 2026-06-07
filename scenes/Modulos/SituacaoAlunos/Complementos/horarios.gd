@@ -65,6 +65,7 @@ func _set_condicoes(new_state: Array[String]) -> void:
 		lista_itens["_condicoes_"].append(temp)
 		lista_itens["_condicoes_retorno"].append(condicoes[a])
 	$"%SeletorCondicoes".lista_itens = lista_itens
+	DicasPrograma.vincular_itens($"%SeletorCondicoes", condicoes, ["condicoes_matricula"])
 #endregion
 
 #region Sinais

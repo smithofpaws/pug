@@ -18,7 +18,41 @@
 		"ppc_principal": "[b]Projeto Pedagógico de Curso[/b] padrão do programa.\n\nAo definir um PPC principal, os filtros de curso dos módulos [b]Planejamento de Oferta[/b] e [b]Planejamento de Horário[/b] são pré-selecionados automaticamente ao abri-los.\n\nOs módulos [b]Situação de Disciplinas[/b] e [b]Exportadores[/b] também herdam a seleção de grade do PPC."
 	},
 	"planejamento_horario": {
-		"mesclar_horarios_planejamento": "[b]Reconcilia[/b] um [b]horarios.txt[/b] já montado com o [b]planejamento[/b] atualmente carregado.\n\n• Disciplinas que [b]permanecem[/b] no planejamento mantêm o horário/dia/sala que já tinham no horarios.txt.\n• Disciplinas [b]novas[/b] (no planejamento, mas não no horarios.txt) entram [b]sem horário[/b], prontas para posicionar.\n• Disciplinas que [b]saíram[/b] do planejamento (estavam no horarios.txt) são listadas, e você decide se [b]reinclui[/b] ou [b]descarta[/b].\n\nDisponível apenas quando há, ao mesmo tempo, um horarios.txt e um planejamento carregados."
+		"mesclar_horarios_planejamento": "[b]Reconcilia[/b] um [b]horarios.txt[/b] já montado com o [b]planejamento[/b] atualmente carregado.\n\n• Disciplinas que [b]permanecem[/b] no planejamento mantêm o horário/dia/sala que já tinham no horarios.txt.\n• Disciplinas [b]novas[/b] (no planejamento, mas não no horarios.txt) entram [b]sem horário[/b], prontas para posicionar.\n• Disciplinas que [b]saíram[/b] do planejamento (estavam no horarios.txt) são listadas, e você decide se [b]reinclui[/b] ou [b]descarta[/b].\n\nDisponível apenas quando há, ao mesmo tempo, um horarios.txt e um planejamento carregados.",
+		"posicionar_automatico": "Abre o diálogo de [b]posicionamento automático[/b] e tenta alocar as disciplinas ainda [b]sem horário[/b], respeitando preferências de professores e choques existentes.",
+		"limpar_preenchimento": "[b]Remove todas as alocações[/b] da grade, mantendo as disciplinas na lista à esquerda para reposicionar.",
+		"ocultar_curso": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas que não passam pelo filtro de [b]curso[/b].",
+		"ocultar_semestre": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas fora dos [b]semestres[/b] filtrados.",
+		"ocultar_professor": "Quando marcado, mostra [b]apenas[/b] as disciplinas do [b]professor[/b] filtrado, ocultando as demais."
+	},
+	"planejamento_oferta_acoes": {
+		"determinar_demanda": "Analisa o histórico para contar [b]quantos alunos[/b] precisam de cada disciplina neste semestre.",
+		"determinar_demanda_ignorar_oferta": "Igual a [b]Determinar[/b], mas [b]ignora[/b] os alunos que já cursaram a disciplina neste semestre.",
+		"verificar_carga_horaria": "Relatório consolidado da [b]carga total[/b] de cada professor. Com um curso no filtro, só considera quem já lecionou para ele.",
+		"sugerir_oferta": "Propõe automaticamente [b]quais disciplinas ofertar[/b], com base na demanda levantada e na afinidade dos professores.",
+		"verificar_erro_afinidade": "Valida a [b]integridade[/b] dos dados históricos de afinidade professor/disciplina.",
+		"detectar_problema_oferta": "Confere a oferta contra as [b]grades do curso filtrado[/b]: aponta obrigatórias ausentes e disciplinas alocadas em semestre divergente. [b]Requer um curso selecionado[/b]."
+	},
+	"exportadores_tipo": {
+		"lista": "Gera um Markdown com a tabela de [b]pré-requisitos e co-requisitos[/b] de cada disciplina. Requer grade curricular.",
+		"ementa": "Gera um [b]PDF[/b] com a ementa completa de uma disciplina. Requer o arquivo de ementa (.txt estruturado).",
+		"choques": "Relatório Markdown dos [b]choques de horário[/b] entre disciplinas que compartilham alunos. Requer hist.csv e horarios.txt.",
+		"validacao": "Verifica a [b]regularidade do cadastro[/b] dos alunos no GURI (relatório 5104). Requer hist.csv.",
+		"planos": "Lista de disciplinas [b]por professor[/b] para preencher os planos de ensino. Requer planejamento.csv ou horários carregados."
+	},
+	"condicoes_matricula": {
+		"matriculado_agora": "Aluno está [b]cursando[/b] a disciplina neste semestre.",
+		"matriculado_agora_aproveitamento": "Cursando neste semestre, com a vaga obtida por [b]aproveitamento/equivalência[/b] de outra disciplina.",
+		"matricula_irregular": "Matriculado [b]sem cumprir os pré-requisitos[/b] exigidos — requer atenção.",
+		"matricula_irregular_aproveitamento": "Matrícula irregular cujo pré-requisito dependia de [b]aproveitamento/equivalência[/b].",
+		"matriculavel": "Cumpriu [b]todos os pré-requisitos[/b] e pode se matricular, sem choque de horário.",
+		"matriculavel_aproveitamento": "Matriculável quando se considera [b]aproveitamento/equivalência[/b] de disciplinas.",
+		"corequisito_matriculavel": "Pode cursar a disciplina [b]junto com[/b] outra (co-requisito) já satisfeita.",
+		"corequisito_matriculavel_aproveitamento": "Co-requisito matriculável considerando [b]aproveitamento/equivalência[/b].",
+		"seaprovado": "Poderá cursar [b]se for aprovado[/b] nas disciplinas do semestre atual.",
+		"seaprovado_aproveitamento": "Matriculável se aprovado no semestre atual, considerando [b]aproveitamento/equivalência[/b].",
+		"corequisito_seaprovado": "Co-requisito que fica matriculável [b]se aprovado[/b] nas disciplinas do semestre atual.",
+		"corequisito_seaprovado_aproveitamento": "Co-requisito 'se aprovado' considerando [b]aproveitamento/equivalência[/b]."
 	},
 	"posicionamento": {
 		"preferencia": "Quanto cada [b]preferência de horário[/b] do professor pesa na escolha do slot.\n\nA preferência vai de [b]1[/b] (horário desejado) a [b]5[/b] (indesejado). O custo cresce de forma [b]não-linear[/b] conforme o [b]Expoente[/b] ao lado, e este peso multiplica o resultado. Horários que o professor não marcou são [b]proibidos[/b].\n\nAumente para respeitar mais as preferências; diminua para priorizar evitar choques.",

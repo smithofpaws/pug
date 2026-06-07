@@ -92,6 +92,7 @@ func _ready() -> void:
 		"_tipo*": ["Lista de pré-requisitos", "Ementa de disciplina", "Choques de horário", "Validar cadastro com relatório GURI 5104", "Lista para planos de ensino"],
 		"_tipo_retorno": ["lista", "ementa", "choques", "validacao", "planos"]
 	}
+	DicasPrograma.vincular_itens($"%SeletorTipoExportacao", ["lista", "ementa", "choques", "validacao", "planos"], ["exportadores_tipo"])
 	$"%SeletorTipoExportacao".atualizar_texto_padrao = true
 	$"%SeletorTipoExportacao".selecionar_item(0)
 	_tipo_exportacao = "lista"
@@ -160,6 +161,7 @@ func _popular_seletor_condicoes() -> void:
 		lista_itens["_condicoes_"].append(nome_exibicao)
 		lista_itens["_condicoes_retorno"].append(condicao)
 	$"%SeletorCondicoesChoque".lista_itens = lista_itens
+	DicasPrograma.vincular_itens($"%SeletorCondicoesChoque", condicoes, ["condicoes_matricula"])
 	# Marca matriculavel e matriculado_agora como padrao
 	$"%SeletorCondicoesChoque".selecionar_item(4)  # matriculavel (indice 4 na lista original)
 	$"%SeletorCondicoesChoque".selecionar_item(0)  # matriculado_agora (indice 0 na lista original)
