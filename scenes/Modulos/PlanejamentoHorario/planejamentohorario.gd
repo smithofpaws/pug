@@ -1799,7 +1799,11 @@ func _abrir_selecao_download(registros: Array) -> void:
 	dialog.title = "Baixar planejamento do servidor"
 	dialog.get_ok_button().text = "Baixar"
 	dialog.get_cancel_button().text = "Cancelar"
-	dialog.min_size = Vector2i(520, 320)
+	# wrap_controls deixa a janela dimensionar-se ao conteudo (pequena para poucos itens); a altura da
+	# lista (abaixo) e quem define o piso/teto. min_size so fixa a largura — com y=0 e wrap_controls a
+	# altura segue o conteudo (sem y=0 a janela ficava travada num piso alto, ocupando a tela toda).
+	dialog.wrap_controls = true
+	dialog.min_size = Vector2i(520, 0)
 
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1807,11 +1811,11 @@ func _abrir_selecao_download(registros: Array) -> void:
 	var lbl := Label.new()
 	lbl.text = "Escolha o curso a baixar (substitui o planejamento.json local e a grade):"
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.custom_minimum_size = Vector2(480, 0)
 	vbox.add_child(lbl)
 
 	var lista := ItemList.new()
 	lista.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lista.custom_minimum_size = Vector2(480, 220)
 	vbox.add_child(lista)
 	var ids: Array[String] = []
 	for rec in registros:
@@ -1834,6 +1838,16 @@ func _abrir_selecao_download(registros: Array) -> void:
 		if not dialog.visible:
 			dialog.queue_free())
 	add_child(dialog)
+	# Dimensiona a lista ao numero de itens, com um piso estetico de MIN_ITENS_VISIVEIS (a janela nao
+	# encolhe demais com poucos cursos) e um teto de MAX_ITENS_VISIVEIS — acima disso ela rola
+	# internamente em vez de esticar a janela. Feito apos add_child para o tema (fonte/separacao) ja
+	# estar resolvido pela arvore; +8 cobre o padding interno do ItemList.
+	const MIN_ITENS_VISIVEIS := 6
+	const MAX_ITENS_VISIVEIS := 10
+	var altura_linha := int(lista.get_theme_font(&"font").get_height(lista.get_theme_font_size(&"font_size"))) \
+		+ lista.get_theme_constant(&"v_separation")
+	var n_visiveis: int = clampi(lista.item_count, MIN_ITENS_VISIVEIS, MAX_ITENS_VISIVEIS)
+	lista.custom_minimum_size = Vector2(480, n_visiveis * altura_linha + 8)
 	dialog.popup_centered()
 	Dialogos.limitar_a_tela(dialog)
 
@@ -1903,7 +1917,10 @@ func _abrir_selecao_referencia(registros: Array) -> void:
 	dialog.title = "Ver outros cursos (referência)"
 	dialog.get_ok_button().text = "Sobrepor"
 	dialog.get_cancel_button().text = "Cancelar"
-	dialog.min_size = Vector2i(540, 340)
+	# wrap_controls deixa a janela acompanhar o conteudo; a altura da lista (abaixo) define piso/teto.
+	# min_size so fixa a largura — com y=0 e wrap_controls a altura segue o conteudo.
+	dialog.wrap_controls = true
+	dialog.min_size = Vector2i(540, 0)
 
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1912,12 +1929,12 @@ func _abrir_selecao_referencia(registros: Array) -> void:
 	lbl.text = "Escolha os cursos a sobrepor na grade (somente-leitura; não altera o seu plano). " + \
 		"Segure Ctrl/Shift para selecionar vários:"
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.custom_minimum_size = Vector2(500, 0)
 	vbox.add_child(lbl)
 
 	var lista := ItemList.new()
 	lista.select_mode = ItemList.SELECT_MULTI
 	lista.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lista.custom_minimum_size = Vector2(500, 240)
 	vbox.add_child(lista)
 	for rec in registros:
 		var id_curso: String = str(rec.get("id", ""))
@@ -1937,6 +1954,15 @@ func _abrir_selecao_referencia(registros: Array) -> void:
 		if not dialog.visible:
 			dialog.queue_free())
 	add_child(dialog)
+	# Dimensiona a lista ao numero de itens, com piso estetico de MIN_ITENS_VISIVEIS e teto de
+	# MAX_ITENS_VISIVEIS — acima disso rola internamente. Feito apos add_child para o tema ja estar
+	# resolvido pela arvore; +8 cobre o padding interno do ItemList.
+	const MIN_ITENS_VISIVEIS := 6
+	const MAX_ITENS_VISIVEIS := 10
+	var altura_linha := int(lista.get_theme_font(&"font").get_height(lista.get_theme_font_size(&"font_size"))) \
+		+ lista.get_theme_constant(&"v_separation")
+	var n_visiveis: int = clampi(lista.item_count, MIN_ITENS_VISIVEIS, MAX_ITENS_VISIVEIS)
+	lista.custom_minimum_size = Vector2(500, n_visiveis * altura_linha + 8)
 	dialog.popup_centered()
 	Dialogos.limitar_a_tela(dialog)
 
