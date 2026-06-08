@@ -8,6 +8,9 @@ signal mensagem_texto
 
 var lista: Array[String] : set = _lista_changed
 
+# Ids canonicos na MESMA ordem dos itens do seletor (inclui desabilitados), para reverter_seletor_para().
+var _ids_modulos: Array[String] = []
+
 func _ready() -> void:
 	pass
 
@@ -34,6 +37,8 @@ func _lista_changed(new_value: Array[String]) -> void:
 		"_modulos_retorno": modulos_retorno,
 		"_modulos_disabled": modulos_disabled
 	}
+	# Mesma ordem/conteudo de _retorno do seletor — usado por reverter_seletor_para().
+	_ids_modulos = modulos_retorno.duplicate()
 	$HBoxContainer/SeletorModulos.atualizar_texto_padrao = true
 	if modulos_visiveis.size() > 0:
 		$HBoxContainer/SeletorModulos.texto_padrao = modulos_visiveis[0]
@@ -46,6 +51,15 @@ func _lista_changed(new_value: Array[String]) -> void:
 
 func _on_seletor_modulos_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
 	emit_signal("modulo_selecionado", retorno)
+
+## Reseleciona visualmente o modulo [param id] no seletor. Usado pelo main ao reverter (cancelar a
+## saida de um modulo com alteracoes nao salvas) ou ao confirmar (selecionar o destino). Dispara
+## [signal modulo_selecionado] de novo — o main usa [code]_redirecionando[/code]/[code]_saida_confirmada[/code]
+## para tratar a reentrada.
+func reverter_seletor_para(id: String) -> void:
+	var idx: int = _ids_modulos.find(id)
+	if idx >= 0:
+		$HBoxContainer/SeletorModulos.selecionar_item(idx)
 
 func _on_dir_saida_button_up() -> void:
 	if OS.has_feature("pc"):

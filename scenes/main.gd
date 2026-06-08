@@ -30,6 +30,10 @@ const _MODULOS_COM_DADOS_DISCENTES: Array[String] = ["situacao_alunos", "situaca
 	"matricula_irregular", "exportadores", "planejamento_horario", "planejamento_oferta"]
 ## Flag para evitar loop ao redirecionar para o módulo Principal
 var _redirecionando := false
+# Modulo atualmente carregado em $Modulo e flag de "saida ja confirmada" — sustentam o aviso de
+# alteracoes nao salvas ao trocar de modulo / voltar ao inicio (ver _on_barra_principal_modulo_selecionado).
+var _modulo_atual_id: String = "principal"
+var _saida_confirmada: bool = false
 var _ajustando_janela := false
 # Timer de debounce: adia a gravacao de base_config.json para evitar I/O em disco a cada frame
 # durante o arraste da janela ou do controle de escala.
@@ -371,6 +375,13 @@ func _limpar_modulo() -> void:
 	for child in $Modulo.get_children():
 		child.queue_free()
 
+# Callback do dialogo "alteracoes nao salvas": o usuario confirmou a saida. Marca a confirmacao e
+# re-seleciona o destino no seletor, reentrando em _on_barra_principal_modulo_selecionado (que agora
+# passa direto, pois _saida_confirmada esta true).
+func _confirmar_saida_modulo(destino) -> void:
+	_saida_confirmada = true
+	$BarraPrincipal.reverter_seletor_para(destino)
+
 ## Verifica se todos os arquivos e diretórios necessários para o módulo existem no diretório de dados. [br]
 ## Retorna um [Dictionary] com [code]ok[/code] ([bool]) e [code]mensagem[/code] ([String]).
 func _verificar_arquivos(modulo_nome: String) -> Dictionary:
@@ -452,6 +463,23 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 		_redirecionando = false
 		return
 
+	# Aviso de alteracoes nao salvas ao SAIR do Planejamento de Oferta/Horario (trocar de modulo ou
+	# voltar ao inicio). Reverte o seletor para o modulo atual enquanto o usuario decide; so prossegue
+	# se confirmar (_saida_confirmada, setado pelo callback do dialogo).
+	if not _saida_confirmada and modulo_selecionado != _modulo_atual_id \
+			and _modulo_atual_id in ["planejamento_oferta", "planejamento_horario"]:
+		var atual: Node = $Modulo.get_child(0) if $Modulo.get_child_count() > 0 else null
+		if atual and atual.has_method("tem_alteracoes_nao_salvas") and atual.tem_alteracoes_nao_salvas():
+			var onde: String = "na oferta" if _modulo_atual_id == "planejamento_oferta" else "nos horários"
+			_redirecionando = true
+			$BarraPrincipal.reverter_seletor_para(_modulo_atual_id)
+			Dialogos.confirmar(self, "Alterações não salvas", \
+				"Você fez alterações %s. Quer mesmo sair sem salvar?" % onde, \
+				_confirmar_saida_modulo.bind(modulo_selecionado), \
+				"Sair sem salvar", "Continuar editando")
+			return
+	_saida_confirmada = false
+
 	_limpar_modulo()
 
 	var mensagem_erro := ""
@@ -463,6 +491,10 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo_selecionado = "principal"
 			_redirecionando = true
 			$BarraPrincipal/HBoxContainer/SeletorModulos.selecionar_item(0)
+
+	# Registra o modulo que passara a estar carregado (ja resolvido o eventual redirecionamento acima),
+	# base do aviso de alteracoes nao salvas na proxima troca.
+	_modulo_atual_id = modulo_selecionado
 
 	# Pre-computa (ou reutiliza) o cache de dados discentes antes de instanciar os modulos que
 	# fazem analise de historico/aproveitamento, eliminando o recalculo a cada troca de modulo.

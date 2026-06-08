@@ -122,13 +122,17 @@ var _ultimo_total_choques: int = 0
 var _mapa_condicoes: Dictionary = {}
 
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
-# uma, aplica o filtro de semestre ao semestre dela. _menu_celula_semestres guarda, por índice de
-# item, o semestre correspondente.
+# uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
+# ({"tipo": "semestre"/"professor", "valor": ...}); separadores/cabeçalhos guardam {} (sem ação).
 var _menu_celula: PopupMenu
-var _menu_celula_semestres: Array[String] = []
+var _menu_celula_acoes: Array[Dictionary] = []
 # Estado anterior do botao direito, para detectar a borda de pressao no polling de _process (reabrir o
 # menu de contexto noutra celula enquanto o popup esta aberto).
 var _rmb_anterior: bool = false
+
+# Hash da grade (_ger_alocacoes.alocacoes) no ultimo carregamento/salvamento. Base do aviso de
+# alteracoes nao salvas ao trocar de modulo (ver tem_alteracoes_nao_salvas / _marcar_estado_salvo).
+var _hash_estado_salvo: int = hash({})
 
 # Código (minúsculo) da disciplina destacada por clique em um card: suas células ficam em verde
 # claro na grade. Vazio = nenhuma. Limpo ao alterar/limpar os filtros.
@@ -159,7 +163,9 @@ var _filtro_grade_semestre: String = ""
 var _cache_comentarios_professores: Dictionary = {}
 
 const IND_SEM_PROFESSOR := "Células sem professor"
-const IND_CHOQUE := "Choque de professor/sala/semestre"
+const IND_CHOQUE_PROF := "Choque de professor"
+const IND_CHOQUE_SALA := "Choque de sala"
+const IND_CHOQUE_SEM := "Choque de semestre"
 const IND_CH_EXCEDIDA := "CH excedida"
 const IND_CARGA := "Carga ≥6h/dia"
 const IND_NOTURNA_MANHA := "Noturna → manhã"
@@ -169,7 +175,9 @@ const IND_DETALHAR_ALUNOS := "Detalhar alunos em choque"
 # Todos os indicadores oferecidos no SeletorPreferencias (na ordem do menu).
 const INDICADORES_DISPONIVEIS: Array[String] = [
 	IND_SEM_PROFESSOR,
-	IND_CHOQUE,
+	IND_CHOQUE_PROF,
+	IND_CHOQUE_SALA,
+	IND_CHOQUE_SEM,
 	IND_CH_EXCEDIDA,
 	IND_CARGA,
 	IND_NOTURNA_MANHA,
@@ -177,13 +185,17 @@ const INDICADORES_DISPONIVEIS: Array[String] = [
 	IND_DETALHAR_ALUNOS,
 ]
 
-# Indicadores marcados por padrão (IND_CHOQUE_ALUNOS fica desligado: depende de hist.csv e é mais pesado).
+# Indicadores marcados por padrão. Choque de sala fica desligado (menos crítico que prof/semestre);
+# Choques de horário e Detalhar alunos vêm ligados (dependem de hist.csv, mas são úteis de imediato).
 const INDICADORES_PADRAO: Array[String] = [
 	IND_SEM_PROFESSOR,
-	IND_CHOQUE,
+	IND_CHOQUE_PROF,
+	IND_CHOQUE_SEM,
 	IND_CH_EXCEDIDA,
 	IND_CARGA,
 	IND_NOTURNA_MANHA,
+	IND_CHOQUE_ALUNOS,
+	IND_DETALHAR_ALUNOS,
 ]
 
 func _ready() -> void:
@@ -419,7 +431,9 @@ func _recalcular_grade(reportar: bool = true, celulas_relato: Array = []) -> voi
 func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_prof: Dictionary) -> Dictionary:
 	var painel := $"%PainelDisciplinas"
 	var tem_filtro: bool = painel.filtro_ativo() or not _filtro_grade_semestre.is_empty()
-	var ind_choque := IND_CHOQUE in _indicadores_ativos
+	var ind_choque_prof := IND_CHOQUE_PROF in _indicadores_ativos
+	var ind_choque_sala := IND_CHOQUE_SALA in _indicadores_ativos
+	var ind_choque_sem := IND_CHOQUE_SEM in _indicadores_ativos
 	var ind_ch_exc := IND_CH_EXCEDIDA in _indicadores_ativos
 	var ind_carga := IND_CARGA in _indicadores_ativos
 	var ind_noturna := IND_NOTURNA_MANHA in _indicadores_ativos
@@ -448,9 +462,9 @@ func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_
 			"destaque_disciplina": destaque_disc,
 			"sem_professor": ind_sem_prof and sem_prof.has(chave_celula),
 			"hora_extra": _celula_tem_extra(chave_celula),
-			"choque_prof": ind_choque and ch.get("prof", false),
-			"choque_sala": ind_choque and ch.get("sala", false),
-			"choque_sem": ind_choque and ch.get("sem", false),
+			"choque_prof": ind_choque_prof and ch.get("prof", false),
+			"choque_sala": ind_choque_sala and ch.get("sala", false),
+			"choque_sem": ind_choque_sem and ch.get("sem", false),
 			"ch_excedida": ind_ch_exc and cel_ch_exc.has(chave_celula),
 			"carga": ind_carga and cel_carga.has(chave_celula),
 			"noturna": ind_noturna and cel_noturna.has(chave_celula),
@@ -690,6 +704,15 @@ func _recarregar_horarios_txt_apos_merge(entries: Array) -> void:
 
 func _on_exportar_button_up() -> void:
 	_dados.exportar_horarios(diretorio_exportacao, _ger_alocacoes.alocacoes, grades_disciplinas_curriculos, $"%Terminal", cores_terminal)
+
+# Marca a grade atual como "salva" (apos carregar/salvar o planejamento). Zera o aviso de alteracoes.
+func _marcar_estado_salvo() -> void:
+	_hash_estado_salvo = hash(_ger_alocacoes.alocacoes)
+
+## True se a grade mudou desde o ultimo carregamento/salvamento. Consultado pelo main.gd antes de
+## trocar de modulo / voltar ao inicio, para avisar sobre alteracoes nao salvas.
+func tem_alteracoes_nao_salvas() -> bool:
+	return hash(_ger_alocacoes.alocacoes) != _hash_estado_salvo
 
 # Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
 # e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
@@ -1217,6 +1240,25 @@ func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 		_reportar_choques_alunos_celulas(celulas_dia, eh_ancora)
 	else:
 		_reportar_choques_alunos_celulas(celulas_dia)
+	_ativar_preferencias_da_celula(linha, coluna)
+
+
+# Ao clicar numa célula que está EM FOCO por um filtro ativo (fica verde por se enquadrar no filtro de
+# semestre/professor), ativa na grade a visualização das preferências de horário do professor da
+# disciplina — o mesmo efeito de clicar no card, mas a partir da grade. Usa o 1º professor (do
+# planejamento) com arquivo de preferências. Sem filtro ativo (célula não fica verde), não faz nada.
+func _ativar_preferencias_da_celula(linha: int, coluna: int) -> void:
+	var painel := $"%PainelDisciplinas"
+	if not (painel.filtro_ativo() or not _filtro_grade_semestre.is_empty()):
+		return
+	for aloc in _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna]):
+		if not _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
+			continue
+		for p in _dados._planejamento_csv.get((aloc as Dictionary).get("chave", ""), {}).get("professor", []):
+			var arquivo: String = _arquivo_preferencias_de(str(p))
+			if not arquivo.is_empty():
+				_ler_regras_professores(arquivo)
+				return
 
 # Permite reabrir o menu de contexto direto noutra celula com um unico clique direito. O popup embutido
 # tem grab modal: enquanto aberto, ele engole o clique direito de fora (nem fecha nem repassa a celula) e
@@ -1241,8 +1283,8 @@ func _process(_delta: float) -> void:
 	_rmb_anterior = rmb
 
 
-# Clique direito: abre um menu com as disciplinas daquele horário. Ao escolher uma, aplica o
-# filtro de semestre ao semestre dela (atalho para focar a grade naquela disciplina).
+# Clique direito: abre um menu com duas partes para aquele horário — as disciplinas (escolher filtra
+# pelo semestre da disciplina) e os professores que as dão (escolher filtra por aquele professor).
 func _on_grade_celula_clicada_direita(linha: int, coluna: int) -> void:
 	_abrir_menu_celula(linha, coluna)
 
@@ -1253,15 +1295,34 @@ func _abrir_menu_celula(linha: int, coluna: int) -> void:
 	if arr.is_empty():
 		return
 	_menu_celula.clear()
-	_menu_celula_semestres.clear()
+	_menu_celula_acoes.clear()
+	# Parte 1: disciplinas daquele horário — escolher filtra pelo semestre da disciplina.
+	_menu_celula.add_separator("Disciplina (filtra por semestre)")
+	_menu_celula_acoes.append({})
+	var profs: Dictionary = {}  # nome exato (como no planejamento) -> true, para a parte 2
 	for a_dict in arr:
 		var aloc: Dictionary = a_dict
 		var codigo: String = str(aloc.get("codigo", "")).to_upper()
-		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""), null)
+		var chave_aloc: String = aloc.get("chave", "")
+		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave_aloc, null)
 		var nome: String = card.nome if card else codigo
 		var sem: String = _semestre_da_aloc(aloc)
 		_menu_celula.add_item("%s — %s (%s)" % [codigo, nome, sem])
-		_menu_celula_semestres.append(sem)
+		_menu_celula_acoes.append({"tipo": "semestre", "valor": sem})
+		# Coleta os professores dessas disciplinas (do planejamento) para a parte 2.
+		for p in _dados._planejamento_csv.get(chave_aloc, {}).get("professor", []):
+			var pn: String = str(p).strip_edges()
+			if not pn.is_empty():
+				profs[pn] = true
+	# Parte 2: professores que dão as disciplinas listadas — escolher filtra por aquele professor.
+	if not profs.is_empty():
+		var nomes: Array = profs.keys()
+		nomes.sort()
+		_menu_celula.add_separator("Professor (filtra por professor)")
+		_menu_celula_acoes.append({})
+		for pn in nomes:
+			_menu_celula.add_item(str(pn).capitalize())
+			_menu_celula_acoes.append({"tipo": "professor", "valor": pn})
 	_menu_celula.reset_size()
 	# Subjanelas embutidas (padrao do Godot 4) + stretch "canvas_items": um popup embutido posiciona-se
 	# no espaco do viewport (coords logicas), nao da tela. DisplayServer.mouse_get_position() devolve
@@ -1269,13 +1330,19 @@ func _abrir_menu_celula(linha: int, coluna: int) -> void:
 	# direita. get_viewport().get_mouse_position() ja vem no espaco certo do popup.
 	_menu_celula.popup(Rect2i(Vector2i(get_viewport().get_mouse_position()), Vector2i.ZERO))
 
-# Ao escolher uma disciplina no menu da célula, aplica o filtro de semestre ao semestre dela.
+# Ao escolher um item no menu da célula: disciplina → filtra pelo semestre dela; professor → filtra
+# por aquele professor. Separadores não disparam index_pressed (a ação {} nunca é acionada).
 func _on_menu_celula_index_pressed(idx: int) -> void:
-	if idx < 0 or idx >= _menu_celula_semestres.size():
+	if idx < 0 or idx >= _menu_celula_acoes.size():
 		return
-	var sem: String = _menu_celula_semestres[idx]
-	if not sem.is_empty():
-		$"%PainelDisciplinas".selecionar_filtro_semestre_unico(sem)
+	var acao: Dictionary = _menu_celula_acoes[idx]
+	match acao.get("tipo", ""):
+		"semestre":
+			var sem: String = acao.get("valor", "")
+			if not sem.is_empty():
+				$"%PainelDisciplinas".selecionar_filtro_semestre_unico(sem)
+		"professor":
+			$"%PainelDisciplinas".selecionar_filtro_professor_unico(acao.get("valor", ""))
 
 func _detectar_choques(_celulas_afetadas: Array[String] = []) -> void:
 	_recalcular_grade(true)
@@ -1471,8 +1538,11 @@ func _listar_alunos_em_choque(discentes: Dictionary, rot_a: String, rot_b: Strin
 			vistos[chave_par] = true
 			var pa: int = _prioridade_condicao(cond_a)
 			var pb: int = _prioridade_condicao(cond_b)
-			var texto: String = "%s: %s / %s: %s" % \
-				[rot_a, cond_a.replacen("_", " ").capitalize(), rot_b, cond_b.replacen("_", " ").capitalize()]
+			# Cada lado leva a cor (BBCode) da sua condição — a mesma paleta das situações curriculares
+			# (ex.: matriculado_agora = verde; matriculavel = neutro). Facilita distinguir o tipo de choque.
+			var texto: String = "[color=%s]%s: %s[/color] / [color=%s]%s: %s[/color]" % \
+				[PaletaSemantica.cor_hex(cond_a), rot_a, cond_a.replacen("_", " ").capitalize(), \
+				PaletaSemantica.cor_hex(cond_b), rot_b, cond_b.replacen("_", " ").capitalize()]
 			pares_prio.append([min(pa, pb), max(pa, pb), texto])
 		# Ordena as situações do próprio aluno (mais "matriculado" primeiro).
 		pares_prio.sort_custom(func(x, y): return x[0] < y[0] if x[0] != y[0] else x[1] < y[1])
@@ -1558,6 +1628,7 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 		"salvar_json":
 			var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes)
 			file_handling.save_json(diretorio_exportacao, "planejamento.json", json)
+			_marcar_estado_salvo()
 			$"%Terminal".text_edit("Exportado: " + diretorio_exportacao + "planejamento.json" + \
 				" (" + str(json["disciplinas"].size()) + " disciplinas).", \
 				"sucesso", true, false)
@@ -1696,6 +1767,7 @@ func _enviar_para_servidor_confirmado(cod: String) -> void:
 	var r: Dictionary = await _sync.enviar(cod, json)
 	if r.get("ok", false):
 		_registrar_versao_sincronizada(cod, r)
+		_marcar_estado_salvo()
 		$"%Terminal".text_edit("Enviado: %s (%d disciplinas) para o servidor." \
 			% [cod, json.get("disciplinas", []).size()], "sucesso", true, false)
 	else:
@@ -2350,6 +2422,7 @@ func _importar_planejamento_json() -> void:
 	_sincronizar_referencias()
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
+	_marcar_estado_salvo()
 	$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
 		% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
 

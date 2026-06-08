@@ -79,6 +79,26 @@ func selecionar_filtro_semestre_unico(semestre: String) -> void:
 	filtro_alterado.emit({"curso": filtro_curso, "semestre": filtro_semestre, "professor": filtro_professor})
 
 
+## Programa o filtro de professor para um único [param professor] (ex.: clique direito numa célula da
+## grade > escolher um professor). Reseta o filtro de semestre (mostra o professor em todos os
+## semestres) e dispara o efeito, como a seleção manual de um professor. O [param professor] deve ser o
+## nome exato como consta no planejamento (a comparação do filtro é exata).
+func selecionar_filtro_professor_unico(professor: String) -> void:
+	# Reseta o filtro de semestre.
+	var popup_sem: PopupMenu = $"%FiltroSemestre".get_node("MenuButton").get_popup()
+	for i in popup_sem.item_count:
+		if popup_sem.is_item_checkable(i):
+			popup_sem.set_item_checked(i, false)
+	filtro_semestre = []
+	$"%FiltroSemestre".texto_padrao = "Semestre"
+	# Aplica o filtro de professor (repopula a lista para o escopo sem semestre).
+	filtro_professor = professor
+	$"%FiltroProfessor".lista_itens = popular_filtro_professor()
+	$"%FiltroProfessor".texto_padrao = professor
+	aplicar_filtro()
+	filtro_alterado.emit({"curso": filtro_curso, "semestre": filtro_semestre, "professor": filtro_professor})
+
+
 func _ready() -> void:
 	$"%FiltroCurso".opcao_selecionada.connect(_on_filtro_curso_opcao_selecionada)
 	$"%FiltroSemestre".opcao_selecionada.connect(_on_filtro_semestre_opcao_selecionada)

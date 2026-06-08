@@ -97,6 +97,10 @@ var _alocacoes: Dictionary = {}
 # do planejamento.json (chave "estado_inicial") para sobreviver a fechar/reabrir o programa.
 var _alocacoes_inicial: Dictionary = {}
 
+# Hash de _alocacoes no ultimo carregamento/salvamento. Base do aviso de alteracoes nao salvas ao
+# trocar de modulo (ver tem_alteracoes_nao_salvas / _marcar_estado_salvo).
+var _hash_estado_salvo: int = hash({})
+
 # Lista de todos os nomes de professores extraidos do CSV.
 var _todos_professores: Array[String] = []
 
@@ -651,6 +655,7 @@ func _importar_planejamento_csv(prefixos_semestre: Array[String]) -> void:
 		# Baseline para o diff de alteracoes.md: o estado recem-importado e o ponto de partida.
 		# Deep copy obrigatorio — copia rasa compartilharia os sub-dicts "professores".
 		_alocacoes_inicial = _alocacoes.duplicate(true)
+		_marcar_estado_salvo()
 		_log("planejamento.csv importado (%d disciplinas)." % _alocacoes.size(), "sucesso", true, false)
 	else:
 		_log("Arquivo \"planejamento.csv\" nao foi lido corretamente!", "erro", false, true)
@@ -765,6 +770,7 @@ func _importar_planejamento_json(caminho: String, arquivo: String) -> void:
 		_alocacoes_inicial = _parsear_alocacoes_de_array(dados["estado_inicial"])
 	else:
 		_alocacoes_inicial = _alocacoes.duplicate(true)
+	_marcar_estado_salvo()
 	_log("Planejamento importado de %s (%d disciplinas)." % [arquivo, _alocacoes.size()],
 		"sucesso", true, false)
 
@@ -1027,6 +1033,16 @@ func _parsear_alocacoes_de_array(arr: Array) -> Dictionary:
 	return resultado
 
 
+# Marca o planejamento atual como "salvo" (apos carregar/salvar). Zera o aviso de alteracoes.
+func _marcar_estado_salvo() -> void:
+	_hash_estado_salvo = hash(_alocacoes)
+
+## True se as alocacoes mudaram desde o ultimo carregamento/salvamento. Consultado pelo main.gd antes
+## de trocar de modulo / voltar ao inicio, para avisar sobre alteracoes nao salvas.
+func tem_alteracoes_nao_salvas() -> bool:
+	return hash(_alocacoes) != _hash_estado_salvo
+
+
 func _exportar_planejamento_json() -> void:
 	var tempo: Dictionary = Time.get_datetime_dict_from_system()
 	var data_str: String = "%d-%02d-%02d %02d:%02d" % \
@@ -1046,6 +1062,7 @@ func _exportar_planejamento_json() -> void:
 	}
 	file_handling.check_create_dir(diretorio_exportacao)
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", saida)
+	_marcar_estado_salvo()
 	_log("Planejamento exportado para %splanejamento.json (%d disciplinas)." % \
 		[diretorio_exportacao, disciplinas.size()], "sucesso", true, true)
 
