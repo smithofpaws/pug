@@ -36,7 +36,10 @@ var _ocupado: bool = false
 func configurar(url: String, usuario: String, token: String) -> void:
 	_url_base = url.strip_edges().trim_suffix("/")
 	_usuario = usuario.strip_edges()
-	_token = token.strip_edges()
+	# NAO usar strip_edges() no token: a senha/token pode legitimamente conter espaco no inicio/fim,
+	# e precisa casar byte a byte com o que foi gravado no servidor. Url e usuario sao limpos (espaco
+	# ali e sempre acidental e o Kinto nem aceita espaco no nome de conta).
+	_token = token
 
 
 ## Retorna true quando url, usuario e token estao preenchidos.

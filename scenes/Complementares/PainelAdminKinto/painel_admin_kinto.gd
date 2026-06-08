@@ -118,7 +118,10 @@ func _aba_autenticacao() -> Control:
 	_ed_user = _campo(vbox, "Usuário admin:")
 	_ed_senha = _campo(vbox, "Senha admin:", true)
 	_chk_lembrar = CheckBox.new()
-	_chk_lembrar.text = "Lembrar nesta máquina (grava a senha em %APPDATA%, fora do OneDrive)"
+	_chk_lembrar.text = "Lembrar senha"
+	DicaFlutuante.vincular(_chk_lembrar, "Grava a senha de administrador nesta máquina, em %APPDATA% " \
+		+ "(fora do OneDrive, portanto não sincroniza com os outros PCs).\n" \
+		+ "[b]Atenção:[/b] a senha fica em texto puro no arquivo — só marque em um computador de sua confiança.")
 	vbox.add_child(_chk_lembrar)
 	var bt := Button.new()
 	bt.text = "Conectar"
@@ -195,26 +198,30 @@ func _aba_planos() -> Control:
 func _aba_permissoes() -> Control:
 	var vbox := VBoxContainer.new()
 	vbox.name = "Permissões"
-	var lbl := Label.new()
-	lbl.text = "Permissões atuais da collection \"planejamentos\":"
-	vbox.add_child(lbl)
+	var intro := Label.new()
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	intro.text = "Quem pode fazer o quê com os planos no servidor. Normalmente não é preciso mexer " + \
+		"aqui — só use o botão de liberar envio se algum coordenador receber erro de permissão ao enviar."
+	vbox.add_child(intro)
+	var titulo := Label.new()
+	titulo.text = "Situação atual:"
+	vbox.add_child(titulo)
 	_lbl_perms = Label.new()
 	_lbl_perms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_lbl_perms)
-	var desc := Label.new()
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.text = "O botão abaixo garante que todos os coordenadores (membros do grupo) possam enviar " + \
-		"o plano do seu curso. Normalmente já está configurado; use só se algum coordenador receber " + \
-		"erro de permissão ao enviar."
-	vbox.add_child(desc)
+	var linha := HBoxContainer.new()
+	vbox.add_child(linha)
 	var bt := Button.new()
-	bt.text = "Permitir que coordenadores enviem planos"
+	bt.text = "Liberar envio para os coordenadores"
+	DicaFlutuante.vincular(bt, "Garante que todos os coordenadores (membros do grupo) possam enviar " \
+		+ "o plano do próprio curso.\nUse só se algum receber erro de permissão ao enviar.")
 	bt.pressed.connect(_garantir_create_grupo)
-	vbox.add_child(bt)
+	linha.add_child(bt)
 	var bt2 := Button.new()
-	bt2.text = "Atualizar lista de permissões"
+	bt2.text = "Atualizar"
+	DicaFlutuante.vincular(bt2, "Relê do servidor a lista de permissões mostrada acima.")
 	bt2.pressed.connect(_carregar_permissoes)
-	vbox.add_child(bt2)
+	linha.add_child(bt2)
 	return vbox
 
 
@@ -301,7 +308,9 @@ func _carregar_usuarios() -> void:
 	if r.get("dados") is Dictionary:
 		membros = r["dados"].get("data", {}).get("members", [])
 	for m in membros:
-		_lista_usuarios.add_item(str(m))
+		# Mostra o nome limpo, mas guarda o principal cru (account:x) em metadata para apagar/remover.
+		var idx: int = _lista_usuarios.add_item(_principal_legivel(str(m)))
+		_lista_usuarios.set_item_metadata(idx, str(m))
 
 
 # Le os membros atuais do grupo (read-modify-write). Retorna o Array de principais ou [] em falha.
@@ -322,6 +331,8 @@ func _usuario_valido(u: String) -> bool:
 
 func _criar_usuario() -> void:
 	var u: String = _ed_novo_user.text.strip_edges()
+	# Senha SEM strip_edges(): preserva espaco no inicio/fim de proposito. O coordenador tambem nao
+	# limpa o token no envio (sincronizacao.gd), entao a senha bate byte a byte com o servidor.
 	var s: String = _ed_nova_senha.text
 	if u.is_empty() or s.is_empty():
 		_lbl_user.text = "Informe usuário e senha."
@@ -351,7 +362,7 @@ func _criar_usuario() -> void:
 
 func _redefinir_senha() -> void:
 	var u: String = _ed_novo_user.text.strip_edges()
-	var s: String = _ed_nova_senha.text
+	var s: String = _ed_nova_senha.text  # sem strip_edges(): ver _criar_usuario.
 	if u.is_empty() or s.is_empty():
 		_lbl_user.text = "Informe o usuário e a nova senha."
 		return
@@ -374,7 +385,7 @@ func _apagar_usuario() -> void:
 	if sel.is_empty():
 		_lbl_user.text = "Selecione um usuário na lista para apagar."
 		return
-	var principal: String = _lista_usuarios.get_item_text(sel[0])
+	var principal: String = str(_lista_usuarios.get_item_metadata(sel[0]))
 	var u: String = principal.trim_prefix("account:")
 	Dialogos.confirmar(self, "Apagar usuário", \
 		"Apagar a conta '%s' e removê-la do grupo? Isso NÃO apaga o plano que ela enviou." % u, \
@@ -448,8 +459,34 @@ func _carregar_permissoes() -> void:
 		perms = r["dados"].get("permissions", {})
 	var linhas: Array[String] = []
 	for chave in perms:
-		linhas.append("%s: %s" % [chave, ", ".join(PackedStringArray(perms[chave]))])
-	_lbl_perms.text = "\n".join(linhas) if not linhas.is_empty() else "(sem permissões explícitas)"
+		var quem := PackedStringArray()
+		for p in perms[chave]:
+			quem.append(_principal_legivel(str(p)))
+		linhas.append("• %s: %s" % [_acao_legivel(str(chave)), ", ".join(quem)])
+	_lbl_perms.text = "\n".join(linhas) if not linhas.is_empty() else "(nenhuma permissão específica definida)"
+
+
+# Traduz as chaves de permissao do Kinto (read/write/record:create) para algo legivel ao admin.
+func _acao_legivel(acao: String) -> String:
+	match acao:
+		"read": return "Podem ver os planos"
+		"write": return "Podem administrar (editar/apagar tudo)"
+		"record:create": return "Podem enviar planos"
+		_: return acao
+
+
+# Traduz um principal do Kinto (account:x, grupo, system.*) para texto legivel ao admin.
+func _principal_legivel(principal: String) -> String:
+	if principal.begins_with("account:"):
+		return principal.trim_prefix("account:")
+	if principal.ends_with("/groups/" + SyncKintoAdmin.GRUPO_COORDENADORES):
+		return "Coordenadores (grupo)"
+	if principal.begins_with("/buckets/") and principal.contains("/groups/"):
+		return "grupo " + principal.get_slice("/groups/", 1)
+	match principal:
+		"system.Authenticated": return "qualquer usuário autenticado"
+		"system.Everyone": return "qualquer um (acesso público)"
+		_: return principal
 
 
 func _garantir_create_grupo() -> void:

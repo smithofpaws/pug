@@ -1995,16 +1995,19 @@ func _configurar_sincronizacao() -> void:
 	var ed_token := LineEdit.new()
 	ed_token.secret = true
 	ed_token.text = str(sinc.get("token", ""))
-	for par in [["Endereco do servidor (URL da API):", ed_url], ["Usuario:", ed_user], ["Token:", ed_token]]:
+	for par in [["Endereco do servidor (URL da API):", ed_url], ["Usuario:", ed_user], ["Senha (token):", ed_token]]:
 		var rotulo := Label.new()
 		rotulo.text = par[0]
 		vbox.add_child(rotulo)
 		vbox.add_child(par[1])
+	DicaFlutuante.vincular(ed_token, "E a [b]mesma senha[/b] que o administrador criou para a sua conta " \
+		+ "no servidor (no Kinto, a senha da conta funciona como token de acesso).")
 
 	dialog.confirmed.connect(func():
 		var u: String = ed_url.text.strip_edges()
 		var us: String = ed_user.text.strip_edges()
-		var tk: String = ed_token.text.strip_edges()
+		# Token sem strip_edges(): a senha pode ter espaco no inicio/fim de proposito (ver configurar()).
+		var tk: String = ed_token.text
 		override_config.emit(["sincronizacao", "url"], u)
 		override_config.emit(["sincronizacao", "usuario"], us)
 		override_config.emit(["sincronizacao", "token"], tk)
