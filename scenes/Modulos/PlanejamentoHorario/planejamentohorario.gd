@@ -975,7 +975,8 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 			$"%Terminal".text_edit("Movido: %s → [%d, %d]." % \
 				[aloc.get("codigo", "?").to_upper(), linha, coluna], \
 				"sucesso", true, false)
-			_reportar_choques_alunos_celulas([[linha, coluna]])
+			_reportar_choques_alunos_celulas([[linha, coluna]], \
+				_ancora_por_codigo(str(aloc.get("codigo", "")).to_lower()))
 			return
 	var chave: String = dados.get("chave", "")
 	var codigo: String = dados.get("codigo", "")
@@ -1049,7 +1050,7 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 	var celulas_novas: Array = []
 	for i in slots_alocados:
 		celulas_novas.append([linha + i, coluna])
-	_reportar_choques_alunos_celulas(celulas_novas)
+	_reportar_choques_alunos_celulas(celulas_novas, _ancora_por_codigo(codigo.to_lower()))
 
 # Clique do meio: remove as alocações da célula (anteriormente era o clique direito).
 func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
@@ -1198,15 +1199,24 @@ func _mover_bloco_celulas(linha_orig: int, coluna_orig: int, linha_dest: int, co
 	var celulas_bloco: Array = []
 	for i in n:
 		celulas_bloco.append([linha_dest + i, coluna_dest])
-	_reportar_choques_alunos_celulas(celulas_bloco)
+	_reportar_choques_alunos_celulas(celulas_bloco, \
+		_ancora_por_codigo(str(alocacoes_mover[0].get("codigo", "")).to_lower()))
 
-# Clique esquerdo: mesmo efeito de soltar uma disciplina — reseta o terminal e apresenta os choques
-# de horário das disciplinas presentes na célula clicada. (Comportamento será expandido futuramente.)
+# Clique esquerdo: reseta o terminal e apresenta os choques de horário do DIA inteiro (coluna clicada),
+# não só da célula. Sem filtro ativo, mostra todos os pares de choque do dia. Com filtro ativo, foca:
+# só os pares que envolvem disciplinas que passam o filtro (× todas as outras no horário).
 func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
 		return
 	$"%Terminal".text_edit("", "padrao", false, true)
-	_reportar_choques_alunos_celulas([[linha, coluna]])
+	var celulas_dia: Array = _celulas_do_dia(coluna)
+	var painel := $"%PainelDisciplinas"
+	if painel.filtro_ativo() or not _filtro_grade_semestre.is_empty():
+		var eh_ancora := func(aloc: Dictionary) -> bool:
+			return _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor)
+		_reportar_choques_alunos_celulas(celulas_dia, eh_ancora)
+	else:
+		_reportar_choques_alunos_celulas(celulas_dia)
 
 # Permite reabrir o menu de contexto direto noutra celula com um unico clique direito. O popup embutido
 # tem grab modal: enquanto aberto, ele engole o clique direito de fora (nem fecha nem repassa a celula) e
@@ -1374,9 +1384,13 @@ func _contar_choques_alunos() -> int:
 	return total
 
 # Imprime no terminal os choques de alunos entre disciplinas sobrepostas nas células dadas (cada item
-# de [param celulas] é [linha, coluna]). Deduplica pares repetidos entre as células. Usado ao soltar
-# uma disciplina e ao clicar com o esquerdo. Só age com o indicador "Choques de horário" ativo.
-func _reportar_choques_alunos_celulas(celulas: Array) -> void:
+# de [param celulas] é [linha, coluna]). Deduplica pares repetidos entre as células. Só age com o
+# indicador "Choques de horário" ativo. [br]
+# [param eh_ancora]: quando válido, só reporta um par se ao menos uma das disciplinas for âncora
+# (eh_ancora.call(aloc) == true). Usado para focar o relato: ao soltar, âncora = a disciplina movida
+# (só seus choques); ao clicar com filtro, âncora = as disciplinas que passam o filtro. Inválido =
+# reporta todos os pares (ex.: clique sem filtro mostra todos os choques do dia).
+func _reportar_choques_alunos_celulas(celulas: Array, eh_ancora: Callable = Callable()) -> void:
 	if not (IND_CHOQUE_ALUNOS in _indicadores_ativos):
 		return
 	if _condicoes_discentes.is_empty() or _condicoes_choque_selecionadas.is_empty():
@@ -1392,11 +1406,34 @@ func _reportar_choques_alunos_celulas(celulas: Array) -> void:
 				var cod_b: String = aloc_b.get("codigo", "").to_lower()
 				if cod_a.is_empty() or cod_b.is_empty() or cod_a == cod_b:
 					continue
+				# Foco: ao menos um lado do par precisa ser âncora (quando há predicado).
+				if eh_ancora.is_valid() and not (eh_ancora.call(aloc_a) or eh_ancora.call(aloc_b)):
+					continue
 				var k: String = (cod_a + "|" + cod_b) if cod_a < cod_b else (cod_b + "|" + cod_a)
 				if vistos.has(k):
 					continue
 				vistos[k] = true
 				_imprimir_choque_par(aloc_a, aloc_b)
+
+
+# Predicado-âncora que casa pelo código (minúsculo) de uma disciplina movida. Usado pelos relatos de
+# choque ao soltar/mover, para mostrar só os choques que envolvem a disciplina arrastada.
+func _ancora_por_codigo(cod_alvo: String) -> Callable:
+	return func(aloc: Dictionary) -> bool:
+		return str(aloc.get("codigo", "")).to_lower() == cod_alvo
+
+
+# Lista [linha, coluna] de todas as células ocupadas no dia (coluna) informado. "Dia" é a coluna da
+# grade (as horas de uma disciplina empilham na mesma coluna).
+func _celulas_do_dia(coluna: int) -> Array:
+	var celulas: Array = []
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var partes: PackedStringArray = chave_celula.split("_")
+		if partes.size() == 2 and int(partes[1]) == coluna:
+			celulas.append([int(partes[0]), coluna])
+	# Ordena por horário (linha) para o relato sair de cima para baixo no terminal.
+	celulas.sort_custom(func(a, b): return a[0] < b[0])
+	return celulas
 
 # Imprime no terminal a contagem de alunos em choque entre duas disciplinas e, se o detalhamento
 # estiver ativo, a lista de alunos com a situação em cada uma. O rótulo segue o modo de visualização.
