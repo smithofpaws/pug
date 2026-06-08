@@ -449,17 +449,16 @@ func _popular_alocacoes_do_csv() -> void:
 # das CHs dos professores — ao contrario do popular() generico, que usa a soma das
 # CHs como ch_total. Por isso reescrevemos ambos aqui (alem do excedente).
 func _sincronizar_cards_alocacoes() -> void:
-	# Indexa os cards uma unica vez para casar com as alocacoes em O(1) (evita varredura
-	# linear por alocacao).
-	var indice_cards: Dictionary = _indice_cards()
 	for chave in _alocacoes:
 		var dados: Dictionary = _alocacoes[chave]
 		var profs: Dictionary = dados.get("professores", {})
 		var ch_alocada: int = 0
 		for ch in profs.values():
 			ch_alocada += int(ch)
-		var card: CardDisciplina = indice_cards.get(
-			str(dados["codigo"]).to_lower() + "|" + str(dados["semestre"]).to_lower(), null)
+		# Casa pela CHAVE UNICA da oferta (cards_disciplinas e _alocacoes compartilham a mesma chave).
+		# Indexar por codigo|semestre sobrescrevia ofertas duplicadas, deixando a 2ª oferta sem
+		# ch_total/ch_alocada (card cinza apos a importacao).
+		var card: CardDisciplina = _painel_disciplinas.cards_disciplinas.get(chave, null)
 		if card == null:
 			continue
 		var ch_total: int = int(dados.get("ch_total", 0))
@@ -469,25 +468,6 @@ func _sincronizar_cards_alocacoes() -> void:
 		card.ch_alocada = ch_alocada
 	# Apos sincronizar os cards (import de CSV/JSON), atualiza o contorno de inseridas na grade.
 	_refresh_grade_se_visivel()
-
-
-# Indexa os cards do painel por "codigo|semestre" (ambos minusculos) para lookup O(1).
-func _indice_cards() -> Dictionary:
-	var indice: Dictionary = {}
-	for chave_card in _painel_disciplinas.cards_disciplinas:
-		var card: CardDisciplina = _painel_disciplinas.cards_disciplinas[chave_card]
-		indice[card.codigo.to_lower() + "|" + card.semestre.to_lower()] = card
-	return indice
-
-
-# Localiza o card do painel correspondente a um codigo + semestre (case-insensitive).
-# Retorna null se nenhum card corresponder.
-func _buscar_card(codigo: String, semestre: String) -> CardDisciplina:
-	for chave_card in _painel_disciplinas.cards_disciplinas:
-		var card: CardDisciplina = _painel_disciplinas.cards_disciplinas[chave_card]
-		if card.codigo.to_lower() == codigo.to_lower() and card.semestre.to_lower() == semestre.to_lower():
-			return card
-	return null
 
 
 # Retorna o cod_curso ao qual a [param grade_nome] pertence, conforme [code]cursos.<cod>.grades[/code].
@@ -1412,9 +1392,11 @@ func _on_atribuicao_alterada() -> void:
 	# Sincroniza as atribuicoes do painel de volta para as alocacoes.
 	var profs: Dictionary = _painel_atribuicoes.obter_atribuicoes()
 	_alocacoes[_disciplina_selecionada]["professores"] = profs
-	# Atualiza o card correspondente no painel de disciplinas.
+	# Atualiza o card correspondente no painel de disciplinas. Busca pela CHAVE UNICA da oferta
+	# selecionada (a mesma que indexa cards_disciplinas e _alocacoes) — nunca por codigo+semestre, que
+	# colide entre varias ofertas da mesma disciplina e atualizaria o card errado.
 	var dados: Dictionary = _alocacoes[_disciplina_selecionada]
-	var card: CardDisciplina = _buscar_card(dados["codigo"], dados["semestre"])
+	var card: CardDisciplina = _painel_disciplinas.cards_disciplinas.get(_disciplina_selecionada, null)
 	if card != null:
 		var profs_array: Array[String] = []
 		for pn in profs:
