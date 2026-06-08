@@ -333,4 +333,17 @@ func get_celula(linha: int, coluna: int) -> Celula:
 	if indice >= $GridContainer.get_child_count():
 		return null
 	return $GridContainer.get_child(indice)
+
+
+## Retorna (linha, coluna) da celula que contem o [param ponto] (coords globais de canvas, ex.: de
+## [method CanvasItem.get_global_mouse_position]), ou (-1, -1) se nenhuma. Inverso de [method get_celula]:
+## indice = linha * colunas + coluna.
+func celula_em_ponto_global(ponto: Vector2) -> Vector2i:
+	var filhos: Array = $GridContainer.get_children()
+	for i in filhos.size():
+		var c: Control = filhos[i]
+		if c.get_global_rect().has_point(ponto):
+			@warning_ignore("integer_division")
+			return Vector2i(i / _colunas, i % _colunas)
+	return Vector2i(-1, -1)
 #endregion

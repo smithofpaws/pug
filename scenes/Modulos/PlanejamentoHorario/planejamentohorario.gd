@@ -126,6 +126,9 @@ var _mapa_condicoes: Dictionary = {}
 # item, o semestre correspondente.
 var _menu_celula: PopupMenu
 var _menu_celula_semestres: Array[String] = []
+# Estado anterior do botao direito, para detectar a borda de pressao no polling de _process (reabrir o
+# menu de contexto noutra celula enquanto o popup esta aberto).
+var _rmb_anterior: bool = false
 
 # Código (minúsculo) da disciplina destacada por clique em um card: suas células ficam em verde
 # claro na grade. Vazio = nenhuma. Limpo ao alterar/limpar os filtros.
@@ -1199,9 +1202,35 @@ func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 	$"%Terminal".text_edit("", "padrao", false, true)
 	_reportar_choques_alunos_celulas([[linha, coluna]])
 
+# Permite reabrir o menu de contexto direto noutra celula com um unico clique direito. O popup embutido
+# tem grab modal: enquanto aberto, ele engole o clique direito de fora (nem fecha nem repassa a celula) e
+# suprime _input/_gui_input dos outros nos. Por isso detectamos o clique por POLLING em _process (que
+# roda sempre, independente do grab): a cada novo clique direito FORA do menu, fechamos e reabrimos na
+# celula sob o cursor. So fica ativo enquanto o menu esta visivel.
+func _process(_delta: float) -> void:
+	var rmb: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if rmb and not _rmb_anterior and _menu_celula.visible:
+		var rect := Rect2(_menu_celula.position, _menu_celula.size)
+		if not rect.has_point(get_viewport().get_mouse_position()):
+			var grade := $"%GradeHorarios"
+			var lc: Vector2i = grade.celula_em_ponto_global(grade.get_global_mouse_position())
+			if lc.x >= 0:
+				# Reposiciona o popup JA aberto para a nova celula (popup() reusa a mesma janela). NAO
+				# fechar antes: hide()+popup() no mesmo frame se anulavam, o menu so fechava e exigia um
+				# 2o clique para reabrir.
+				_abrir_menu_celula(lc.x, lc.y)
+			else:
+				# Clique direito fora de qualquer celula: fecha o menu.
+				_menu_celula.hide()
+	_rmb_anterior = rmb
+
+
 # Clique direito: abre um menu com as disciplinas daquele horário. Ao escolher uma, aplica o
 # filtro de semestre ao semestre dela (atalho para focar a grade naquela disciplina).
 func _on_grade_celula_clicada_direita(linha: int, coluna: int) -> void:
+	_abrir_menu_celula(linha, coluna)
+
+func _abrir_menu_celula(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
 		return
 	var arr: Array = _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna])
@@ -1218,7 +1247,11 @@ func _on_grade_celula_clicada_direita(linha: int, coluna: int) -> void:
 		_menu_celula.add_item("%s — %s (%s)" % [codigo, nome, sem])
 		_menu_celula_semestres.append(sem)
 	_menu_celula.reset_size()
-	_menu_celula.popup(Rect2i(DisplayServer.mouse_get_position(), Vector2i.ZERO))
+	# Subjanelas embutidas (padrao do Godot 4) + stretch "canvas_items": um popup embutido posiciona-se
+	# no espaco do viewport (coords logicas), nao da tela. DisplayServer.mouse_get_position() devolve
+	# coords fisicas globais, somando o offset da janela e o fator de escala -> o menu abria bem abaixo/a
+	# direita. get_viewport().get_mouse_position() ja vem no espaco certo do popup.
+	_menu_celula.popup(Rect2i(Vector2i(get_viewport().get_mouse_position()), Vector2i.ZERO))
 
 # Ao escolher uma disciplina no menu da célula, aplica o filtro de semestre ao semestre dela.
 func _on_menu_celula_index_pressed(idx: int) -> void:
