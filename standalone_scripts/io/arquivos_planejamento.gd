@@ -398,6 +398,13 @@ func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, chave: St
 ## Substitui o conteudo atual de _planejamento_csv.
 func montar_planejamento_csv_do_txt(cards: Array) -> void:
 	_planejamento_csv = {}
+	adicionar_planejamento_csv_do_txt(cards)
+
+## Adiciona ao [member _planejamento_csv] as disciplinas dos [param cards] do txt, SEM limpar o
+## existente. Usado para incorporar a um planejamento ja carregado as disciplinas que estao no
+## horarios.txt mas faltavam nele (escolhidas pelo usuario). Mesma ressalva de CH por professor de
+## [method montar_planejamento_csv_do_txt] (sem quebra por docente; CH vai em ch_disciplina).
+func adicionar_planejamento_csv_do_txt(cards: Array) -> void:
 	for c in cards:
 		var chave: String = str(c.get("chave", ""))
 		if chave.is_empty():

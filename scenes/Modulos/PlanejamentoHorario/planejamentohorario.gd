@@ -567,6 +567,86 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 		msg += ", " + str(plano["ignoradas"]) + " ignoradas"
 	$"%Terminal".text_edit(msg + ".", "sucesso", true, false)
 
+	# Com um planejamento ja carregado, as "novas disciplinas" do txt sao as que faltam nele. Elas
+	# aparecem na grade, mas NAO entram no _planejamento_csv (logo nao seriam salvas/enviadas). Avisa
+	# e oferece adiciona-las (o usuario escolhe quais).
+	if not montar_planejamento_do_txt and not plano["cards_novos"].is_empty():
+		var rotulos: Array[String] = []
+		for c in plano["cards_novos"]:
+			rotulos.append("%s (%s)" % [str(c.get("codigo", "")), str(c.get("sem", ""))])
+		$"%Terminal".text_edit("Disciplinas no horarios.txt fora do planejamento carregado: " \
+			+ ", ".join(rotulos) + ". Sem adiciona-las, nao serao salvas/enviadas.", "aviso", true, false)
+		_perguntar_adicionar_disciplinas_extras(plano["cards_novos"])
+
+# Dialogo (AGENTS.md: customizado com checkboxes) que lista as disciplinas do horarios.txt ausentes
+# do planejamento carregado e deixa o usuario escolher quais incorporar ao planejamento (para que
+# sejam salvas/enviadas). Cada [param cards] segue o formato de _montar_card_novo. Cancelar nao
+# adiciona nada (elas seguem so na grade, fora do salvar/enviar).
+func _perguntar_adicionar_disciplinas_extras(cards: Array) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Disciplinas do horarios.txt fora do planejamento"
+	dialog.get_ok_button().text = "Adicionar selecionadas"
+	dialog.get_cancel_button().text = "Nao adicionar"
+	dialog.wrap_controls = true
+	dialog.min_size = Vector2i(540, 0)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog.add_child(vbox)
+	var lbl := Label.new()
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.custom_minimum_size = Vector2(500, 0)
+	lbl.text = "Estas disciplinas estao no horarios.txt mas nao no planejamento carregado. " \
+		+ "Sem adicionar, elas nao serao salvas/enviadas. Ao adicionar, a carga horaria por " \
+		+ "professor fica menos detalhada (vem do txt). Selecione quais adicionar:"
+	vbox.add_child(lbl)
+	var btn_todas := Button.new()
+	btn_todas.text = "Marcar/desmarcar todas"
+	vbox.add_child(btn_todas)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(500, 240)
+	vbox.add_child(scroll)
+	var lista := VBoxContainer.new()
+	lista.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(lista)
+	var checkboxes: Array = []
+	for c in cards:
+		var cb := CheckBox.new()
+		cb.text = "%s - %s (%s)" % [str(c.get("codigo", "")).to_upper(), \
+			str(c.get("nome", "")), str(c.get("sem", ""))]
+		cb.button_pressed = true
+		cb.set_meta("card", c)
+		lista.add_child(cb)
+		checkboxes.append(cb)
+
+	btn_todas.pressed.connect(func() -> void:
+		var algum: bool = false
+		for cb in checkboxes:
+			if cb.button_pressed:
+				algum = true
+				break
+		for cb in checkboxes:
+			cb.button_pressed = not algum)
+	dialog.confirmed.connect(func() -> void:
+		var selecionados: Array = []
+		for cb in checkboxes:
+			if cb.button_pressed:
+				selecionados.append(cb.get_meta("card"))
+		if selecionados.is_empty():
+			return
+		_dados.adicionar_planejamento_csv_do_txt(selecionados)
+		_detectar_choques()
+		$"%Terminal".text_edit("%d disciplina(s) do horarios.txt adicionadas ao planejamento." \
+			% selecionados.size(), "sucesso", true, false))
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.close_requested.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered()
+	Dialogos.limitar_a_tela(dialog)
+
 # Abre o dialogo modal de selecao de cursos antes da leitura do planejamento.csv. A leitura
 # efetiva acontece em _on_cursos_selecionados_planejamento, ao confirmar a selecao.
 func _abrir_janela_selecao_cursos_planejamento() -> void:
@@ -1960,7 +2040,9 @@ func _baixar_curso(chave_curso: String) -> void:
 		return
 	_fazer_backup_planejamento("baixar")
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", planejamento)
-	_importar_planejamento_json()
+	# Modo nao-verboso: sem o despejo do planejamento; so um resumo. A confirmacao "Baixado:" fica por
+	# ultimo, clara (ver _importar_planejamento_json).
+	_importar_planejamento_json(false)
 	_registrar_versao_sincronizada(chave_curso, r)
 	$"%Terminal".text_edit("Baixado: %s (enviado por %s em %s)." \
 		% [chave_curso, str(record.get("enviado_por", "?")), str(record.get("enviado_em", "?"))], \
@@ -2449,8 +2531,11 @@ func _importar_arquivo_preferencia(caminho: String) -> void:
 
 ## Importa o [code]planejamento.json[/code] exportado do modulo Planejamento de Oferta.
 ## O arquivo e lido de [member diretorio_exportacao] e seus dados sao convertidos
-## para o formato [code]_planejamento_csv[/code] de [PlanejamentoDados].
-func _importar_planejamento_json() -> void:
+## para o formato [code]_planejamento_csv[/code] de [PlanejamentoDados]. [br]
+## [param verbose] (padrao true, usado pelo "Abrir planejamento.json") despeja o conteudo no
+## terminal e fecha com a mensagem detalhada. Em [code]false[/code] (usado pelo "Baixar do
+## servidor") pula o despejo e mostra so um resumo curto, deixando a confirmacao da acao por ultimo.
+func _importar_planejamento_json(verbose: bool = true) -> void:
 	var caminho: String = diretorio_exportacao + "planejamento.json"
 	if not FileAccess.file_exists(caminho):
 		$"%Terminal".text_edit("Nenhum planejamento.json encontrado em " + diretorio_exportacao \
@@ -2516,10 +2601,11 @@ func _importar_planejamento_json() -> void:
 		return
 
 	_dados.adicionar_planejamento()
-	var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
-	_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
+	if verbose:
+		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
+		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
 	_sincronizar_referencias()
-	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
+	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false, verbose)
 
 	# Aplica as alocações (alocacoes) do JSON na grade.
 	var dias_json: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
@@ -2564,12 +2650,18 @@ func _importar_planejamento_json() -> void:
 			if card_json:
 				card_json.ch_alocada += 1
 			cont_aloc += 1
+	# Resumo curto antes dos choques (modo nao-verboso, ex.: baixar do servidor): substitui o despejo
+	# e a mensagem detalhada, deixando a confirmacao da acao (ex.: "Baixado:") por ultimo no chamador.
+	if not verbose:
+		$"%Terminal".text_edit("Planejamento carregado: %d disciplinas, %d alocações." \
+			% [_dados._planejamento_csv.size(), cont_aloc], "sucesso", true, false)
 	_sincronizar_referencias()
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
 	_marcar_estado_salvo()
-	$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
-		% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
+	if verbose:
+		$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
+			% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
 
 func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
 	match retorno:

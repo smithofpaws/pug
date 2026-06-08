@@ -323,7 +323,7 @@ func semestre_pertence_ao_curso(sem: String, cod_curso: String) -> bool:
 ## Quando [param limpar_antes] é [code]true[/code] (padrão), descarta toda a lista antes de popular. [br]
 ## Quando [code]false[/code], faz merge: remove apenas os cards cujo código está no novo planejamento
 ## (serão recriados atualizados) e preserva os demais (ex.: adicionados via grade), evitando duplicação.
-func popular(planejamento_csv: Dictionary, terminal: Node, limpar_antes: bool = true) -> Dictionary:
+func popular(planejamento_csv: Dictionary, terminal: Node, limpar_antes: bool = true, imprimir_resumo: bool = true) -> Dictionary:
 	if limpar_antes:
 		limpar()
 	else:
@@ -363,8 +363,9 @@ func popular(planejamento_csv: Dictionary, terminal: Node, limpar_antes: bool = 
 		$"%ListaDisciplinas".add_child(card)
 		cards_disciplinas[chave] = card
 	_atualizar_indicadores()
-	terminal.text_edit("Painel populado com " + str(chaves_ordenadas.size()) + " disciplinas.", \
-		_cores_terminal.get("sucesso", "green"), true, false)
+	if imprimir_resumo:
+		terminal.text_edit("Painel populado com " + str(chaves_ordenadas.size()) + " disciplinas.", \
+			_cores_terminal.get("sucesso", "green"), true, false)
 	var filtros := popular_filtros()
 	_aplicar_listas_filtros(filtros)
 	aplicar_filtro()
