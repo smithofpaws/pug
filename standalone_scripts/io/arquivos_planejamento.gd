@@ -391,6 +391,29 @@ func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, chave: St
 		ch_total = ch_por_chave.get(chave, 1)
 	return {"codigo": codigo, "nome": nome, "profs": profs, "ch_total": ch_total, "sem": sem, "chave": chave}
 
+## Monta o [member _planejamento_csv] a partir dos cards extraidos do horarios.txt ([param cards] no
+## formato de [method _montar_card_novo]). Usado ao importar um horarios.txt SEM um planejamento.csv/
+## .json carregado, para que salvar/enviar tenham as disciplinas. A CH por professor fica menos
+## detalhada que a do planejamento.csv (sem quebra por docente; toda a CH vai em [code]ch_disciplina[/code]).
+## Substitui o conteudo atual de _planejamento_csv.
+func montar_planejamento_csv_do_txt(cards: Array) -> void:
+	_planejamento_csv = {}
+	for c in cards:
+		var chave: String = str(c.get("chave", ""))
+		if chave.is_empty():
+			continue
+		var profs: Array = c.get("profs", [])
+		var sem: String = str(c.get("sem", ""))
+		_planejamento_csv[chave] = {
+			"codigo": str(c.get("codigo", "")),
+			"semestre": sem,
+			"professor": profs.duplicate(),
+			"ch": [],
+			"oferta": sem,
+			"ch_disciplina": str(c.get("ch_total", 0)),
+			"nome_csv": str(c.get("nome", "")),
+		}
+
 ## Carrega um arquivo de horarios_txt e armazena em [param _horarios_txt_lista][chave]. [br]
 ## [param nome_arquivo] padrao [code]"horarios.txt"[/code], [param chave] padrao [code]"horarios"[/code]. [br]
 ## Pode ser chamado varias vezes com arquivos e chaves diferentes. [br]

@@ -286,10 +286,10 @@ func _ready() -> void:
 	_carregar_dados_discentes()
 	_limpar_preferencias_grade()
 	$"%SeletorImportar".lista_itens = {
-		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Salvar planejamento.json"],
-		"Locais_retorno": ["abrir_json", "abrir_csv", "salvar_json"],
+		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Abrir horarios.txt", "Salvar planejamento.json"],
+		"Locais_retorno": ["abrir_json", "abrir_csv", "abrir_horarios_txt", "salvar_json"],
 		"Importar": ["planejamento.csv", "horarios.txt", "professor.xlsx (.csv)"],
-		"Importar_retorno": ["importar_csv", "horarios.txt", "professor.xlsx (.csv)"],
+		"Importar_retorno": ["importar_csv", "importar_horarios_txt", "professor.xlsx (.csv)"],
 		"Exportar": ["horarios.txt"],
 		"Exportar_retorno": ["exportar_horarios_txt"],
 		"Servidor": ["Enviar ao servidor", "Baixar do servidor", "Ver outros cursos (referência)…", "Limpar referências", "Configurar servidor…"],
@@ -522,6 +522,10 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 		dias, horas, grade._linhas, grade._colunas, $"%PainelDisciplinas".cards_disciplinas.keys(), prefixos)
 	if not plano["valido"]:
 		return
+	# Sem um planejamento.csv/.json carregado, o horarios.txt vira a fonte do planejamento em memoria,
+	# para que salvar/enviar tenham disciplinas. Com um planejamento ja carregado, preserva-o (os cards
+	# extras ja usam os dados dele via _montar_card_novo).
+	var montar_planejamento_do_txt: bool = _dados._planejamento_csv.is_empty()
 
 	# Limpa a grade e as alocações atuais antes de repopular.
 	for chave_celula in _ger_alocacoes.alocacoes:
@@ -536,6 +540,13 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 		profs.assign(info["profs"])
 		$"%PainelDisciplinas".popular_card_extra(info["codigo"], info["nome"], profs, \
 			[str(info["ch_total"])], info["sem"], info["chave"])
+
+	if montar_planejamento_do_txt:
+		_dados.montar_planejamento_csv_do_txt(plano["cards_novos"])
+		$"%Terminal".text_edit("Planejamento montado a partir do horarios.txt (%d disciplinas). " \
+			% _dados._planejamento_csv.size() \
+			+ "Para a carga horaria por professor mais detalhada, e preferivel abrir um " \
+			+ "planejamento.csv ou .json antes de importar os horarios.", "aviso", true, false)
 
 	for item in plano["alocacoes"]:
 		var chave_celula := "%d_%d" % [item["linha"], item["coluna"]]
@@ -708,6 +719,71 @@ func _on_exportar_button_up() -> void:
 # Marca a grade atual como "salva" (apos carregar/salvar o planejamento). Zera o aviso de alteracoes.
 func _marcar_estado_salvo() -> void:
 	_hash_estado_salvo = hash(_ger_alocacoes.alocacoes)
+
+# Arquivos que compoem um snapshot de regressao do planejamento. Reune o estado de trabalho:
+# o plano salvo (.json), a oferta de origem (.csv) e a grade de horarios (.txt + .ini canonicos).
+func _arquivos_snapshot_planejamento() -> Array:
+	return [
+		diretorio_exportacao + "planejamento.json",
+		GV.dir_saida + "planejamento.csv",
+		GV.dir_saida + "horarios.txt",
+		GV.dir_saida + "horarios.ini",
+	]
+
+# Salva um snapshot com data/hora dos arquivos do planejamento em .backup/planejamentohorario/,
+# como historico de regressao. Chamado ANTES de operacoes que sobrescrevem (salvar/baixar) e ao
+# enviar ao servidor. Falhas de backup nunca bloqueiam a acao principal (apenas nao geram pasta).
+func _fazer_backup_planejamento(rotulo: String) -> void:
+	var pasta: String = file_handling.fazer_backup(_arquivos_snapshot_planejamento(), \
+		"planejamentohorario", rotulo)
+	if not pasta.is_empty():
+		$"%Terminal".text_edit("Backup do planejamento salvo em " + pasta + ".", "padrao", true, false)
+
+# Lista (rotulos "codigo (oferta)") das disciplinas carregadas que NAO sao do meu curso nem
+# compartilhadas com ele, ou seja, cuja oferta nao casa com [param meus_prefixos]. Mesmo criterio do
+# filtro de exportacao (ver exportar_planejamento_json). Ignora camadas de referencia (somente-leitura)
+# e retorna vazio quando nao ha curso proprio definido (sem como escopar).
+func _disciplinas_de_outros_cursos(meus_prefixos: Array) -> Array[String]:
+	var fora: Array[String] = []
+	if meus_prefixos.is_empty():
+		return fora
+	for chave in _dados._planejamento_csv:
+		var d: Dictionary = _dados._planejamento_csv[chave]
+		if d.get("referencia", false):
+			continue
+		var oferta: String = str(d.get("oferta", d.get("semestre", "")))
+		if not FileHandling.semestre_casa_prefixos(oferta, meus_prefixos):
+			fora.append("%s (%s)" % [str(d.get("codigo", "")), oferta])
+	return fora
+
+# Ponto de entrada do "Salvar planejamento.json". Se o plano contiver disciplinas de outros cursos
+# (importadas para dar uma olhada), avisa e deixa o usuario escolher salvar so o seu curso ou tudo —
+# evita "poluir" o planejamento.json local com dados de outro curso. Sem poluicao, salva direto.
+func _salvar_planejamento() -> void:
+	var meus_prefixos: Array = cursos.get(_meu_cod_curso(), {}).get("prefixos_semestre", [])
+	var outras: Array[String] = _disciplinas_de_outros_cursos(meus_prefixos)
+	if outras.is_empty():
+		_salvar_planejamento_json([])
+		return
+	Dialogos.escolha_lista(self, "Disciplinas de outros cursos no planejamento", \
+		"O planejamento carregado contem disciplinas que nao sao do seu curso. " \
+			+ "Salvar tudo pode duplicar dados entre planejamentos. O que deseja salvar?", \
+		outras, "", \
+		[
+			{"texto": "So o meu curso", "ao_acionar": func() -> void: _salvar_planejamento_json(meus_prefixos)},
+			{"texto": "Salvar tudo", "ao_acionar": func() -> void: _salvar_planejamento_json([])},
+		])
+
+# Grava o planejamento.json filtrado por [param prefixos] (vazio = tudo). Faz backup antes de
+# sobrescrever (historico de regressao) e marca o estado como salvo.
+func _salvar_planejamento_json(prefixos: Array) -> void:
+	_fazer_backup_planejamento("salvar")
+	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	file_handling.save_json(diretorio_exportacao, "planejamento.json", json)
+	_marcar_estado_salvo()
+	$"%Terminal".text_edit("Exportado: " + diretorio_exportacao + "planejamento.json" + \
+		" (" + str(json["disciplinas"].size()) + " disciplinas).", \
+		"sucesso", true, false)
 
 ## True se a grade mudou desde o ultimo carregamento/salvamento. Consultado pelo main.gd antes de
 ## trocar de modulo / voltar ao inicio, para avisar sobre alteracoes nao salvas.
@@ -1626,16 +1702,13 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 		"abrir_csv":
 			_abrir_janela_selecao_cursos_planejamento()
 		"salvar_json":
-			var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes)
-			file_handling.save_json(diretorio_exportacao, "planejamento.json", json)
-			_marcar_estado_salvo()
-			$"%Terminal".text_edit("Exportado: " + diretorio_exportacao + "planejamento.json" + \
-				" (" + str(json["disciplinas"].size()) + " disciplinas).", \
-				"sucesso", true, false)
+			_salvar_planejamento()
 		"importar_csv":
 			_converter_planejamento_csv()
-		"horarios.txt":
+		"abrir_horarios_txt":
 			_abrir_janela_selecao_cursos_horario()
+		"importar_horarios_txt":
+			_converter_horarios_txt()
 		"professor.xlsx (.csv)":
 			_importar_preferencias_professor()
 		"exportar_horarios_txt":
@@ -1754,6 +1827,23 @@ func _enviar_para_servidor() -> void:
 		$"%Terminal".text_edit("Defina o PPC principal em Configuracoes > Geral antes de enviar.", \
 			"aviso", true, true)
 		return
+	# Guarda: o envio SUBSTITUI o registro do curso no servidor. Se o planejamento filtrado vier
+	# vazio (ex.: a grade foi montada so a partir do horarios.txt, sem abrir o planejamento.csv),
+	# aborta antes de confirmar — evita apagar o plano que ja esta no servidor por engano.
+	var prefixos: Array = cursos.get(cod, {}).get("prefixos_semestre", [])
+	var previa: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	if previa.get("disciplinas", []).is_empty():
+		$"%Terminal".text_edit("Nenhuma disciplina de %s carregada — abra o planejamento.csv " % cod \
+			+ "(Arquivo > Locais > Abrir planejamento.csv) antes de enviar. " \
+			+ "Envio cancelado para nao sobrescrever o plano no servidor.", "aviso", true, true)
+		return
+	# Informativo (nao bloqueia): o envio so manda o seu curso + compartilhadas. Se houver disciplinas
+	# de outros cursos carregadas (importadas para olhar), avisa que ficarao de fora.
+	var outras: Array[String] = _disciplinas_de_outros_cursos(prefixos)
+	if not outras.is_empty():
+		$"%Terminal".text_edit("%d disciplina(s) de outros cursos nao serao enviadas " % outras.size() \
+			+ "(ficam so no registro do curso delas; use \"Ver outros cursos\" para referencia).", \
+			"aviso", true, false)
 	Dialogos.confirmar(self, "Enviar ao servidor", \
 		"Enviar o planejamento do curso %s ao servidor? Isso substitui a versao que estiver la." % cod, \
 		_enviar_para_servidor_confirmado.bind(cod), "Enviar")
@@ -1763,6 +1853,7 @@ func _enviar_para_servidor_confirmado(cod: String) -> void:
 	# Filtra a exportacao para mandar apenas as disciplinas deste curso (1 record por curso).
 	var prefixos: Array = cursos.get(cod, {}).get("prefixos_semestre", [])
 	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	_fazer_backup_planejamento("enviar")
 	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % cod, "padrao", true, false)
 	var r: Dictionary = await _sync.enviar(cod, json)
 	if r.get("ok", false):
@@ -1867,6 +1958,7 @@ func _baixar_curso(chave_curso: String) -> void:
 	if not planejamento is Dictionary or not planejamento.has("disciplinas"):
 		$"%Terminal".text_edit("O planejamento recebido esta vazio ou em formato invalido.", "erro", true, true)
 		return
+	_fazer_backup_planejamento("baixar")
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", planejamento)
 	_importar_planejamento_json()
 	_registrar_versao_sincronizada(chave_curso, r)
@@ -2216,6 +2308,33 @@ func _converter_planejamento_csv() -> void:
 		# poupando o usuario de abrir manualmente "Arquivo > Abrir planejamento.csv".
 		if FileAccess.file_exists(GV.dir_saida + "planejamento.csv"):
 			_abrir_janela_selecao_cursos_planejamento())
+	fd.canceled.connect(fd.queue_free)
+	add_child(fd)
+	fd.popup_centered()
+	Dialogos.limitar_a_tela(fd)
+
+
+## Abre um [FileDialog] para selecionar um horarios.txt externo, converte para UTF-8 e o salva
+## como [code]horarios.txt[/code] no diretorio de saida (sobreescrevendo o existente).
+## Util quando o horarios.txt vem em encoding diferente de UTF-8 (ex.: ANSI/Windows-1252).
+func _converter_horarios_txt() -> void:
+	var fd := FileDialog.new()
+	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.title = "Selecionar horarios.txt para importar"
+	fd.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
+	fd.add_filter("*.txt", "Arquivos de texto")
+	fd.file_selected.connect(func(path: String):
+		var dir_in: String = path.get_base_dir() + "/"
+		var file_name: String = path.get_file()
+		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, "horarios.txt")
+		$"%Terminal".text_edit("%s convertido e salvo como horarios.txt em %s." \
+			% [file_name, GV.dir_saida], "sucesso", true, true)
+		fd.queue_free()
+		# Encadeia direto na selecao de cursos para abrir o arquivo recem-convertido,
+		# poupando o usuario de acionar manualmente "Arquivo > Abrir horarios.txt".
+		if FileAccess.file_exists(GV.dir_saida + "horarios.txt"):
+			_abrir_janela_selecao_cursos_horario())
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered()

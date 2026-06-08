@@ -467,6 +467,31 @@ func save_json(directory: String, filename: String, data: Dictionary) -> void:
 		return
 	f.store_line(JSON.stringify(data, "\t", false))
 
+## Copia os [param arquivos] (caminhos, absolutos ou [code]res://[/code]) para uma subpasta com
+## carimbo de data/hora em [code].backup/<subpasta>/<AAAA-MM-DD_HHMMSS[_rotulo]>/[/code] na raiz do
+## projeto ([member GV.dir_principal], gitignorada). Serve de historico de regressao antes de
+## sobrescrever/enviar arquivos. Arquivos inexistentes sao ignorados; falhas nunca lancam erro. [br]
+## Retorna o caminho absoluto da pasta de backup criada, ou [code]""[/code] se nada foi copiado.
+func fazer_backup(arquivos: Array, subpasta: String, rotulo: String = "") -> String:
+	var existentes: Array[String] = []
+	for caminho in arquivos:
+		var abs: String = ProjectSettings.globalize_path(str(caminho))
+		if FileAccess.file_exists(abs):
+			existentes.append(abs)
+	if existentes.is_empty():
+		return ""
+	# Carimbo seguro para nome de pasta no Windows: troca ":" e espaco (nao permitidos / ruidosos).
+	var carimbo: String = Time.get_datetime_string_from_system(false, true).replace(":", "").replace(" ", "_")
+	var nome_pasta: String = carimbo if rotulo.is_empty() else carimbo + "_" + rotulo
+	var destino: String = ProjectSettings.globalize_path(GV.dir_principal + ".backup/" + subpasta + "/") \
+		+ nome_pasta + "/"
+	if DirAccess.make_dir_recursive_absolute(destino) != OK:
+		print_debug("AVISO: nao foi possivel criar a pasta de backup ", destino, ".")
+		return ""
+	for abs in existentes:
+		DirAccess.copy_absolute(abs, destino + abs.get_file())
+	return destino
+
 ## Verifica se um dado diretorio e arquivo existem. [param filename] e opcional. [br]
 ## [param directory] formato deve ser como [code]c:/example_folder/[/code]. [br]
 ## [param filename] formato deve ser como [code]filename.txt[/code]. [br]
