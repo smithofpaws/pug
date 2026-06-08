@@ -388,7 +388,13 @@ func _recalcular_grade(reportar: bool = true, celulas_relato: Array = []) -> voi
 	_ger_alocacoes.definir_filtro_professor($"%PainelDisciplinas".filtro_professor)
 	_ger_alocacoes.reaplicar_todas()
 	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
-	var res_choques: Dictionary = _detector.detectar()
+	# Choque de semestre respeita o filtro de visualização: filtrando um semestre, só alertamos choques
+	# desse semestre (reusa _aloc_passa_filtro, o mesmo predicado da pintura/foco). Sem filtro ativo, ele
+	# devolve true para tudo — comportamento idêntico ao anterior.
+	var painel := $"%PainelDisciplinas"
+	var passa_filtro_sem := func(aloc: Dictionary) -> bool:
+		return _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor)
+	var res_choques: Dictionary = _detector.detectar([], passa_filtro_sem)
 	var res_carga: Dictionary = _verif_carga.verificar(horas, $"%PainelDisciplinas".filtro_professor)
 	var sem_prof: Dictionary = _ger_alocacoes.celulas_sem_professor()
 	_ultimo_total_choques = res_choques.get("total", 0)

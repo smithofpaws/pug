@@ -23,11 +23,16 @@ func configurar(alocacoes: Dictionary, planejamento_csv: Dictionary, cards_disci
 
 ## Varre as alocações e detecta choques de professor, sala e semestre, além de CH excedida. [br]
 ## Se [param celulas_afetadas] for não-vazio, limita a verificação a essas células. [br]
+## [param passa_filtro_semestre]: quando válido, recebe cada alocação e devolve [code]true[/code] se
+## ela está visível no filtro atual da grade. Aplica-se [b]só ao choque de semestre[/b] — que é interno
+## a um semestre, então só interessa quando o semestre está em foco (ex.: filtrando o 2º semestre, não
+## alertar choques de ECExtra que dividem célula com uma disciplina visível). Choques de professor/sala
+## (conflito de recurso, inclusive entre cursos) seguem globais. [br]
 ## Retorna um dicionário com as contagens, um [param resumo] (Array[String]) quando há problemas,
 ## e dois mapas por célula: [br]
 ## [code]celulas_choque: { "linha_coluna": { "prof":bool, "sala":bool, "sem":bool } }[/code] e
 ## [code]celulas_ch_excedida: { "linha_coluna": true }[/code].
-func detectar(celulas_afetadas: Array[String] = []) -> Dictionary:
+func detectar(celulas_afetadas: Array[String] = [], passa_filtro_semestre: Callable = Callable()) -> Dictionary:
 	var prof_por_celula: Dictionary = {}
 	var sala_por_celula: Dictionary = {}
 	var sem_por_celula: Dictionary = {}
@@ -60,7 +65,10 @@ func detectar(celulas_afetadas: Array[String] = []) -> Dictionary:
 				if not sala_por_celula.has(sala):
 					sala_por_celula[sala] = []
 				sala_por_celula[sala].append(chave_celula)
-			if not sem.is_empty() and not eh_ref:
+			# Choque de semestre só conta alocações visíveis no filtro atual (quando há predicado):
+			# filtrando um semestre, não se alerta de choques de outro que apenas divide a célula.
+			var sem_visivel: bool = not passa_filtro_semestre.is_valid() or passa_filtro_semestre.call(aloc)
+			if not sem.is_empty() and not eh_ref and sem_visivel:
 				if not sem_por_celula.has(sem):
 					sem_por_celula[sem] = []
 				sem_por_celula[sem].append(chave_celula)
