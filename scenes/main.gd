@@ -62,6 +62,7 @@ func _ready() -> void:
 		GV.configuracao_base.get("interface", {}).get("tema", "nord"))
 	janela_config.parametro_alterado.connect(_on_config_parametro_alterado)
 	janela_config.restauracao_solicitada.connect(_on_restaurar_padroes)
+	janela_config.abrir_admin_servidor.connect(_abrir_painel_admin)
 	# Configura os diretórios de dados
 	file_handling.configurar_dirdados()
 	# Envia dados necessários aos nós
@@ -250,6 +251,62 @@ func _gravar_override(caminho: Array, valor: Variant) -> void:
 	GeneralFunctions.definir_por_caminho(GV.configuracao_base, caminho, valor)
 	GeneralFunctions.definir_por_caminho(GV.config_usuario, caminho, valor)
 	_agendar_salvar_config()
+
+
+# Arquivo do segredo de admin do Kinto. Fica em user:// (mapeia para %APPDATA%, FORA do OneDrive) e
+# guarda a senha de administrador — privilegiada demais para o config_usuario.json sincronizado nos 3
+# PCs. So existe se o admin marcar "Lembrar nesta maquina".
+const _ARQ_SEGREDO_ADMIN := "user://admin_kinto.json"
+
+
+# Abre o painel de administracao do Kinto (pedido pela JanelaConfiguracoes). O painel faz I/O de rede;
+# o main injeta a URL e o segredo lembrado, e centraliza o I/O do segredo (AGENTS.md).
+func _abrir_painel_admin() -> void:
+	var painel := PainelAdminKinto.new()
+	add_child(painel)
+	var url: String = GV.configuracao_base.get("sincronizacao", {}).get("url", "")
+	painel.configurar(url, _ler_segredo_admin())
+	painel.salvar_segredo_admin.connect(_salvar_segredo_admin)
+	painel.apagar_segredo_admin.connect(_apagar_segredo_admin)
+	painel.salvar_campus_local.connect(_salvar_campus_local)
+	painel.visibility_changed.connect(func() -> void:
+		if not painel.visible:
+			painel.queue_free())
+	painel.popup_centered()
+	Dialogos.limitar_a_tela(painel)
+
+
+func _ler_segredo_admin() -> Dictionary:
+	if not FileAccess.file_exists(_ARQ_SEGREDO_ADMIN):
+		return {}
+	var f := FileAccess.open(_ARQ_SEGREDO_ADMIN, FileAccess.READ)
+	if f == null:
+		return {}
+	var txt: String = f.get_as_text()
+	f.close()
+	var d: Variant = JSON.parse_string(txt)
+	return d if d is Dictionary else {}
+
+
+func _salvar_segredo_admin(usuario: String, senha: String) -> void:
+	var f := FileAccess.open(_ARQ_SEGREDO_ADMIN, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify({ "usuario": usuario, "senha": senha }))
+	f.close()
+
+
+func _apagar_segredo_admin() -> void:
+	if FileAccess.file_exists(_ARQ_SEGREDO_ADMIN):
+		DirAccess.remove_absolute(_ARQ_SEGREDO_ADMIN)
+
+
+# Grava o plano de campus mesclado (pedido pelo PainelAdminKinto) em exportacoes/. Usa um nome
+# PROPRIO (planejamento_campus.json) para NAO sobrescrever o planejamento.json de trabalho do
+# coordenador (o admin tambem coordena um curso). Para abrir o campus na grade, use Servidor > Baixar
+# do servidor > campus (que ai sim substitui o planejamento.json, de forma explicita).
+func _salvar_campus_local(plano: Dictionary) -> void:
+	file_handling.save_json(GV.dir_exportacoes, "planejamento_campus.json", plano)
 
 func _carregar_arquivos() -> void:
 	# Carregar grades

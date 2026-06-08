@@ -29,6 +29,31 @@ var analise_historico := AnaliseHistorico.new()
 var avisos_leitura: Array[String] = []
 
 #region Funções específicas
+## Verdadeiro quando a [param celula] de semestre (ex.: [code]"EC04"[/code], [code]"EM02;ECExtra"[/code])
+## casa com algum dos [param prefixos] (case-insensitive). A célula é quebrada nos [param delimitadores]
+## (default [code][";", "/", "-"][/code]) ANTES do teste, para que ofertas combinadas como
+## [code]"EM02;ECExtra"[/code] casem com o prefixo [code]"EC"[/code] mesmo não sendo o primeiro da lista.
+## Usado tanto na leitura ([method carregar_planejamento]) quanto no filtro de envio por curso
+## ([method ArquivosPlanejamento.exportar_planejamento_json]).
+static func semestre_casa_prefixos(celula: String, prefixos: Array, delimitadores: Array = []) -> bool:
+	for parte in dividir_semestres(celula, delimitadores):
+		var parte_lower: String = parte.strip_edges().to_lower()
+		for prefixo in prefixos:
+			var pref_lower: String = str(prefixo).strip_edges().to_lower()
+			if not pref_lower.is_empty() and parte_lower.begins_with(pref_lower):
+				return true
+	return false
+
+## Quebra a [param celula] de semestre em partes pelos [param delimitadores] (default
+## [code][";", "/", "-"][/code]). Usado para ofertas combinadas (ex.: [code]"EM02;ECExtra"[/code]).
+## Retorna [code][celula][/code] quando nenhum delimitador aparece.
+static func dividir_semestres(celula: String, delimitadores: Array = []) -> PackedStringArray:
+	var delims: Array = delimitadores if delimitadores.size() > 0 else [";", "/", "-"]
+	for delim in delims:
+		if celula.contains(delim):
+			return celula.split(delim)
+	return PackedStringArray([celula])
+
 ## Carrega o arquivo de planejamento csv localizado em [code]/dados/saida/planejamento.csv[/code], sendo
 ## o arquivo em questão baixado da planilha de planejamento da coordenação acadêmica, mas em formato csv. [br]
 ## Formato de [param diretorio] deve ser como [code]c:/local_exemplo/[/code]. [br]
@@ -103,27 +128,12 @@ func carregar_planejamento(diretorio: String, arquivo: String, prefixos_semestre
 	# Varre todas as linhas: cada bloco de curso (separado por linhas em branco) é tratado igual.
 	# Linhas em branco são naturalmente descartadas porque seu temp[lines][col_semestre] não casa com nenhum prefixo.
 	for lines in temp.size():
-		# Verifica se a célula de semestre contém múltiplos cursos (ex.: "EC04;EE04", "EM02;ECExtra").
-		# O split é feito antes do teste de prefixo para que entradas como "EM02;ECExtra"
-		# casem com o prefixo "EC" mesmo quando este não é o primeiro da lista.
+		# Linhas em branco e de outros cursos são descartadas: seu semestre não casa com nenhum prefixo.
 		var celula_semestre: String = temp[lines][col_semestre]
-		var delimitadores_comuns: Array = delimitadores if delimitadores.size() > 0 else [";", "/", "-"]
-		var semestres: PackedStringArray = PackedStringArray([celula_semestre])
-		for delim in delimitadores_comuns:
-			if celula_semestre.contains(delim):
-				semestres = celula_semestre.split(delim)
-				break
-		var prefixo_casa: bool = false
-		for sem in semestres:
-			var sem_lower: String = sem.strip_edges().to_lower()
-			for prefixo in prefixos_lower:
-				if sem_lower.begins_with(prefixo):
-					prefixo_casa = true
-					break
-			if prefixo_casa:
-				break
-		if not prefixo_casa:
+		if not semestre_casa_prefixos(celula_semestre, prefixos_lower, delimitadores):
 			continue
+		# Partes da oferta combinada (ex.: "EM02;ECExtra"): cada parte que casa vira uma entrada.
+		var semestres: PackedStringArray = dividir_semestres(celula_semestre, delimitadores)
 		# Determina o código da disciplina
 		var cod_pos: int = col_codigo
 		if not temp[lines][col_codigo].to_lower().begins_with("al"):

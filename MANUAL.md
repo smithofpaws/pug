@@ -284,7 +284,7 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
 - **Exportar**
   - **horarios.txt** — gera o `horarios.txt` da grade atual.
 - **Servidor** — sincronização do planejamento entre coordenadores (servidor compartilhado).
-  - **Enviar ao servidor** — envia o planejamento do **curso do PPC principal** (definido em _Configurações › Geral_) para o servidor, substituindo a versão que estiver lá. Só funciona para o curso do qual você é o coordenador responsável.
+  - **Enviar ao servidor** — envia o planejamento do **seu curso** (derivado do PPC principal definido em _Configurações › Geral_; ex.: `alec_2023` → curso `alec`) para o servidor, substituindo a versão que estiver lá. O registro no servidor é **por curso, não por versão de grade** — um curso com vários PPCs ativos (ex.: 2010 e 2023) usa um único registro, pois o planejamento cobre todos. São enviadas **apenas as disciplinas do seu curso** (as compartilhadas com outro curso entram nos dois). Só funciona para o curso do qual você é o coordenador responsável.
   - **Baixar do servidor** — lista os planejamentos disponíveis (mostrando quem enviou e quando) e permite baixar o de um curso; isso **substitui** o `planejamento.json` local e o conteúdo da grade.
   - **Ver outros cursos (referência)…** — lista os demais cursos no servidor e permite **sobrepor** um ou mais deles na sua grade como **camada de referência** (somente-leitura). Serve para co-planejar **disciplinas compartilhadas** entre cursos (ex.: `EC01;EM02`): você passa a ver onde os colegas alocaram as disciplinas, sem poder editá-las.
   - **Limpar referências** — remove da grade os cursos sobrepostos como referência, deixando só o seu plano.
@@ -297,6 +297,15 @@ Ao abrir o `planejamento.csv`/`horarios.txt`, um diálogo permite selecionar qua
 > **Camada de referência (co-planejamento):** os cursos sobrepostos via _Ver outros cursos_ aparecem na grade com cor própria e o marcador `»`, são **somente-leitura** (tentar mover/remover/alocar exibe um aviso) e **nunca** entram no seu `planejamento.json` nem são reenviados ao servidor — ao salvar ou enviar, só vai o seu plano. Com a referência sobreposta, o programa: (1) **sinaliza disciplinas compartilhadas em horário divergente** — quando os dois lados de uma compartilhada (ex.: `EC01;EM02`) estão em horários diferentes, abre um aviso listando-as e mostra a contagem na barra de status (_Compart. divergentes_); e (2) passa a **detectar choques de professor/sala entre cursos** no mesmo horário. Use _Limpar referências_ para voltar a ver só o seu plano.
 
 > **Sobre a sincronização:** cada coordenador trabalha de forma assíncrona no seu próprio curso. Apenas o **planejamento de oferta** (disciplinas e professores) trafega — nunca dados de alunos. O acesso é autenticado por usuário/token e restrito à rede privada (Tailscale).
+
+#### Administração do servidor (somente admin)
+
+Em **Configurações › aba Geral › "Administração do servidor…"** abre-se um painel para quem administra o servidor compartilhado. Na aba **Autenticação**, informe o usuário e a senha de **administrador** e clique **Conectar**; marque **"Lembrar nesta máquina"** para guardar a senha localmente (ela fica em `%APPDATA%`, fora do OneDrive, e nunca é sincronizada entre PCs). Após conectar, as demais abas liberam:
+
+- **Usuários** — cria a conta de cada coordenador (usuário + senha) já adicionando-o ao grupo que pode enviar planos; permite **redefinir senha** e **apagar** o usuário. Apagar o usuário **não** apaga o plano que ele enviou.
+- **Planos enviados** — lista os planos no servidor (um por curso) e permite **apagar** o que quiser.
+- **Permissões** — mostra as permissões atuais e tem um botão para **liberar o envio aos coordenadores**, caso algum receba erro de permissão ao enviar.
+- **Campus (mesclar)** — seleciona vários cursos e **mescla** os planos num plano único do campus, salvo localmente como `planejamento_campus.json` (nome próprio, para **não** sobrescrever o seu `planejamento.json` de trabalho) **e** publicado como o plano `campus` no servidor. Para abri-lo na grade, use _Baixar do servidor › campus_ (que aí sim substitui o `planejamento.json`, de forma explícita). Disciplinas compartilhadas idênticas são unificadas; quando os horários **divergem** entre cursos, o programa **lista os conflitos** e deixa você cancelar (para ajustar nos cursos de origem) ou mesclar mantendo a versão enviada mais recentemente — nunca decide sozinho.
 
 #### Painel de disciplinas (cards)
 

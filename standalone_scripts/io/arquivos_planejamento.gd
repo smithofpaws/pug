@@ -429,8 +429,12 @@ func exportar_horarios(dir_exportacao: String, alocacoes: Dictionary, grades_dis
 
 ## Exporta o planejamento + alocações para JSON unificado. [br]
 ## [param alocacoes] é o dicionário de alocações da grade (key "linha_coluna" → Array[Dictionary]). [br]
+## [param prefixos_semestre] (opcional): quando NÃO vazio, inclui apenas as disciplinas cujo campo
+## [code]oferta[/code] casa com algum desses prefixos (via [method FileHandling.semestre_casa_prefixos]).
+## Usado no envio ao servidor para mandar só as disciplinas do próprio curso (1 record por curso);
+## o salvamento local chama sem prefixos e mantém o arquivo completo. [br]
 ## Retorna um dicionário no formato compatível com [method FileHandling.save_json]. [br]
-func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
+func exportar_planejamento_json(alocacoes: Dictionary, prefixos_semestre: Array = []) -> Dictionary:
 	var saida: Dictionary = {
 		"ano": Time.get_datetime_dict_from_system()["year"],
 		"exportado_em": Time.get_datetime_string_from_system(),
@@ -445,6 +449,12 @@ func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
 		# planejamento.json do usuário — não devem ser salvas nem enviadas ao servidor como se fossem dele.
 		if dados.get("referencia", false):
 			continue
+		# Filtro de curso (só no envio): mantém apenas as disciplinas cuja oferta casa com os prefixos.
+		# Compartilhadas (ex.: "EM02;ECExtra") casam por qualquer parte, então entram nos dois cursos.
+		if not prefixos_semestre.is_empty():
+			var oferta: String = dados.get("oferta", dados.get("semestre", ""))
+			if not FileHandling.semestre_casa_prefixos(oferta, prefixos_semestre):
+				continue
 		var professores_json: Array[Dictionary] = []
 		for i in dados.get("professor", []).size():
 			professores_json.append({
@@ -486,6 +496,58 @@ func exportar_planejamento_json(alocacoes: Dictionary) -> Dictionary:
 					})
 		saida["disciplinas"].append(disc)
 	return saida
+
+
+## Mescla os planos de varios cursos num plano unico de campus (concatenacao do coordenador
+## academico). [param registros] e um Array de records do servidor (cada um
+## [code]{ id, enviado_em, planejamento: { disciplinas } }[/code]). [br]
+## Reconciliacao (nao concatenacao cega): disciplinas sao identificadas por
+## [code](codigo, oferta)[/code]. Uma compartilhada chega nos records de ambos os cursos (filtro de
+## envio por curso) — se as [code]alocacoes[/code] forem [b]iguais[/b], dedup; se [b]divergirem[/b], e
+## um CONFLITO. Com [param preferir_recente] = false, mantem a 1a vista e apenas REGISTRA o conflito
+## (para o chamador decidir); com true, resolve mantendo a do record de [code]enviado_em[/code] mais
+## recente. [br]
+## Retorna [code]{ "plano": Dictionary, "conflitos": Array }[/code] — [code]plano[/code] no mesmo
+## formato de [method exportar_planejamento_json]; cada conflito e
+## [code]{ codigo, oferta, cursos }[/code].
+static func mesclar_planejamentos(registros: Array, preferir_recente: bool) -> Dictionary:
+	var por_chave: Dictionary = {}   # chave -> { "disc", "enviado_em", "curso" }
+	var conflitos: Array = []
+	var chaves_em_conflito: Dictionary = {}   # evita listar o mesmo conflito mais de uma vez
+	for rec in registros:
+		if not rec is Dictionary:
+			continue
+		var curso: String = str(rec.get("id", ""))
+		var enviado_em: String = str(rec.get("enviado_em", ""))
+		var plano: Dictionary = rec.get("planejamento", {}) if rec.get("planejamento") is Dictionary else {}
+		for disc in plano.get("disciplinas", []):
+			if not disc is Dictionary:
+				continue
+			var oferta: String = str(disc.get("oferta", disc.get("semestre", "")))
+			var chave: String = str(disc.get("codigo", "")) + "|" + oferta
+			if not por_chave.has(chave):
+				por_chave[chave] = { "disc": disc, "enviado_em": enviado_em, "curso": curso }
+				continue
+			var atual: Dictionary = por_chave[chave]
+			# Comparacao estavel das alocacoes (JSON), independente da ordem interna dos dicts.
+			if JSON.stringify(atual["disc"].get("alocacoes", [])) == JSON.stringify(disc.get("alocacoes", [])):
+				continue  # identica -> dedup silencioso
+			if not chaves_em_conflito.has(chave):
+				chaves_em_conflito[chave] = true
+				conflitos.append({ "codigo": disc.get("codigo", ""), "oferta": oferta, \
+					"cursos": [atual["curso"], curso] })
+			# So sobrescreve quando o admin pediu para manter o mais recente (nunca em silencio).
+			if preferir_recente and enviado_em > str(atual["enviado_em"]):
+				por_chave[chave] = { "disc": disc, "enviado_em": enviado_em, "curso": curso }
+	var disciplinas: Array = []
+	for chave in por_chave:
+		disciplinas.append(por_chave[chave]["disc"])
+	var plano_final: Dictionary = {
+		"ano": Time.get_datetime_dict_from_system()["year"],
+		"exportado_em": Time.get_datetime_string_from_system(),
+		"disciplinas": disciplinas,
+	}
+	return { "plano": plano_final, "conflitos": conflitos }
 
 ## Mescla o planejamento atual com um [code]horarios.txt[/code] existente. [br]
 ## Preserva dados de agendamento (sala, horário, dia, tipo, turma) de disciplinas [br]

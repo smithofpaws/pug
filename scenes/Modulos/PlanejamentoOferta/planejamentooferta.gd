@@ -493,11 +493,7 @@ func _buscar_card(codigo: String, semestre: String) -> CardDisciplina:
 # Retorna o cod_curso ao qual a [param grade_nome] pertence, conforme [code]cursos.<cod>.grades[/code].
 # Vazio quando a grade nao esta cadastrada em nenhum curso.
 func _curso_da_grade(grade_nome: String) -> String:
-	for cod_curso in cursos.keys():
-		var grades_list: Array = cursos[cod_curso].get("grades", [])
-		if grade_nome in grades_list:
-			return cod_curso
-	return ""
+	return analise_historico.curso_da_grade(grade_nome, cursos)
 
 
 # Restaura uma selecao de curso coerente com o dropdown apos popular o painel. Necessario porque

@@ -74,8 +74,24 @@ PC", e é controlada:
 - Acesso **sempre autenticado** (Basic Auth `usuario:token`, sem leitura pública) e restrito à
   **rede privada Tailscale** (o transporte já é cifrado pelo WireGuard).
 - Credenciais ficam em `config_usuario.json:sincronizacao` (gitignorado); o **token é revogável**
-  no servidor. Modelo: bucket `pug` / collection `planejamentos` / 1 record por curso
-  (`id = <cod_curso>_<versao>`), com escrita restrita ao coordenador dono.
+  no servidor. Modelo: bucket `pug` / collection `planejamentos` / 1 record por **curso**
+  (`id = <cod_curso>`, ex.: `alec` — não por grade/versão, pois um curso tem vários PPCs ativos e o
+  planejamento cobre todos), com escrita restrita ao coordenador dono. O envio filtra o planejamento
+  para mandar só as disciplinas do próprio curso (`prefixos_semestre`).
+- **Administração pela interface** (Configurações › "Administração do servidor…", cena
+  `scenes/Complementares/PainelAdminKinto/`): o admin autentica com a conta de admin do Kinto e
+  gerencia contas de coordenadores, o grupo `coordenadores`, os records (apagar), as permissões da
+  collection e a **mesclagem do campus**. Usa `SyncKintoAdmin` (`sincronizacao_admin.gd`), uma
+  instância **separada** do `_sync` do coordenador. Coordenadores criam o record do seu curso porque
+  o grupo `coordenadores` tem `record:create` na collection.
+- **Senha de admin:** opcional ("Lembrar nesta máquina"); quando gravada, vai para
+  `user://admin_kinto.json` (`%APPDATA%`, **fora do OneDrive**), **nunca** em `config_usuario.json`
+  (sincronizado nos 3 PCs). O I/O desse arquivo fica em `main.gd`.
+- **Mesclagem (campus):** o admin mescla os planos dos cursos num record `campus` + arquivo local
+  `planejamento_campus.json` (nome próprio, para não sobrescrever o `planejamento.json` de trabalho do
+  coordenador). É **reconciliação**: disciplinas compartilhadas iguais são unificadas; horários divergentes
+  viram **conflito** (nunca resolvido em silêncio — o admin cancela ou opta por manter o mais
+  recente). `campus` não é `cod_curso`, então é excluído da lista de "Ver outros cursos (referência)".
 - **Plano:** migrar o servidor para a infraestrutura da Unipampa. **Ao concluir, atualizar aqui.**
 
 ## Ferramentas

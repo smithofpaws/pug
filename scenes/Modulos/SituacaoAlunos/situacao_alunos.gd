@@ -621,10 +621,7 @@ func _detectar_curso(matricula: String) -> String:
 
 # Retorna o cod_curso cuja lista [code]grades[/code] contém a [param grade] informada (ou "").
 func _curso_da_grade(grade: String) -> String:
-	for cod in cursos:
-		if grade in cursos[cod].get("grades", []):
-			return cod
-	return ""
+	return analise_historico.curso_da_grade(grade, cursos)
 
 # Monta o seletor de curso do Topo. Lista apenas os cursos presentes no hist.csv, precedidos da
 # opção "Todos os cursos" (retorno ""). Pré-seleciona o curso dono do ppc_principal; se ele não

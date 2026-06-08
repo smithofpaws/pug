@@ -423,6 +423,16 @@ func detectar_versao_grade(matricula: String, historico: Dictionary, cursos: Dic
 			". Adotado fallback ", chaves_coletadas[-1] if chaves_coletadas.size() > 0 else "<vazio>", ".")
 	return chaves_coletadas[-1] if chaves_coletadas.size() > 0 else ""
 
+## Retorna o [code]cod_curso[/code] ao qual a [param grade_nome] (chave [code]<cod_curso>_<versao>[/code])
+## pertence, conforme [code]cursos.<cod>.grades[/code] em [param cursos] ([code]base_config.json:cursos[/code]).
+## Valida contra a lista de grades do curso (em vez de só fatiar o nome), então retorna "" quando a
+## grade nao esta cadastrada em nenhum curso.
+func curso_da_grade(grade_nome: String, cursos: Dictionary) -> String:
+	for cod_curso in cursos.keys():
+		if grade_nome in cursos[cod_curso].get("grades", []):
+			return cod_curso
+	return ""
+
 # Tenta inferir o cod_curso pelo prefixo do semestre (e.g. "EC01" -> "alec") consultando
 # [code]cursos[cod].prefixos_semestre[/code]. Retorna string vazia se nada bater.
 func _inferir_cod_curso_por_semestre(semestre: String, cursos: Dictionary) -> String:

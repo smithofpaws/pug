@@ -13,6 +13,10 @@ signal parametro_alterado(caminho: Array, valor: Variant)
 ## o base) fica a cargo do [code]main.gd[/code].
 signal restauracao_solicitada
 
+## Emitido quando o usuário pede para abrir o painel de administração do servidor Kinto. O painel
+## (que faz I/O de rede) é instanciado pelo [code]main.gd[/code]; esta janela só dispara o pedido.
+signal abrir_admin_servidor
+
 var _carregando: bool = false
 
 var _escala_atual: float = 1.0
@@ -55,6 +59,12 @@ func _ready() -> void:
 	add_button("Restaurar padrões", true, "restaurar_padroes")
 	custom_action.connect(_on_custom_action)
 	$SeletorHorariosLiberados.horarios_alterados.connect(_on_horarios_liberados_alterado)
+	# Botão (aba Geral) que abre o painel de administração do servidor Kinto. O painel em si vive no
+	# main.gd (faz I/O de rede); aqui só sinalizamos o pedido.
+	var bt_admin := Button.new()
+	bt_admin.text = "Administração do servidor…"
+	$TabContainer/Geral.add_child(bt_admin)
+	bt_admin.pressed.connect(func() -> void: emit_signal("abrir_admin_servidor"))
 
 
 func _on_custom_action(acao: StringName) -> void:

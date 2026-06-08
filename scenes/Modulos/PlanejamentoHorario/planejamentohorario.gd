@@ -1520,6 +1520,13 @@ func _garantir_sync_config() -> bool:
 	return true
 
 
+# O record de sincronizacao e identificado pelo CURSO (ex.: "alec"), nao pela grade/versao, porque um
+# curso tem varios PPCs ativos e o planejamento cobre todos. Deriva o cod_curso do ppc_principal
+# (ex.: "alec_2023" -> "alec"); vazio quando o ppc_principal nao esta definido/cadastrado.
+func _meu_cod_curso() -> String:
+	return analise_historico.curso_da_grade(GV.configuracao_base.get("ppc_principal", ""), cursos)
+
+
 # Ao abrir o modulo, consulta o servidor em segundo plano e avisa se houver uma versao do curso do
 # PPC principal que valha a pena baixar. So avisa quando AMBAS as condicoes valem:
 #   1) e uma versao que este usuario ainda nao sincronizou (last_modified do Kinto > marcador local
@@ -1534,10 +1541,10 @@ func _verificar_atualizacao_servidor() -> void:
 	_sync.configurar(str(sinc.get("url", "")), str(sinc.get("usuario", "")), str(sinc.get("token", "")))
 	if not _sync.esta_configurado():
 		return
-	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
-	if ppc.is_empty():
+	var cod: String = _meu_cod_curso()
+	if cod.is_empty():
 		return
-	var r: Dictionary = await _sync.baixar(ppc)
+	var r: Dictionary = await _sync.baixar(cod)
 	if not r.get("ok", false):
 		return
 	var record: Dictionary = {}
@@ -1547,7 +1554,7 @@ func _verificar_atualizacao_servidor() -> void:
 	# Condicao 1: versao do servidor ainda nao sincronizada por este usuario.
 	var lm_servidor: int = int(record.get("last_modified", 0))
 	var versoes: Dictionary = sinc.get("versoes_sincronizadas", {})
-	if lm_servidor <= int(versoes.get(ppc, 0)):
+	if lm_servidor <= int(versoes.get(cod, 0)):
 		return
 
 	# Condicao 2: servidor mais recente, por data, do que o planejamento.json local. Os dois lados
@@ -1566,8 +1573,8 @@ func _verificar_atualizacao_servidor() -> void:
 	var em: String = str(record.get("enviado_em", "?"))
 	Dialogos.confirmar(self, "Versão nova no servidor", \
 		"Há uma versão mais recente do planejamento de %s no servidor (enviada por %s em %s). " \
-		% [ppc, por, em] + "Deseja baixá-la agora? Isso substitui o planejamento local.", \
-		_baixar_curso.bind(ppc), "Baixar agora", "Agora não")
+		% [cod, por, em] + "Deseja baixá-la agora? Isso substitui o planejamento local.", \
+		_baixar_curso.bind(cod), "Baixar agora", "Agora não")
 
 
 # Marca localmente (config_usuario.json via override) qual versao do servidor este usuario tem para
@@ -1591,28 +1598,30 @@ func _data_para_unix(data: String) -> int:
 	return int(Time.get_unix_time_from_datetime_string(data.strip_edges().replace(" ", "T")))
 
 
-# Envia o planejamento do curso do PPC principal ao servidor (apos confirmacao).
+# Envia o planejamento do proprio curso (derivado do PPC principal) ao servidor (apos confirmacao).
 func _enviar_para_servidor() -> void:
 	if not _garantir_sync_config():
 		return
-	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
-	if ppc.is_empty():
+	var cod: String = _meu_cod_curso()
+	if cod.is_empty():
 		$"%Terminal".text_edit("Defina o PPC principal em Configuracoes > Geral antes de enviar.", \
 			"aviso", true, true)
 		return
 	Dialogos.confirmar(self, "Enviar ao servidor", \
-		"Enviar o planejamento do curso %s ao servidor? Isso substitui a versao que estiver la." % ppc, \
-		_enviar_para_servidor_confirmado.bind(ppc), "Enviar")
+		"Enviar o planejamento do curso %s ao servidor? Isso substitui a versao que estiver la." % cod, \
+		_enviar_para_servidor_confirmado.bind(cod), "Enviar")
 
 
-func _enviar_para_servidor_confirmado(ppc: String) -> void:
-	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes)
-	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % ppc, "padrao", true, false)
-	var r: Dictionary = await _sync.enviar(ppc, json)
+func _enviar_para_servidor_confirmado(cod: String) -> void:
+	# Filtra a exportacao para mandar apenas as disciplinas deste curso (1 record por curso).
+	var prefixos: Array = cursos.get(cod, {}).get("prefixos_semestre", [])
+	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % cod, "padrao", true, false)
+	var r: Dictionary = await _sync.enviar(cod, json)
 	if r.get("ok", false):
-		_registrar_versao_sincronizada(ppc, r)
+		_registrar_versao_sincronizada(cod, r)
 		$"%Terminal".text_edit("Enviado: %s (%d disciplinas) para o servidor." \
-			% [ppc, json.get("disciplinas", []).size()], "sucesso", true, false)
+			% [cod, json.get("disciplinas", []).size()], "sucesso", true, false)
 	else:
 		$"%Terminal".text_edit("Falha ao enviar: %s" % r.get("erro", ""), "erro", true, true)
 
@@ -1723,11 +1732,17 @@ func _ver_outros_cursos_referencia() -> void:
 	var registros: Array = []
 	if r.get("dados") is Dictionary:
 		registros = r["dados"].get("data", [])
-	var ppc: String = GV.configuracao_base.get("ppc_principal", "")
+	var cod: String = _meu_cod_curso()
 	var outros: Array = []
 	for rec in registros:
-		if rec is Dictionary and str(rec.get("id", "")) != ppc:
-			outros.append(rec)
+		if not rec is Dictionary:
+			continue
+		var id_rec: String = str(rec.get("id", ""))
+		# So sobrepoe cursos reais como referencia: exclui o proprio e agregados (ex.: 'campus'), que
+		# nao sao cod_curso de base_config.json:cursos.
+		if id_rec == cod or not cursos.has(id_rec):
+			continue
+		outros.append(rec)
 	if outros.is_empty():
 		$"%Terminal".text_edit("Nenhum outro curso disponivel no servidor para referencia.", "aviso", true, true)
 		return

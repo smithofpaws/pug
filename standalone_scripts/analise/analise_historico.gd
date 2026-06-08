@@ -102,6 +102,11 @@ func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: Str
 func detectar_versao_grade(matricula: String, historico: Dictionary, cursos: Dictionary = {}) -> String:
 	return analise_curricular.detectar_versao_grade(matricula, historico, cursos)
 
+## Retorna o [code]cod_curso[/code] dono da [param grade_nome] (chave [code]<cod_curso>_<versao>[/code]),
+## conforme [code]cursos.<cod>.grades[/code] em [param cursos]. Vazio se a grade nao estiver cadastrada.
+func curso_da_grade(grade_nome: String, cursos: Dictionary) -> String:
+	return analise_curricular.curso_da_grade(grade_nome, cursos)
+
 ## Verifica algumas questões do histórico: [br]
 ##  - Se existem disciplinas no histórico que não estão nas grades; [br]
 ##  - Se alguma disciplina de outro semestre encontra-se em aberto. [br]

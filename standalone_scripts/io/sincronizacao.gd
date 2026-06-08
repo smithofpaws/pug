@@ -3,8 +3,9 @@ class_name SyncKinto extends Node
 ##
 ## Permite que cada coordenador envie ([method enviar]) e baixe ([method baixar]/[method listar]) o
 ## planejamento do seu curso de/para um servidor compartilhado, de forma assincrona. Cada curso e um
-## [i]record[/i] no Kinto, identificado pela chave de grade ([code]<cod_curso>_<versao>[/code], ex.:
-## [code]alec_2023[/code]), dentro de [code]bucket "pug" / collection "planejamentos"[/code]. [br]
+## [i]record[/i] no Kinto, identificado pelo codigo do curso ([code]<cod_curso>[/code], ex.:
+## [code]alec[/code]) — nao pela grade/versao, pois um curso tem varios PPCs ativos e o planejamento
+## cobre todos. Fica em [code]bucket "pug" / collection "planejamentos"[/code]. [br]
 ## [br]
 ## Autenticacao por [b]Basic Auth[/b] com [code]usuario:token[/code] (o token e a "senha" da conta
 ## Kinto, revogavel no servidor). So trafega o planejamento de oferta (nomes de professores), nunca
@@ -82,9 +83,11 @@ func _caminho_record(chave_curso: String) -> String:
 
 
 # Executa a requisicao e devolve o resultado normalizado. [param corpo] (quando nao nulo) e
-# encapsulado em {"data": corpo}, como o Kinto espera. Espera o sinal request_completed via await
-# (cujos argumentos retornam num Array) — sem capturar locais em lambda (ver AGENTS.md).
-func _requisitar(metodo: int, caminho: String, corpo: Variant) -> Dictionary:
+# encapsulado em {"data": corpo}, como o Kinto espera para records/contas/grupos. Quando
+# [param encapsular_data] e false, o corpo e enviado como veio (ex.: {"permissions": {...}}, que vai
+# no topo, nao sob "data"). Espera o sinal request_completed via await (cujos argumentos retornam num
+# Array) — sem capturar locais em lambda (ver AGENTS.md).
+func _requisitar(metodo: int, caminho: String, corpo: Variant, encapsular_data: bool = true) -> Dictionary:
 	if not esta_configurado():
 		return { "ok": false, "codigo": 0, "erro": "Sincronizacao nao configurada (servidor/usuario/token)." }
 	if _ocupado:
@@ -99,7 +102,7 @@ func _requisitar(metodo: int, caminho: String, corpo: Variant) -> Dictionary:
 	])
 	var corpo_txt: String = ""
 	if corpo != null:
-		corpo_txt = JSON.stringify({ "data": corpo })
+		corpo_txt = JSON.stringify({ "data": corpo } if encapsular_data else corpo)
 
 	var err: int = _http.request(_url_base + caminho, headers, metodo, corpo_txt)
 	if err != OK:
