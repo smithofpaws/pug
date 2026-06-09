@@ -2899,8 +2899,18 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 		return
 
 	# Remove qualquer camada de referencia (outros cursos) antes de carregar o proprio plano, para
-	# nao deixar alocacoes de referencia orfas na grade (o clear() abaixo so limpa o _planejamento_csv).
+	# nao deixar alocacoes de referencia orfas na grade (libera tambem os cards de referencia do painel).
 	_remover_dados_referencia()
+	# Limpa TODAS as alocacoes proprias da grade antes de aplicar as do JSON. Importar = substituir o
+	# plano, nao somar: sem isso, abrir o planejamento.json sobre uma grade ja preenchida (ex.: reabrir
+	# o mesmo arquivo na sessao, ou apos um "Baixar do servidor") empilharia cada alocacao em duplicata.
+	# A ch_alocada do card era recomputada so pela contagem do JSON (mais abaixo), mascarando o dobro
+	# ate o proximo salvar — que entao persistia a duplicacao. Mesmo padrao de _nova_grade().
+	for chave_celula in _ger_alocacoes.alocacoes:
+		var partes_lc: PackedStringArray = str(chave_celula).split("_")
+		if partes_lc.size() == 2:
+			_ger_alocacoes.limpar_celula(int(partes_lc[0]), int(partes_lc[1]))
+	_ger_alocacoes.limpar_alocacoes()
 	# Converte o JSON para o formato _planejamento_csv.
 	_dados._planejamento_csv.clear()
 	var disciplinas: Array = dados["disciplinas"]
