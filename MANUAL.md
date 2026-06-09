@@ -281,6 +281,7 @@ Todas as operações de arquivo ficam reunidas no botão **Arquivo**, organizado
 - **Importar**
   - **planejamento.csv** — seleciona um `planejamento.csv` externo, converte para UTF-8 e o salva no diretório de saída.
   - **horarios.txt** — seleciona um `horarios.txt` externo, converte para UTF-8, salva no diretório de saída e abre em seguida (populando a grade — e, sem um `planejamento.csv`/`.json` carregado, também o planejamento em memória, com o mesmo aviso descrito em _Abrir horarios.txt_).
+  - **horarios.txt outros cursos (referência)…** — seleciona **um ou mais** `horarios.txt` locais de outros cursos e os **sobrepõe** na grade como **camada de referência** (somente-leitura), concatenando todos. Cada disciplina é etiquetada automaticamente com o curso a que pertence (pelo prefixo de semestre); as disciplinas que já são suas têm prioridade e não são sobrepostas. Equivale ao **Servidor › Ver outros cursos (referência)…**, mas a partir de arquivos locais — útil quando o outro curso não publicou seu plano no servidor mas você tem o `horarios.txt` dele. Use **Servidor › Limpar referências** para removê-las.
   - **professor.xlsx (.csv)** — importa as preferências de horário de um professor (Excel ou CSV).
 - **Exportar**
   - **horarios.txt** — gera o `horarios.txt` da grade atual.

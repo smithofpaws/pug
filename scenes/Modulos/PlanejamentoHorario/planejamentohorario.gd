@@ -288,8 +288,8 @@ func _ready() -> void:
 	$"%SeletorImportar".lista_itens = {
 		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Abrir horarios.txt", "Salvar planejamento.json"],
 		"Locais_retorno": ["abrir_json", "abrir_csv", "abrir_horarios_txt", "salvar_json"],
-		"Importar": ["planejamento.csv", "horarios.txt", "professor.xlsx (.csv)"],
-		"Importar_retorno": ["importar_csv", "importar_horarios_txt", "professor.xlsx (.csv)"],
+		"Importar": ["planejamento.csv", "horarios.txt", "horarios.txt outros cursos (referência)…", "professor.xlsx (.csv)"],
+		"Importar_retorno": ["importar_csv", "importar_horarios_txt", "importar_horarios_ref", "professor.xlsx (.csv)"],
 		"Exportar": ["horarios.txt"],
 		"Exportar_retorno": ["exportar_horarios_txt"],
 		"Servidor": ["Enviar ao servidor", "Baixar do servidor", "Ver outros cursos (referência)…", "Limpar referências", "Configurar servidor…"],
@@ -1789,6 +1789,8 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 			_abrir_janela_selecao_cursos_horario()
 		"importar_horarios_txt":
 			_converter_horarios_txt()
+		"importar_horarios_ref":
+			_importar_horarios_referencia()
 		"professor.xlsx (.csv)":
 			_importar_preferencias_professor()
 		"exportar_horarios_txt":
@@ -2233,6 +2235,18 @@ func _aplicar_referencia(registros: Array) -> void:
 				})
 				cont_aloc += 1
 
+	var nomes_cursos: Array[String] = []
+	for rec in registros:
+		if rec is Dictionary:
+			nomes_cursos.append(str(rec.get("id", "")))
+	_finalizar_referencia(nomes_cursos, cont_aloc)
+
+
+# Etapa final comum aos dois caminhos de referência (servidor e horarios.txt local): recomputa CH,
+# sincroniza, anexa as dicas de origem nos cards somente-leitura, redesenha, detecta choques, informa
+# no terminal e sinaliza disciplinas compartilhadas em horário divergente. [param nomes_cursos] são os
+# rótulos de origem (ids de curso) para a mensagem; [param cont_aloc] é o total de alocações aplicadas.
+func _finalizar_referencia(nomes_cursos: Array[String], cont_aloc: int) -> void:
 	_recomputar_ch_alocada()
 	_sincronizar_referencias()
 	# Dica de origem nos cards de referencia (somente-leitura).
@@ -2243,10 +2257,6 @@ func _aplicar_referencia(registros: Array) -> void:
 				"Disciplina de outro curso (somente-leitura): %s" % str(entrada.get("curso_origem", "")))
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
-	var nomes_cursos: Array[String] = []
-	for rec in registros:
-		if rec is Dictionary:
-			nomes_cursos.append(str(rec.get("id", "")))
 	$"%Terminal".text_edit("Referência sobreposta: %s (%d alocações). Somente-leitura." \
 		% [", ".join(nomes_cursos), cont_aloc], "sucesso", true, false)
 
@@ -2259,6 +2269,115 @@ func _aplicar_referencia(registros: Array) -> void:
 			"Estas disciplinas compartilhadas estão em horários diferentes entre o seu plano e o " + \
 			"curso de referência. Alinhe-as com o(s) coordenador(es):", \
 			divergencias, "", [{ "texto": "Entendi", "ao_acionar": Callable() }], "")
+
+
+# Importa um ou mais horarios.txt locais de outros cursos e os sobrepoe na grade como camada de
+# referencia (somente-leitura). Alternativa local ao "Ver outros cursos (referencia)" do servidor, util
+# quando o outro curso nao publicou seu plano. Abre um FileDialog de multipla selecao; cada arquivo e
+# convertido para UTF-8 antes de ser lido.
+func _importar_horarios_referencia() -> void:
+	var fd := FileDialog.new()
+	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILES
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.title = "Selecionar horarios.txt de outros cursos (referência)"
+	fd.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
+	fd.add_filter("*.txt", "Arquivos de texto")
+	fd.files_selected.connect(func(paths: PackedStringArray):
+		fd.queue_free()
+		_aplicar_referencia_txt(paths))
+	fd.canceled.connect(fd.queue_free)
+	add_child(fd)
+	fd.popup_centered()
+	Dialogos.limitar_a_tela(fd)
+
+
+# Aplica como referencia (somente-leitura) o conteudo de um ou mais horarios.txt locais. Espelha
+# _aplicar_referencia (caminho servidor), trocando a fonte (JSON do servidor -> parse do horarios.txt):
+# converte cada arquivo para UTF-8 num temporario, faz o parse via _dados.preparar_alocacoes_do_txt (sem
+# filtro de prefixos: traz tudo do arquivo) e injeta as disciplinas/alocacoes marcadas com
+# "referencia": true. O curso de origem de cada disciplina e derivado do prefixo de semestre.
+func _aplicar_referencia_txt(caminhos: PackedStringArray) -> void:
+	if caminhos.is_empty():
+		return
+	# Recomeca da referencia limpa para a operacao ser idempotente (reimportar nao duplica).
+	_remover_dados_referencia()
+	var grade: GradeVisual = $"%GradeHorarios"
+	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	var tmp_nome: String = "_ref_tmp.txt"
+	var tmp_caminho: String = GV.dir_saida + tmp_nome
+
+	# Mapeia chave de referencia -> curso de origem (etiqueta alocacoes e cards). So entram disciplinas
+	# que NAO sao suas (a sua tem prioridade); as de mesma chave que as suas ficam de fora.
+	var ref_origem: Dictionary = {}
+	var planos: Array[Dictionary] = []
+	for path in caminhos:
+		var dir_in: String = path.get_base_dir() + "/"
+		var nome_arq: String = path.get_file()
+		file_handling.convertto_utf8(dir_in, nome_arq, GV.dir_saida, tmp_nome)
+		if not FileAccess.file_exists(tmp_caminho):
+			$"%Terminal".text_edit("Falha ao converter %s — ignorado." % nome_arq, "aviso", true, false)
+			continue
+		var plano: Dictionary = _dados.preparar_alocacoes_do_txt(tmp_caminho, dias, horas, \
+			grade._linhas, grade._colunas, $"%PainelDisciplinas".cards_disciplinas.keys(), [])
+		if not plano["valido"]:
+			$"%Terminal".text_edit("%s sem alocações válidas — ignorado." % nome_arq, "aviso", true, false)
+			continue
+		var fallback: String = nome_arq.get_basename()
+		for info in plano["cards_novos"]:
+			var chave: String = info["chave"]
+			if _dados._planejamento_csv.has(chave):
+				continue  # a sua (ou outra referencia ja adicionada) tem prioridade
+			var origem: String = _curso_de_semestre(info["sem"])
+			if origem.is_empty():
+				origem = fallback
+			ref_origem[chave] = origem
+			var profs: Array[String] = []
+			profs.assign(info["profs"])
+			_dados._planejamento_csv[chave] = {
+				"codigo": info["codigo"],
+				"semestre": info["sem"],
+				"professor": profs,
+				"ch": [str(info["ch_total"])],
+				"oferta": info["sem"],
+				"ch_disciplina": str(info["ch_total"]),
+				"referencia": true,
+				"curso_origem": origem,
+			}
+		planos.append(plano)
+	# Limpa o temporario.
+	if FileAccess.file_exists(tmp_caminho):
+		DirAccess.remove_absolute(tmp_caminho)
+
+	if ref_origem.is_empty():
+		$"%Terminal".text_edit("Nenhuma disciplina de referência nova encontrada nos arquivos.", \
+			"aviso", true, true)
+		_sincronizar_referencias()
+		return
+
+	# Repopula o painel (recria cards) e reconfigura as referencias antes de alocar na grade.
+	_sincronizar_referencias()
+	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false)
+
+	# Aplica na grade so as alocacoes das chaves marcadas como referencia (evita anexar a uma disciplina
+	# sua de mesma chave).
+	var cont_aloc: int = 0
+	for plano in planos:
+		for item in plano["alocacoes"]:
+			var chave: String = item["chave"]
+			if not ref_origem.has(chave):
+				continue
+			var aloc: Dictionary = (item["aloc"] as Dictionary).duplicate()
+			aloc["referencia"] = true
+			aloc["curso_origem"] = ref_origem[chave]
+			_ger_alocacoes.alocar("%d_%d" % [item["linha"], item["coluna"]], aloc)
+			cont_aloc += 1
+
+	var nomes_cursos: Array[String] = []
+	for origem in ref_origem.values():
+		if not origem in nomes_cursos:
+			nomes_cursos.append(origem)
+	_finalizar_referencia(nomes_cursos, cont_aloc)
 
 
 # Remove da grade e do _planejamento_csv todos os dados marcados como referencia, redesenhando.
