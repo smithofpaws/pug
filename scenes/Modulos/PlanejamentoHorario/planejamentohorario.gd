@@ -291,7 +291,10 @@ func _ready() -> void:
 			popup_viz.set_item_checked(i, true)
 	_dados.carregar_horarios_ini(GV.dir_saida, "horarios.ini")
 	_carregar_dados_discentes()
-	_limpar_preferencias_grade()
+	# Construção inicial da grade (estrutura vazia, segura — sem alocações ainda). As limpezas de
+	# preferência posteriores NÃO reconstroem a grade (ver _limpar_preferencias_grade).
+	$"%GradeHorarios".dados = _dados.gerar_matriz_vazia()
+	_recalcular_grade(false)
 	$"%SeletorImportar".lista_itens = {
 		"Locais": ["Abrir planejamento.json", "Abrir planejamento.csv", "Abrir horarios.txt", "Salvar planejamento.json"],
 		"Locais_retorno": ["abrir_json", "abrir_csv", "abrir_horarios_txt", "salvar_json"],
@@ -349,19 +352,21 @@ func _ready() -> void:
 	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
 
-
 ## Reconstrói a grade sem nenhum marcador de preferência de horário.
 func _limpar_preferencias_grade() -> void:
-	$"%GradeHorarios".larguras_colunas = []
-	$"%GradeHorarios".dados = _dados.gerar_matriz_vazia()
+	# Limpa as preferências do professor sem reconstruir a grade (reatribuir os dados libera/recria
+	# todas as células de uma vez e, com a grade populada, causa crash do engine — ver
+	# GradeVisual.limpar_preferencias).
+	$"%GradeHorarios".limpar_preferencias()
 	_recalcular_grade(false)
 
 # Faz a leitura do arquivo de regras .csv enviado pelos professores e prepara para exibição.
 func _ler_regras_professores(arquivo_selecionado: String) -> void:
 	var resultado: Array[Array] = _dados.ler_regras_professores(arquivo_selecionado)
 	var matriz_horario: Array[Array] = resultado[0]
-	$"%GradeHorarios".larguras_colunas = []
-	$"%GradeHorarios".dados = matriz_horario
+	# Aplica as preferências sem reconstruir a grade (reatribuir os dados libera/recria todas as
+	# células e, com a grade populada, causa crash do engine — ver GradeVisual.aplicar_preferencias).
+	$"%GradeHorarios".aplicar_preferencias(matriz_horario)
 	_recalcular_grade(false)
 	var comentarios: Array[String] = _dados.ler_comentarios_professor(arquivo_selecionado)
 	if not comentarios.is_empty():
@@ -1509,8 +1514,11 @@ func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 	var celulas_dia: Array = _celulas_do_dia(coluna)
 	var painel := $"%PainelDisciplinas"
 	if painel.filtro_ativo() or not _filtro_grade_semestre.is_empty():
+		# Âncora = só as disciplinas EM FOCO na célula clicada (as que passam o filtro), não todas as
+		# que passam o filtro no dia — assim o relato mostra apenas os choques da disciplina clicada.
+		var codigos_foco: Dictionary = _codigos_foco_na_celula(linha, coluna)
 		var eh_ancora := func(aloc: Dictionary) -> bool:
-			return _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor)
+			return codigos_foco.has(str(aloc.get("codigo", "")).to_lower())
 		_reportar_choques_alunos_celulas(celulas_dia, eh_ancora)
 	else:
 		_reportar_choques_alunos_celulas(celulas_dia)
@@ -1706,8 +1714,9 @@ func _detectar_choques(_celulas_afetadas: Array[String] = []) -> void:
 
 func _notification(what: int) -> void:
 	# Na troca de tema, reaplica a barra de status (cor de choques adaptada) sem redetectar nem
-	# reimprimir no terminal. O guard evita rodar antes do _ready inicializar os complementos.
-	if what == NOTIFICATION_THEME_CHANGED and $"%PainelDisciplinas":
+	# reimprimir no terminal. O THEME_CHANGED dispara ao entrar na árvore, ANTES do _ready inicializar
+	# os complementos (ex.: _dados): is_node_ready() garante que só rodamos com o módulo já pronto.
+	if what == NOTIFICATION_THEME_CHANGED and is_node_ready():
 		_atualizar_status_bar()
 
 # Atualiza os labels da barra de status com os totais de choques de recursos e de alunos.
@@ -1838,6 +1847,19 @@ func _reportar_choques_alunos_celulas(celulas: Array, eh_ancora: Callable = Call
 					continue
 				vistos[k] = true
 				_imprimir_choque_par(aloc_a, aloc_b)
+
+
+# Códigos (minúsculo) das alocações da célula que passam pelo filtro ativo — as disciplinas "em foco"
+# (não esmaecidas) daquela célula. Base da âncora ao clicar: foca o relato na(s) disciplina(s)
+# clicada(s). Sem filtro de painel ativo, _aloc_passa_filtro devolve true e o conjunto vira todas as
+# disciplinas da célula (ainda assim restrito à célula clicada, não ao dia inteiro).
+func _codigos_foco_na_celula(linha: int, coluna: int) -> Dictionary:
+	var painel := $"%PainelDisciplinas"
+	var codigos: Dictionary = {}
+	for aloc in _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna]):
+		if _aloc_passa_filtro(aloc as Dictionary, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
+			codigos[str((aloc as Dictionary).get("codigo", "")).to_lower()] = true
+	return codigos
 
 
 # Predicado-âncora que casa pelo código (minúsculo) de uma disciplina movida. Usado pelos relatos de
@@ -2630,6 +2652,8 @@ func _remover_dados_referencia() -> void:
 
 # Verdadeiro se ha alguma disciplina de referencia sobreposta no momento.
 func _ha_referencia() -> bool:
+	if _dados == null:
+		return false
 	for chave in _dados._planejamento_csv:
 		if _dados._planejamento_csv[chave].get("referencia", false):
 			return true

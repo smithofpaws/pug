@@ -326,6 +326,47 @@ func _limpar_highlight_todas_celulas() -> void:
 		if cell is Celula:
 			cell.limpar_highlight_drag()
 
+## Remove as marcações de preferência (barra superior) de todas as células e dos [member dados],
+## SEM reconstruir a grade. Preferir isto a reatribuir [member dados] com uma matriz vazia só para
+## limpar as preferências de horário do professor: a reconstrução libera/recria todas as células de
+## uma vez, o que (com a grade populada) dispara um crash do engine ("Object was deleted while
+## awaiting a callback" → segfault). Resetar as barras in-place não toca na árvore de nós.
+func limpar_preferencias() -> void:
+	for cell in $GridContainer.get_children():
+		if cell is Celula:
+			cell.cor_barra_cima = Color(0, 0, 0, 0)
+	# Mantém os dados coerentes para futuras reconstruções (ex.: trocar de professor).
+	for lin in dados:
+		if lin is Array:
+			for cel in lin:
+				if cel is Dictionary:
+					cel.erase("cor_barra_cima")
+					cel.erase("cor_barra_superior")
+
+
+## Aplica as marcações de preferência (barra superior, chave [code]cor_barra_cima[/code]) de
+## [param matriz] às células existentes, SEM reconstruir a grade (mesmo motivo de [method
+## limpar_preferencias]: reatribuir [member dados] libera/recria todas as células e, com a grade
+## populada, causa um crash do engine). [param matriz] deve ter as dimensões da grade atual; se não
+## tiver, cai no caminho de reconstrução padrão (reatribui [member dados]).
+func aplicar_preferencias(matriz: Array) -> void:
+	if _linhas == 0 or matriz.size() != _linhas \
+			or not (matriz[0] is Array) or matriz[0].size() != _colunas:
+		dados = matriz
+		return
+	for lin in range(_linhas):
+		for col in range(_colunas):
+			var origem = matriz[lin][col]
+			if not (origem is Dictionary) or not origem.has("cor_barra_cima"):
+				continue
+			var cor = origem["cor_barra_cima"]
+			var cel := get_celula(lin, col)
+			if cel:
+				cel.cor_barra_cima = cor
+			if lin < dados.size() and dados[lin] is Array and col < dados[lin].size() \
+					and dados[lin][col] is Dictionary:
+				dados[lin][col]["cor_barra_cima"] = cor
+
 func get_celula(linha: int, coluna: int) -> Celula:
 	if linha < 0 or coluna < 0 or linha >= _linhas or coluna >= _colunas:
 		return null
