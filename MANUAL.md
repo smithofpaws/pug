@@ -322,7 +322,9 @@ Exibe as disciplinas a alocar como cartões coloridos. Filtros permitem navegar 
 Tabela com horários (linhas) × dias da semana (colunas). Cada célula pode conter uma ou mais disciplinas. As células são coloridas por semestre para facilitar a leitura visual.
 
 - **Clique direito** em uma célula: abre um menu com as disciplinas daquele horário (escolher uma aplica o filtro de semestre dela) e os professores que as lecionam (escolher um aplica o filtro daquele professor). Sob **Outras interações**, a opção **Restringir alocação** marca a célula como restrita (ver [Restrições de alocação](#restrições-de-alocação)). O menu também abre em **células vazias** (mostrando só "Outras interações").
-- **Clique do meio** em uma célula: remove a alocação dali.
+- **Clique do meio** em uma célula: remove a alocação dali. Com um **filtro de semestre ou professor ativo** (a célula em foco/verde), remove **apenas a disciplina filtrada**, preservando as demais sobrepostas na mesma célula; sem filtro, remove todas as suas alocações da célula.
+- **Arrastar com Shift:** ao alocar um card, preenche **horas consecutivas** para baixo de uma vez (até completar a CH); ao mover uma disciplina já na grade, move o **bloco contíguo inteiro** (todas as células ligadas da disciplina), e não só a célula agarrada — a célula que você pegou cai onde você soltar, e o resto do bloco a acompanha.
+- **Ctrl+Z:** desfaz a última ação na grade (alocar, mover, remover, posicionar automaticamente, limpar preenchimento/restrições, marcar/remover restrição). O histórico é **multi-nível** (Ctrl+Z repetido volta várias ações), fica **em memória** durante a sessão e é **zerado ao carregar outro plano** (abrir/baixar/importar horarios.txt).
 - Clique em um **card** na lista de disciplinas (à esquerda) para destacar, com **fundo verde claro**, apenas as células daquela disciplina na grade.
 
 Os filtros do painel (curso, semestre e professor) afetam a grade: numa célula com disciplinas sobrepostas, as que **não** passam por um filtro ativo aparecem **esmaecidas** (ou são **ocultadas**, conforme a Visualização). Por exemplo, com o **filtro de professor** em Diego Arthur Hartmann, a disciplina dele fica em branco e as demais no mesmo horário ficam esmaecidas; compartilhadas de curso casam pelo prefixo (`EC04;EM04` conta como `EC`).
@@ -402,6 +404,18 @@ Esta ação **reconcilia um `horarios.txt` já montado** (uma grade que você po
 - Disciplinas que **saíram** do planejamento (constavam no `horarios.txt`) são listadas num diálogo, e você decide se as **reinclui** ou **descarta**.
 
 A opção fica no menu **Ações** e só é **habilitada** quando há, ao mesmo tempo, um `horarios.txt` e um planejamento carregados — caso contrário aparece esmaecida. O pareamento entre as duas fontes é por **código + semestre**, então rótulos de semestre diferentes (ex.: uma compartilhada `EC02;EM02` no planejamento vs. `EC02` no `horarios.txt`) não casam e a entrada do `horarios.txt` entra como disciplina nova.
+
+#### Verificar problemas
+
+A opção **Ações › Verificar problemas** faz uma **varredura completa** da grade e despeja no terminal um relatório de tudo o que estiver irregular, em seções:
+
+- **Choque de professor** — o mesmo professor em duas disciplinas no mesmo dia/horário (lista o horário, o professor e as disciplinas envolvidas).
+- **Células sem professor** — alocações sem professor atribuído (lista o horário e as disciplinas).
+- **Carga horária excedida** — disciplinas com mais horas alocadas do que o previsto (desconta horas extras explícitas).
+- **Sobrecarga** — professores com ≥6h num mesmo dia e casos de aula noturna seguida de manhã cedo no dia seguinte.
+- **Outros choques** — contagem de choques de sala e de semestre.
+
+Diferentemente dos indicadores das **Preferências da grade** (que pintam a grade conforme o que está ligado), esta ação roda **todas** as checagens de uma vez, independentemente dos indicadores marcados, e produz um relatório textual — útil para uma conferência final antes de salvar/enviar. Quando nada é encontrado, informa **"Nenhum problema encontrado"**; com a grade vazia, avisa que não há o que verificar.
 
 #### Exportação
 

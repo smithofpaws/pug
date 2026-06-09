@@ -127,6 +127,14 @@ var _mapa_condicoes: Dictionary = {}
 # do mesmo professor/semestre. Persistidas no planejamento.json.
 var _restricoes: Dictionary = {}
 
+# Pilha de desfazer (Ctrl+Z). Cada item é um snapshot do estado da grade ANTES de uma ação:
+# { "alocacoes": <cópia profunda de _ger_alocacoes.alocacoes>, "restricoes": <cópia de _restricoes>,
+#   "cards": { <chave>: { ch_alocada, ch_extra, permite_extra } } }. Em memória e por sessão — não é
+# persistida; loads (abrir/baixar/horarios.txt) a esvaziam, pois desfazer através de uma troca de plano
+# seria confuso. Tamanho limitado por _UNDO_MAX (descarta o mais antigo).
+const _UNDO_MAX := 50
+var _undo_stack: Array = []
+
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
 # uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
 # ({"tipo": "semestre"/"professor", "valor": ...}); separadores/cabeçalhos guardam {} (sem ação).
@@ -320,14 +328,15 @@ func _ready() -> void:
 		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
 
 	$"%SeletorAcoes".lista_itens = {
-		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)", "Limpar todas as restrições"],
-		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento", "limpar_restricoes"],
+		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)", "Limpar todas as restrições", "Verificar problemas"],
+		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento", "limpar_restricoes", "verificar_problemas"],
 	}
 	$"%SeletorAcoes".get_node("MenuButton").get_popup().set_item_disabled(2, true)
 	$"%SeletorAcoes".definir_dica_item(0, DicasPrograma.texto(["planejamento_horario", "posicionar_automatico"]))
 	$"%SeletorAcoes".definir_dica_item(1, DicasPrograma.texto(["planejamento_horario", "limpar_preenchimento"]))
 	$"%SeletorAcoes".definir_dica_item(2, DicasPrograma.texto(["planejamento_horario", "mesclar_horarios_planejamento"]))
 	$"%SeletorAcoes".definir_dica_item(3, DicasPrograma.texto(["planejamento_horario", "limpar_restricoes"]))
+	$"%SeletorAcoes".definir_dica_item(4, DicasPrograma.texto(["planejamento_horario", "verificar_problemas"]))
 	$"%SeletorAcoes".opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
 	$"%StatusBar".definir_segmentos({
@@ -570,6 +579,8 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 	# extras ja usam os dados dele via _montar_card_novo).
 	var montar_planejamento_do_txt: bool = _dados._planejamento_csv.is_empty()
 
+	# Carregar/preencher a grade a partir do horarios.txt zera o histórico de desfazer.
+	_undo_stack.clear()
 	# Limpa a grade e as alocações atuais antes de repopular.
 	for chave_celula in _ger_alocacoes.alocacoes:
 		var partes: PackedStringArray = chave_celula.split("_")
@@ -1266,6 +1277,7 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 		else:
 			if linha_orig == linha and coluna_orig == coluna:
 				return
+			_snapshot_undo()
 			_ger_alocacoes.remover_indice(chave_orig, idx)
 			_ger_alocacoes.limpar_celula(linha_orig, coluna_orig)
 			if arr_orig.size() > 0:
@@ -1299,6 +1311,7 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 	var modo_extra: bool = card.permite_extra
 	var ch_restante: int = 1 if modo_extra else card.ch_total - card.ch_alocada
 	var grade_vis: GradeVisual = $"%GradeHorarios"
+	_snapshot_undo()
 	var slots_alocados: int = 0
 	var linha_atual := linha
 	while linha_atual < grade_vis._linhas and slots_alocados < ch_restante:
@@ -1354,6 +1367,68 @@ func _on_grade_drop_realizado(linha: int, coluna: int, dados: Dictionary) -> voi
 		celulas_novas.append([linha + i, coluna])
 	_reportar_choques_alunos_celulas(celulas_novas, _ancora_por_codigo(codigo.to_lower()))
 
+# Ctrl+Z desfaz a última ação na grade. Só dispara quando nenhum controle (ex.: um LineEdit em foco)
+# consumiu a tecla — então não interfere na digitação em campos de texto.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode == KEY_Z and event.ctrl_pressed \
+			and not event.shift_pressed and not event.alt_pressed and not event.meta_pressed:
+		_desfazer()
+		get_viewport().set_input_as_handled()
+
+# Empilha um snapshot do estado atual da grade ANTES de uma ação mutadora. Chamar no início de cada
+# ação (drop, mover, remover, posicionar, limpar). Descartável via _descartar_snapshot quando a ação
+# acaba não mudando nada (ex.: clique do meio numa célula só de referência).
+func _snapshot_undo() -> void:
+	var cards_estado: Dictionary = {}
+	for chave in $"%PainelDisciplinas".cards_disciplinas:
+		var c: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas[chave]
+		cards_estado[chave] = {"ch_alocada": c.ch_alocada, "ch_extra": c.ch_extra, "permite_extra": c.permite_extra}
+	_undo_stack.append({
+		"alocacoes": _ger_alocacoes.alocacoes.duplicate(true),
+		"restricoes": _restricoes.duplicate(true),
+		"cards": cards_estado,
+	})
+	if _undo_stack.size() > _UNDO_MAX:
+		_undo_stack.pop_front()
+
+# Remove o último snapshot (quando a ação que o empilhou não chegou a mutar nada).
+func _descartar_snapshot() -> void:
+	if not _undo_stack.is_empty():
+		_undo_stack.pop_back()
+
+# Desfaz a última ação: restaura o snapshot do topo da pilha.
+func _desfazer() -> void:
+	if _undo_stack.is_empty():
+		$"%Terminal".text_edit("Nada para desfazer.", "aviso", true, false)
+		return
+	_restaurar_estado(_undo_stack.pop_back())
+	$"%Terminal".text_edit("Ação desfeita.", "sucesso", true, false)
+
+# Restaura a grade ao estado de um snapshot: limpa a grade atual, reinjeta alocações/restrições e os
+# contadores dos cards, e repinta. Espelha a sequência de _nova_grade, mas com os dados do snapshot.
+func _restaurar_estado(snap: Dictionary) -> void:
+	for chave_celula in _ger_alocacoes.alocacoes.keys():
+		var p: PackedStringArray = str(chave_celula).split("_")
+		if p.size() == 2:
+			_ger_alocacoes.limpar_celula(int(p[0]), int(p[1]))
+	_ger_alocacoes.limpar_alocacoes()
+	for chave_celula in snap["alocacoes"]:
+		_ger_alocacoes.alocacoes[chave_celula] = (snap["alocacoes"][chave_celula] as Array).duplicate(true)
+	_restricoes = (snap["restricoes"] as Dictionary).duplicate(true)
+	var cards: Dictionary = $"%PainelDisciplinas".cards_disciplinas
+	var cards_snap: Dictionary = snap["cards"]
+	for chave in cards:
+		var c: CardDisciplina = cards[chave]
+		var e: Dictionary = cards_snap.get(chave, {"ch_alocada": 0, "ch_extra": 0, "permite_extra": false})
+		# permite_extra/ch_extra antes de ch_alocada: o setter de ch_alocada recalcula o visual do card.
+		c.permite_extra = e["permite_extra"]
+		c.ch_extra = e["ch_extra"]
+		c.ch_alocada = e["ch_alocada"]
+	$"%GradeHorarios".dados = _dados.gerar_matriz_vazia()
+	_ger_alocacoes.reaplicar_todas()
+	_recalcular_grade(false)
+
 # Clique do meio: remove as alocações da célula (anteriormente era o clique direito).
 func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
@@ -1362,12 +1437,21 @@ func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
 	var arr: Array = _ger_alocacoes.obter_alocacoes(chave_celula)
 	if arr.is_empty():
 		return
+	var painel := $"%PainelDisciplinas"
+	# Com filtro de semestre/professor ativo (célula em foco/verde), remove SÓ as disciplinas que
+	# passam o filtro — apaga apenas a disciplina filtrada, preservando as demais sobrepostas na
+	# célula. Sem filtro, remove todas as suas alocações da célula (comportamento anterior).
+	var com_filtro: bool = painel.filtro_ativo() or not _filtro_grade_semestre.is_empty()
 	# Remove apenas as SUAS alocações; as de referência (outro curso) são somente-leitura e ficam.
+	_snapshot_undo()
 	var codigos: Array[String] = []
 	var mantidas: Array = []
 	for a_dict in arr:
 		var aloc: Dictionary = a_dict
 		if _aloc_e_referencia(aloc):
+			mantidas.append(aloc)
+			continue
+		if com_filtro and not _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
 			mantidas.append(aloc)
 			continue
 		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(aloc.get("chave", ""), null)
@@ -1377,8 +1461,13 @@ func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
 				card.ch_extra -= 1
 		codigos.append(aloc.get("codigo", "?").to_upper())
 	if codigos.is_empty():
-		$"%Terminal".text_edit("Alocação de outro curso (somente-leitura): use 'Limpar referências' para removê-la.", \
-			"aviso", true, false)
+		_descartar_snapshot()  # nada removido — o snapshot não corresponde a nenhuma mudança.
+		if com_filtro:
+			$"%Terminal".text_edit("Nenhuma disciplina do filtro nesta célula para remover.", \
+				"aviso", true, false)
+		else:
+			$"%Terminal".text_edit("Alocação de outro curso (somente-leitura): use 'Limpar referências' para removê-la.", \
+				"aviso", true, false)
 		return
 	_ger_alocacoes.limpar_celula(linha, coluna)
 	if mantidas.is_empty():
@@ -1445,30 +1534,35 @@ func _aloc_passa_filtro(aloc: Dictionary, filtro_curso: String, filtro_semestre:
 
 func _mover_bloco_celulas(linha_orig: int, coluna_orig: int, linha_dest: int, coluna_dest: int, chave_card: String) -> void:
 	var grade_vis: GradeVisual = $"%GradeHorarios"
-	var linhas_origem: Array[int] = []
-	var r := linha_orig
-	while r < grade_vis._linhas:
-		var chave_cel := "%d_%d" % [r, coluna_orig]
-		var arr: Array = _ger_alocacoes.obter_alocacoes(chave_cel)
-		if arr.is_empty():
-			break
-		var bateu: bool = false
-		for a_d in arr:
+	# Verdadeiro se a linha [param r] contém a disciplina agarrada na coluna de origem.
+	var tem_chave := func(r: int) -> bool:
+		for a_d in _ger_alocacoes.obter_alocacoes("%d_%d" % [r, coluna_orig]):
 			if (a_d as Dictionary).get("chave", "") == chave_card:
-				bateu = true
-				break
-		if bateu:
-			linhas_origem.append(r)
-			r += 1
-		else:
-			break
-	if linhas_origem.is_empty():
+				return true
+		return false
+	if not tem_chave.call(linha_orig):
 		return
+	# Detecta o bloco contíguo COMPLETO da disciplina: varre para CIMA e para BAIXO a partir da célula
+	# agarrada. Antes só varria para baixo — agarrar o bloco por uma célula que não a do topo movia
+	# apenas parte dele (às vezes uma única célula).
+	var topo := linha_orig
+	while topo - 1 >= 1 and tem_chave.call(topo - 1):
+		topo -= 1
+	var base := linha_orig
+	while base + 1 < grade_vis._linhas and tem_chave.call(base + 1):
+		base += 1
+	var linhas_origem: Array[int] = []
+	for r in range(topo, base + 1):
+		linhas_origem.append(r)
 	var n: int = linhas_origem.size()
-	if linha_dest + n > grade_vis._linhas:
-		$"%Terminal".text_edit("Não há espaço para mover %d células a partir da linha %d." % [n, linha_dest],
+	# A célula agarrada (linha_orig) cai na célula de drop (linha_dest); o resto do bloco a acompanha,
+	# preservando a posição relativa.
+	var offset: int = linha_dest - linha_orig
+	if topo + offset < 1 or base + offset >= grade_vis._linhas:
+		$"%Terminal".text_edit("Não há espaço para mover o bloco de %d células." % n,
 			"erro", true, false)
 		return
+	_snapshot_undo()
 	var alocacoes_mover: Array[Dictionary] = []
 	for r_orig in linhas_origem:
 		var chave_cel := "%d_%d" % [r_orig, coluna_orig]
@@ -1486,21 +1580,21 @@ func _mover_bloco_celulas(linha_orig: int, coluna_orig: int, linha_dest: int, co
 	# podem conter alocações sobrepostas; eventuais conflitos são sinalizados
 	# pelo detector de choques, não removidos silenciosamente.
 	for i in n:
-		var chave_dest := "%d_%d" % [linha_dest + i, coluna_dest]
-		_ger_alocacoes.alocar(chave_dest, alocacoes_mover[i])
-		_ger_alocacoes.atualizar_celula(linha_dest + i, coluna_dest)
+		var dest_linha: int = linhas_origem[i] + offset
+		_ger_alocacoes.alocar("%d_%d" % [dest_linha, coluna_dest], alocacoes_mover[i])
+		_ger_alocacoes.atualizar_celula(dest_linha, coluna_dest)
 	var afetadas_bloco: Array[String] = []
 	for r_orig in linhas_origem:
 		afetadas_bloco.append("%d_%d" % [r_orig, coluna_orig])
 	for i in n:
-		afetadas_bloco.append("%d_%d" % [linha_dest + i, coluna_dest])
+		afetadas_bloco.append("%d_%d" % [linhas_origem[i] + offset, coluna_dest])
 	_refrescar_apos_alocacao(afetadas_bloco)
 	$"%Terminal".text_edit("Bloco movido (Shift): %d células → [%d-%d, %d]." %
-		[n, linha_dest, linha_dest + n - 1, coluna_dest],
+		[n, topo + offset, base + offset, coluna_dest],
 		"sucesso", true, false)
 	var celulas_bloco: Array = []
 	for i in n:
-		celulas_bloco.append([linha_dest + i, coluna_dest])
+		celulas_bloco.append([linhas_origem[i] + offset, coluna_dest])
 	_reportar_choques_alunos_celulas(celulas_bloco, \
 		_ancora_por_codigo(str(alocacoes_mover[0].get("codigo", "")).to_lower()))
 
@@ -1687,10 +1781,12 @@ func _aplicar_restricao(linha: int, coluna: int, escopo: Dictionary) -> void:
 	if linha <= 0 or coluna <= 0 or escopo.is_empty():
 		return
 	var chave_celula := "%d_%d" % [linha, coluna]
+	if _celula_tem_restricao(chave_celula, escopo):
+		return  # restrição idêntica já existe — nada a fazer (não polui o histórico de desfazer).
+	_snapshot_undo()
 	if not _restricoes.has(chave_celula):
 		_restricoes[chave_celula] = []
-	if not _celula_tem_restricao(chave_celula, escopo):
-		_restricoes[chave_celula].append({"tipo": escopo.get("tipo", ""), "valor": str(escopo.get("valor", ""))})
+	_restricoes[chave_celula].append({"tipo": escopo.get("tipo", ""), "valor": str(escopo.get("valor", ""))})
 	_recalcular_grade(false)
 
 # Remove a restrição de mesmo escopo da célula; se a célula ficar sem restrição e sem alocação,
@@ -1700,9 +1796,15 @@ func _remover_restricao(linha: int, coluna: int, escopo: Dictionary) -> void:
 		return
 	var chave_celula := "%d_%d" % [linha, coluna]
 	var arr: Array = _restricoes.get(chave_celula, [])
+	_snapshot_undo()
+	var removeu: bool = false
 	for i in range(arr.size() - 1, -1, -1):
 		if _mesma_restricao(arr[i] as Dictionary, escopo):
 			arr.remove_at(i)
+			removeu = true
+	if not removeu:
+		_descartar_snapshot()  # nada removido — o snapshot não corresponde a nenhuma mudança.
+		return
 	if arr.is_empty():
 		_restricoes.erase(chave_celula)
 		if _ger_alocacoes.obter_alocacoes(chave_celula).is_empty():
@@ -2901,6 +3003,8 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 	# Remove qualquer camada de referencia (outros cursos) antes de carregar o proprio plano, para
 	# nao deixar alocacoes de referencia orfas na grade (libera tambem os cards de referencia do painel).
 	_remover_dados_referencia()
+	# Carregar um plano novo zera o histórico de desfazer (desfazer através de uma troca de plano seria confuso).
+	_undo_stack.clear()
 	# Limpa TODAS as alocacoes proprias da grade antes de aplicar as do JSON. Importar = substituir o
 	# plano, nao somar: sem isso, abrir o planejamento.json sobre uma grade ja preenchida (ex.: reabrir
 	# o mesmo arquivo na sessao, ou apos um "Baixar do servidor") empilharia cada alocacao em duplicata.
@@ -3034,6 +3138,125 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 			_on_mesclar_csv_e_txt_button_up()
 		"limpar_restricoes":
 			_confirmar_limpar_restricoes()
+		"verificar_problemas":
+			_verificar_problemas()
+
+# Varredura completa da grade (ação "Verificar problemas"): roda TODAS as checagens de uma vez —
+# independentemente dos indicadores ligados nas Preferências da grade — e despeja um relatório
+# detalhado no terminal. Reusa o detector/verificador já configurados em _recalcular_grade.
+func _verificar_problemas() -> void:
+	if not _ger_alocacoes:
+		return
+	if _ger_alocacoes.alocacoes.is_empty():
+		$"%Terminal".titulo("Verificação de problemas", true)
+		$"%Terminal".linha("Grade vazia: nada a verificar.", "aviso")
+		return
+	_detector.configurar(_ger_alocacoes.alocacoes, _dados._planejamento_csv, $"%PainelDisciplinas".cards_disciplinas)
+	_verif_carga.configurar(_ger_alocacoes.alocacoes, _dados._planejamento_csv)
+	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	# Sem filtros: a varredura cobre a grade inteira (todos os semestres e professores).
+	var res_choques: Dictionary = _detector.detectar()
+	var res_carga: Dictionary = _verif_carga.verificar(horas)
+	var sem_prof: Dictionary = _ger_alocacoes.celulas_sem_professor()
+
+	var outros: Array[String] = []
+	if int(res_choques.get("choques_sala", 0)) > 0:
+		outros.append("%d choque(s) de sala." % int(res_choques["choques_sala"]))
+	if int(res_choques.get("choques_sem", 0)) > 0:
+		outros.append("%d choque(s) de semestre." % int(res_choques["choques_sem"]))
+	var carga_itens: Array[String] = []
+	for a in res_carga.get("avisos", []):
+		carga_itens.append(str(a))
+
+	var secoes: Array = [
+		{"titulo": "Choque de professor (mesmo professor, duas disciplinas no mesmo horário)",
+			"token": "erro", "itens": _detalhar_choque_professor(res_choques, dias, horas)},
+		{"titulo": "Células sem professor", "token": "erro",
+			"itens": _detalhar_sem_professor(sem_prof, dias, horas)},
+		{"titulo": "Carga horária excedida", "token": "aviso", "itens": _detalhar_ch_excedida()},
+		{"titulo": "Sobrecarga (≥6h no mesmo dia, noturna → manhã cedo)", "token": "aviso", "itens": carga_itens},
+		{"titulo": "Outros choques", "token": "aviso", "itens": outros},
+	]
+	_relatorios.verificacao_completa(secoes)
+
+# Rótulo legível de uma célula "linha_coluna" no formato "Dia HH:MM", convertendo os índices (1-based)
+# em nome do dia e horário via _horarios_ini. Cai num rótulo cru (col/lin N) se o índice escapar.
+func _rotulo_celula(chave_celula: String, dias: Array[String], horas: Array[String]) -> String:
+	var partes: PackedStringArray = chave_celula.split("_")
+	if partes.size() != 2:
+		return chave_celula
+	var l: int = int(partes[0])
+	var c: int = int(partes[1])
+	var dia: String = dias[c - 1] if c >= 1 and c <= dias.size() else "col %d" % c
+	var hora: String = horas[l - 1] if l >= 1 and l <= horas.size() else "lin %d" % l
+	return "%s %s" % [dia, hora]
+
+# Detalha os choques de professor: para cada célula marcada com choque de professor, agrupa as
+# disciplinas por professor e lista quem aparece em duas ou mais ("Quinta 08:30 — Prof X: AL0003, AL0009").
+func _detalhar_choque_professor(res: Dictionary, dias: Array[String], horas: Array[String]) -> Array[String]:
+	var itens: Array[String] = []
+	var cel_choque: Dictionary = res.get("celulas_choque", {})
+	var chaves: Array = cel_choque.keys()
+	chaves.sort()
+	for chave_celula in chaves:
+		if not (cel_choque[chave_celula] as Dictionary).get("prof", false):
+			continue
+		var por_prof: Dictionary = {}
+		for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
+			var dados_csv: Dictionary = _dados._planejamento_csv.get((aloc as Dictionary).get("chave", ""), {})
+			var cod: String = str((aloc as Dictionary).get("codigo", "")).to_upper()
+			for prof in dados_csv.get("professor", []):
+				var pn: String = str(prof)
+				if not por_prof.has(pn):
+					por_prof[pn] = []
+				if cod not in por_prof[pn]:
+					por_prof[pn].append(cod)
+		var quando: String = _rotulo_celula(chave_celula, dias, horas)
+		for pn in por_prof:
+			if (por_prof[pn] as Array).size() >= 2:
+				itens.append("%s — %s: %s" % [quando, pn.capitalize(), ", ".join(por_prof[pn])])
+	return itens
+
+# Detalha as células sem professor: lista o horário e os códigos das disciplinas alocadas sem
+# professor atribuído ("Quarta 13:30 — AL0123").
+func _detalhar_sem_professor(sem_prof: Dictionary, dias: Array[String], horas: Array[String]) -> Array[String]:
+	var itens: Array[String] = []
+	var chaves: Array = sem_prof.keys()
+	chaves.sort()
+	for chave_celula in chaves:
+		var cods: Array[String] = []
+		for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
+			var dados_csv: Dictionary = _dados._planejamento_csv.get((aloc as Dictionary).get("chave", ""), {})
+			var profs: Array = dados_csv.get("professor", [])
+			var pn: String = str(profs[0]) if profs.size() > 0 else ""
+			if pn.is_empty():
+				cods.append(str((aloc as Dictionary).get("codigo", "")).to_upper())
+		itens.append("%s — %s" % [_rotulo_celula(chave_celula, dias, horas), ", ".join(cods)])
+	return itens
+
+# Detalha as disciplinas com CH excedida: horas alocadas (descontando horas extras explícitas, como o
+# DetectorDeChoques) acima da CH prevista do card ("AL0400 (EC08): 6h alocadas / 4h previstas").
+func _detalhar_ch_excedida() -> Array[String]:
+	var itens: Array[String] = []
+	var cards: Dictionary = $"%PainelDisciplinas".cards_disciplinas
+	var extras_por_chave: Dictionary = {}
+	for chave_celula in _ger_alocacoes.alocacoes:
+		for aloc in _ger_alocacoes.alocacoes[chave_celula]:
+			if (aloc as Dictionary).get("is_extra", false):
+				var ch: String = (aloc as Dictionary).get("chave", "")
+				extras_por_chave[ch] = int(extras_por_chave.get(ch, 0)) + 1
+	var chaves: Array = cards.keys()
+	chaves.sort()
+	for chave in chaves:
+		if _dados._planejamento_csv.get(chave, {}).get("referencia", false):
+			continue
+		var card: CardDisciplina = cards[chave]
+		var extras: int = int(extras_por_chave.get(chave, 0))
+		if card.ch_alocada - extras > card.ch_total:
+			itens.append("%s (%s): %dh alocadas / %dh previstas" \
+				% [card.codigo.to_upper(), card.semestre.to_upper(), card.ch_alocada - extras, card.ch_total])
+	return itens
 
 # Pede confirmação antes de remover todas as restrições de alocação. Sem restrições, apenas avisa.
 func _confirmar_limpar_restricoes() -> void:
@@ -3047,6 +3270,7 @@ func _confirmar_limpar_restricoes() -> void:
 # Remove todas as restrições e repinta a grade. Células restritas sem alocação saem da união de
 # pintura, então têm o fundo resetado manualmente antes de zerar o dicionário.
 func _limpar_todas_restricoes() -> void:
+	_snapshot_undo()
 	for chave_celula in _restricoes:
 		if _ger_alocacoes.obter_alocacoes(chave_celula).is_empty():
 			var partes: PackedStringArray = str(chave_celula).split("_")
@@ -3062,6 +3286,7 @@ func _confirmar_limpar_grade() -> void:
 		_nova_grade, "Sim, limpar")
 
 func _nova_grade() -> void:
+	_snapshot_undo()
 	for chave_celula in _ger_alocacoes.alocacoes:
 		var partes: PackedStringArray = str(chave_celula).split("_")
 		if partes.size() == 2:
@@ -3435,6 +3660,8 @@ func _peso_choque_alunos(cod_a: String, cod_b: String) -> int:
 # posicionamento (título + filtro de curso + não alocadas) e repinta a grade. Os choques resultantes
 # são reportados em seguida por _refrescar_apos_alocacao (logo abaixo no terminal).
 func _aplicar_plano_posicionamento(plano: Dictionary) -> void:
+	if not plano.get("alocacoes", []).is_empty():
+		_snapshot_undo()
 	for item in plano.get("alocacoes", []):
 		_ger_alocacoes.alocar("%d_%d" % [item["linha"], item["coluna"]], item["aloc"])
 		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(item["chave"])

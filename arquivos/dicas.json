@@ -22,6 +22,7 @@
 		"posicionar_automatico": "Abre o diálogo de [b]posicionamento automático[/b] e tenta alocar as disciplinas ainda [b]sem horário[/b], respeitando preferências de professores e choques existentes.",
 		"limpar_preenchimento": "[b]Remove todas as alocações[/b] da grade, mantendo as disciplinas na lista à esquerda para reposicionar.",
 		"limpar_restricoes": "[b]Remove todas as restrições[/b] de alocação (células marcadas como restritas) de uma só vez. As [b]alocações não são afetadas[/b].",
+		"verificar_problemas": "Faz uma [b]varredura completa[/b] da grade e lista no terminal todos os problemas: [b]choque de professor[/b] (mesmo professor em duas disciplinas no mesmo horário), [b]células sem professor[/b], [b]carga horária excedida[/b], [b]≥6h no mesmo dia[/b] e [b]aula noturna seguida de manhã cedo[/b]. Roda todas as checagens de uma vez, independentemente dos indicadores ligados nas [b]Preferências da grade[/b].",
 		"ocultar_curso": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas que não passam pelo filtro de [b]curso[/b].",
 		"ocultar_semestre": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas fora dos [b]semestres[/b] filtrados.",
 		"ocultar_professor": "Quando marcado, mostra [b]apenas[/b] as disciplinas do [b]professor[/b] filtrado, ocultando as demais."

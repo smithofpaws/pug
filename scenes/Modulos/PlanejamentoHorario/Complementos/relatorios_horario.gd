@@ -65,6 +65,26 @@ func sem_professor(quantidade: int) -> void:
 		_terminal.linha("%d célula(s) sem professor." % quantidade, "aviso")
 
 
+## Relatório consolidado da ação "Verificar problemas" do menu Ações. [param secoes] é um Array de
+## [code]{ "titulo": String, "token": String, "itens": Array[String] }[/code]; seções sem itens são
+## puladas. Quando todas as seções vêm vazias, imprime "Nenhum problema encontrado." (token sucesso).
+func verificacao_completa(secoes: Array) -> void:
+	_terminal.titulo("Verificação de problemas", true)
+	var houve: bool = false
+	for s in secoes:
+		var itens: Array = s.get("itens", [])
+		if itens.is_empty():
+			continue
+		houve = true
+		_terminal.espaco()
+		_terminal.secao(str(s.get("titulo", "")))
+		var token: String = str(s.get("token", "padrao"))
+		for it in itens:
+			_terminal.item(str(it), 0, token)
+	if not houve:
+		_terminal.linha("Nenhum problema encontrado.", "sucesso")
+
+
 ## Relatório do posicionamento automático: total alocado e disciplinas que não couberam. [br]
 ## [param nome_curso] (opcional) imprime o filtro de curso aplicado, como nas Ações de oferta.
 func posicionamento(plano: Dictionary, nome_curso: String = "") -> void:
