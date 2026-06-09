@@ -20,6 +20,11 @@ class_name SyncKinto extends Node
 const _BUCKET := "pug"
 const _COLLECTION := "planejamentos"
 
+# Tempo maximo (segundos) de espera por uma resposta. Sem timeout, um servidor que nao responde
+# (ex.: Tailscale fora do ar) deixaria o request_completed sem disparar e a guarda _ocupado presa
+# em true para sempre, recusando toda sincronizacao seguinte ate reiniciar o programa.
+const _TIMEOUT_SEGUNDOS := 15.0
+
 # Configuracao injetada via configurar(); _url_base sem barra final (ex.: http://host:8888/v1).
 var _url_base: String = ""
 var _usuario: String = ""
@@ -74,6 +79,7 @@ func listar() -> Dictionary:
 func _garantir_http() -> void:
 	if _http == null:
 		_http = HTTPRequest.new()
+		_http.timeout = _TIMEOUT_SEGUNDOS
 		add_child(_http)
 
 
