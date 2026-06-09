@@ -17,6 +17,9 @@ class_name AplicadorVisualGrade extends RefCounted
 const FUNDO_FOCO := Color("#1a3a1a")
 # Verde claro para as células da disciplina destacada (clique em um card), com precedência sobre o foco.
 const FUNDO_DESTAQUE_DISCIPLINA := Color("#2f6b2f")
+# Vermelho escuro para células restritas (ver Planejamento de horário: "Restringir alocação"),
+# com precedência sobre destaque e foco — uma restrição visível nunca é encoberta pelo filtro.
+const FUNDO_RESTRITO := Color("#5a1414")
 const FUNDO_PADRAO := Color(0.173, 0.173, 0.173, 1)
 const SEM_BARRA := Color(0, 0, 0, 0)
 
@@ -47,8 +50,10 @@ func aplicar(linha: int, coluna: int, cond: Dictionary) -> void:
 	# esmaecida, sem barras — os problemas seguem contabilizados no terminal.
 	var mostrar_alertas: bool = (not tem_filtro) or em_foco
 
-	# --- Fundo: verde claro para a disciplina destacada (clique em card); senão, foco do filtro ---
-	if cond.get("destaque_disciplina", false):
+	# --- Fundo: restrição (precede tudo); senão disciplina destacada; senão foco do filtro ---
+	if cond.get("restrito", false):
+		celula.cor_fundo = FUNDO_RESTRITO
+	elif cond.get("destaque_disciplina", false):
 		celula.cor_fundo = FUNDO_DESTAQUE_DISCIPLINA
 	elif tem_filtro and em_foco:
 		celula.cor_fundo = FUNDO_FOCO

@@ -121,6 +121,12 @@ var _ultimo_total_choques: int = 0
 # AplicadorVisualGrade e o tooltip; preenchido por _montar_mapa_condicoes.
 var _mapa_condicoes: Dictionary = {}
 
+# Restrições de alocação por célula ("linha_coluna" → Array de { "tipo": "professor"|"semestre",
+# "valor": String }). Escopo definido pelo filtro ativo ao marcar (ver _abrir_menu_celula). Pintadas
+# de vermelho quando o filtro correspondente está ativo, e vermelho+hachura ao arrastar uma disciplina
+# do mesmo professor/semestre. Persistidas no planejamento.json.
+var _restricoes: Dictionary = {}
+
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
 # uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
 # ({"tipo": "semestre"/"professor", "valor": ...}); separadores/cabeçalhos guardam {} (sem ação).
@@ -130,9 +136,10 @@ var _menu_celula_acoes: Array[Dictionary] = []
 # menu de contexto noutra celula enquanto o popup esta aberto).
 var _rmb_anterior: bool = false
 
-# Hash da grade (_ger_alocacoes.alocacoes) no ultimo carregamento/salvamento. Base do aviso de
+# Hash do estado (alocações + restrições) no ultimo carregamento/salvamento. Base do aviso de
 # alteracoes nao salvas ao trocar de modulo (ver tem_alteracoes_nao_salvas / _marcar_estado_salvo).
-var _hash_estado_salvo: int = hash({})
+# Inicializa com o hash do estado vazio (dois dicionários vazios) para casar com a grade pristina.
+var _hash_estado_salvo: int = hash([{}, {}])
 
 # Código (minúsculo) da disciplina destacada por clique em um card: suas células ficam em verde
 # claro na grade. Vazio = nenhuma. Limpo ao alterar/limpar os filtros.
@@ -310,13 +317,14 @@ func _ready() -> void:
 		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
 
 	$"%SeletorAcoes".lista_itens = {
-		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)"],
-		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento"],
+		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)", "Limpar todas as restrições"],
+		"_Ações_retorno": ["posicionar_automatico", "limpar_preenchimento", "atualizar_planejamento", "limpar_restricoes"],
 	}
 	$"%SeletorAcoes".get_node("MenuButton").get_popup().set_item_disabled(2, true)
 	$"%SeletorAcoes".definir_dica_item(0, DicasPrograma.texto(["planejamento_horario", "posicionar_automatico"]))
 	$"%SeletorAcoes".definir_dica_item(1, DicasPrograma.texto(["planejamento_horario", "limpar_preenchimento"]))
 	$"%SeletorAcoes".definir_dica_item(2, DicasPrograma.texto(["planejamento_horario", "mesclar_horarios_planejamento"]))
+	$"%SeletorAcoes".definir_dica_item(3, DicasPrograma.texto(["planejamento_horario", "limpar_restricoes"]))
 	$"%SeletorAcoes".opcao_selecionada.connect(_on_acoes_opcao_selecionada)
 
 	$"%StatusBar".definir_segmentos({
@@ -412,7 +420,9 @@ func _recalcular_grade(reportar: bool = true, celulas_relato: Array = []) -> voi
 	_ultimo_total_choques = res_choques.get("total", 0)
 	_ultimo_total_compartilhadas_div = _verificar_compartilhadas_divergentes().size()
 	_mapa_condicoes = _montar_mapa_condicoes(res_choques, res_carga, sem_prof)
-	for chave_celula in _ger_alocacoes.alocacoes:
+	# Pinta a união de células alocadas e restritas: assim células restritas vazias também recebem o
+	# fundo vermelho (e o reset quando o filtro deixa de casar com a restrição).
+	for chave_celula in _celulas_para_pintar():
 		var partes: PackedStringArray = chave_celula.split("_")
 		if partes.size() == 2:
 			_aplicador.aplicar(int(partes[0]), int(partes[1]), _mapa_condicoes.get(chave_celula, {}))
@@ -443,16 +453,17 @@ func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_
 	var cel_carga: Dictionary = res_carga.get("celulas_carga", {})
 	var cel_noturna: Dictionary = res_carga.get("celulas_noturna", {})
 	var mapa: Dictionary = {}
-	for chave_celula in _ger_alocacoes.alocacoes:
+	for chave_celula in _celulas_para_pintar():
+		var arr: Array = _ger_alocacoes.obter_alocacoes(chave_celula)
 		var em_foco: bool = false
-		for aloc in _ger_alocacoes.alocacoes[chave_celula]:
+		for aloc in arr:
 			if _aloc_passa_filtro(aloc, painel.filtro_curso, painel.filtro_semestre, painel.filtro_professor):
 				em_foco = true
 				break
 		var ch: Dictionary = cel_choque.get(chave_celula, {})
 		var destaque_disc: bool = false
 		if not _disciplina_destacada.is_empty():
-			for a in _ger_alocacoes.alocacoes[chave_celula]:
+			for a in arr:
 				if str((a as Dictionary).get("codigo", "")).to_lower() == _disciplina_destacada:
 					destaque_disc = true
 					break
@@ -460,6 +471,7 @@ func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_
 			"tem_filtro": tem_filtro,
 			"em_foco": em_foco,
 			"destaque_disciplina": destaque_disc,
+			"restrito": _restricao_visivel(chave_celula, painel.filtro_professor, painel.filtro_semestre),
 			"sem_professor": ind_sem_prof and sem_prof.has(chave_celula),
 			"hora_extra": _celula_tem_extra(chave_celula),
 			"choque_prof": ind_choque_prof and ch.get("prof", false),
@@ -473,6 +485,29 @@ func _montar_mapa_condicoes(res_choques: Dictionary, res_carga: Dictionary, sem_
 		mapa[chave_celula] = cond
 	return mapa
 
+# União das chaves de células com alocação e com restrição — base da pintura e das condições, para
+# incluir células restritas vazias (que não estão em _ger_alocacoes.alocacoes).
+func _celulas_para_pintar() -> Array:
+	var chaves: Dictionary = {}
+	for chave_celula in _ger_alocacoes.alocacoes:
+		chaves[chave_celula] = true
+	for chave_celula in _restricoes:
+		chaves[chave_celula] = true
+	return chaves.keys()
+
+# Verdadeiro se a célula tem alguma restrição cujo escopo casa com o filtro ativo: restrição de
+# professor aparece sob o filtro daquele professor; de semestre, quando aquele semestre está filtrado.
+func _restricao_visivel(chave_celula: String, filtro_professor: String, filtro_semestre: Array) -> bool:
+	var pf: String = filtro_professor.to_lower()
+	for r in _restricoes.get(chave_celula, []):
+		var tipo: String = (r as Dictionary).get("tipo", "")
+		var valor: String = str((r as Dictionary).get("valor", ""))
+		if tipo == "professor" and not pf.is_empty() and valor.to_lower() == pf:
+			return true
+		if tipo == "semestre" and valor in filtro_semestre:
+			return true
+	return false
+
 # Verdadeiro se alguma alocação da célula é hora extra.
 func _celula_tem_extra(chave_celula: String) -> bool:
 	for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
@@ -483,11 +518,14 @@ func _celula_tem_extra(chave_celula: String) -> bool:
 # Monta o BBCode do tooltip de uma célula listando as condições ativas (✕ erro, ⚠ aviso). Vazio
 # quando não há alerta ou quando a célula está fora do foco do filtro (espelha a pintura).
 func _montar_tooltip_celula(cond: Dictionary) -> String:
-	if cond.get("tem_filtro", false) and not cond.get("em_foco", true):
+	# Fora do foco a célula não detalha alertas — salvo quando está restrita (a restrição precede o foco).
+	if cond.get("tem_filtro", false) and not cond.get("em_foco", true) and not cond.get("restrito", false):
 		return ""
 	var hex_erro := PaletaSemantica.cor_hex("erro")
 	var hex_aviso := PaletaSemantica.cor_hex("aviso")
 	var linhas: Array[String] = []
+	if cond.get("restrito", false):
+		linhas.append("[color=%s]⛔ Alocação restrita[/color]" % hex_erro)
 	if cond.get("sem_professor", false):
 		linhas.append("[color=%s]✕ Sem professor[/color]" % hex_erro)
 	if cond.get("choque_prof", false):
@@ -797,8 +835,9 @@ func _on_exportar_button_up() -> void:
 	_dados.exportar_horarios(diretorio_exportacao, _ger_alocacoes.alocacoes, grades_disciplinas_curriculos, $"%Terminal", cores_terminal)
 
 # Marca a grade atual como "salva" (apos carregar/salvar o planejamento). Zera o aviso de alteracoes.
+# Inclui as restrições no hash para que marcá-las/removê-las também conte como alteração pendente.
 func _marcar_estado_salvo() -> void:
-	_hash_estado_salvo = hash(_ger_alocacoes.alocacoes)
+	_hash_estado_salvo = hash([_ger_alocacoes.alocacoes, _restricoes])
 
 # Arquivos que compoem um snapshot de regressao do planejamento. Reune o estado de trabalho:
 # o plano salvo (.json), a oferta de origem (.csv) e a grade de horarios (.txt + .ini canonicos).
@@ -859,6 +898,7 @@ func _salvar_planejamento() -> void:
 func _salvar_planejamento_json(prefixos: Array) -> void:
 	_fazer_backup_planejamento("salvar")
 	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	json["restricoes"] = _restricoes_para_json()
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", json)
 	_marcar_estado_salvo()
 	$"%Terminal".text_edit("Exportado: " + diretorio_exportacao + "planejamento.json" + \
@@ -868,7 +908,52 @@ func _salvar_planejamento_json(prefixos: Array) -> void:
 ## True se a grade mudou desde o ultimo carregamento/salvamento. Consultado pelo main.gd antes de
 ## trocar de modulo / voltar ao inicio, para avisar sobre alteracoes nao salvas.
 func tem_alteracoes_nao_salvas() -> bool:
-	return hash(_ger_alocacoes.alocacoes) != _hash_estado_salvo
+	return hash([_ger_alocacoes.alocacoes, _restricoes]) != _hash_estado_salvo
+
+# Converte _restricoes ("linha_coluna" → restrições) para a lista do planejamento.json, gravando por
+# dia/horário (robusto a mudanças de layout, como as alocações). Células fora do layout são puladas.
+func _restricoes_para_json() -> Array:
+	var dias: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	var saida: Array = []
+	for chave_celula in _restricoes:
+		var partes: PackedStringArray = chave_celula.split("_")
+		if partes.size() != 2:
+			continue
+		var linha: int = int(partes[0])
+		var coluna: int = int(partes[1])
+		if linha <= 0 or linha > horas.size() or coluna <= 0 or coluna > dias.size():
+			continue
+		for r in _restricoes[chave_celula]:
+			saida.append({
+				"dia": dias[coluna - 1],
+				"horario": horas[linha - 1],
+				"tipo": (r as Dictionary).get("tipo", ""),
+				"valor": str((r as Dictionary).get("valor", "")),
+			})
+	return saida
+
+# Preenche _restricoes a partir do planejamento.json carregado, convertendo dia/horário de volta para
+# "linha_coluna" (mesmo mapeamento das alocações). Limpa o estado anterior; ignora itens fora do layout.
+func _carregar_restricoes_do_json(dados: Dictionary, dias: Array[String], horas: Array[String]) -> void:
+	_restricoes.clear()
+	for item in dados.get("restricoes", []):
+		if not item is Dictionary:
+			continue
+		var tipo: String = str((item as Dictionary).get("tipo", ""))
+		var valor: String = str((item as Dictionary).get("valor", ""))
+		if tipo.is_empty() or valor.is_empty():
+			continue
+		var col_idx: int = dias.find(str((item as Dictionary).get("dia", ""))) + 1
+		var row_idx: int = horas.find(str((item as Dictionary).get("horario", ""))) + 1
+		if col_idx <= 0 or row_idx <= 0:
+			continue
+		var chave_celula := "%d_%d" % [row_idx, col_idx]
+		if not _restricoes.has(chave_celula):
+			_restricoes[chave_celula] = []
+		# Evita duplicatas iguais (mesmo tipo+valor) ao recarregar.
+		if not _celula_tem_restricao(chave_celula, {"tipo": tipo, "valor": valor}):
+			_restricoes[chave_celula].append({"tipo": tipo, "valor": valor})
 
 # Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
 # e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
@@ -1028,17 +1113,33 @@ func _on_grade_arraste_iniciado(linha: int, coluna: int) -> void:
 		_aplicar_hachura(_celulas_do_professor(_profs_da_aloc(aloc), linha, coluna))
 	elif not prof_ativo and not sem_ativo:
 		_aplicar_filtro_grade_semestre(card.semestre)
+	# Alerta de restrição (por último, para não ser sobrescrito pelas etapas acima): independente do
+	# filtro ativo, células restritas para o professor/semestre da disciplina arrastada ficam vermelhas
+	# + hachuradas durante o arraste. É aviso visual — o arraste e o posicionamento seguem permitidos.
+	var restritas: Dictionary = _celulas_restritas_da_aloc(aloc, card)
+	if not restritas.is_empty():
+		var grade: GradeVisual = $"%GradeHorarios"
+		for chave_celula in restritas:
+			var partes: PackedStringArray = chave_celula.split("_")
+			if partes.size() != 2:
+				continue
+			var cel: Celula = grade.get_celula(int(partes[0]), int(partes[1]))
+			if cel:
+				cel.hachurado = true
+				cel.cor_fundo = AplicadorVisualGrade.FUNDO_RESTRITO
 
-# Ao terminar o arrasto (drop ou cancelamento), remove a hachura de todas as células.
+# Ao terminar o arrasto (drop ou cancelamento), remove a hachura de todas as células (alocadas ou
+# restritas vazias) e repinta a grade para restaurar os fundos alterados durante o arraste.
 func _on_grade_arraste_terminado() -> void:
 	var grade: GradeVisual = $"%GradeHorarios"
-	for chave_celula in _ger_alocacoes.alocacoes:
+	for chave_celula in _celulas_para_pintar():
 		var partes: PackedStringArray = chave_celula.split("_")
 		if partes.size() != 2:
 			continue
 		var cel: Celula = grade.get_celula(int(partes[0]), int(partes[1]))
 		if cel:
 			cel.hachurado = false
+	_recalcular_grade(false)
 
 # Aplica hachura nas células de [param celulas] ("linha_coluna" → true) e a remove das demais.
 func _aplicar_hachura(celulas: Dictionary) -> void:
@@ -1083,6 +1184,23 @@ func _celulas_do_professor(profs: Array, linha_orig: int, coluna_orig: int) -> D
 					achou = true
 					break
 			if achou:
+				resultado[chave_celula] = true
+				break
+	return resultado
+
+# Células restritas cujo escopo casa com a disciplina arrastada (algum de seus professores ou seu
+# semestre). Independe do filtro ativo — alimenta o alerta vermelho+hachura durante o arraste.
+func _celulas_restritas_da_aloc(aloc: Dictionary, card: CardDisciplina) -> Dictionary:
+	var resultado: Dictionary = {}
+	var profs: Dictionary = {}
+	for p in _profs_da_aloc(aloc):
+		profs[str(p).to_lower()] = true
+	var sem: String = card.semestre.to_lower()
+	for chave_celula in _restricoes:
+		for r in _restricoes[chave_celula]:
+			var tipo: String = (r as Dictionary).get("tipo", "")
+			var valor: String = str((r as Dictionary).get("valor", "")).to_lower()
+			if (tipo == "professor" and profs.has(valor)) or (tipo == "semestre" and valor == sem):
 				resultado[chave_celula] = true
 				break
 	return resultado
@@ -1448,37 +1566,39 @@ func _abrir_menu_celula(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
 		return
 	var arr: Array = _ger_alocacoes.obter_alocacoes("%d_%d" % [linha, coluna])
-	if arr.is_empty():
-		return
 	_menu_celula.clear()
 	_menu_celula_acoes.clear()
-	# Parte 1: disciplinas daquele horário — escolher filtra pelo semestre da disciplina.
-	_menu_celula.add_separator("Disciplina (filtra por semestre)")
-	_menu_celula_acoes.append({})
-	var profs: Dictionary = {}  # nome exato (como no planejamento) -> true, para a parte 2
-	for a_dict in arr:
-		var aloc: Dictionary = a_dict
-		var codigo: String = str(aloc.get("codigo", "")).to_upper()
-		var chave_aloc: String = aloc.get("chave", "")
-		var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave_aloc, null)
-		var nome: String = card.nome if card else codigo
-		var sem: String = _semestre_da_aloc(aloc)
-		_menu_celula.add_item("%s — %s (%s)" % [codigo, nome, sem])
-		_menu_celula_acoes.append({"tipo": "semestre", "valor": sem})
-		# Coleta os professores dessas disciplinas (do planejamento) para a parte 2.
-		for p in _dados._planejamento_csv.get(chave_aloc, {}).get("professor", []):
-			var pn: String = str(p).strip_edges()
-			if not pn.is_empty():
-				profs[pn] = true
-	# Parte 2: professores que dão as disciplinas listadas — escolher filtra por aquele professor.
-	if not profs.is_empty():
-		var nomes: Array = profs.keys()
-		nomes.sort()
-		_menu_celula.add_separator("Professor (filtra por professor)")
+	# Partes 1 e 2 só existem quando há disciplina na célula; células vazias mostram só a parte 3.
+	if not arr.is_empty():
+		# Parte 1: disciplinas daquele horário — escolher filtra pelo semestre da disciplina.
+		_menu_celula.add_separator("Disciplina (filtra por semestre)")
 		_menu_celula_acoes.append({})
-		for pn in nomes:
-			_menu_celula.add_item(str(pn).capitalize())
-			_menu_celula_acoes.append({"tipo": "professor", "valor": pn})
+		var profs: Dictionary = {}  # nome exato (como no planejamento) -> true, para a parte 2
+		for a_dict in arr:
+			var aloc: Dictionary = a_dict
+			var codigo: String = str(aloc.get("codigo", "")).to_upper()
+			var chave_aloc: String = aloc.get("chave", "")
+			var card: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas.get(chave_aloc, null)
+			var nome: String = card.nome if card else codigo
+			var sem: String = _semestre_da_aloc(aloc)
+			_menu_celula.add_item("%s — %s (%s)" % [codigo, nome, sem])
+			_menu_celula_acoes.append({"tipo": "semestre", "valor": sem})
+			# Coleta os professores dessas disciplinas (do planejamento) para a parte 2.
+			for p in _dados._planejamento_csv.get(chave_aloc, {}).get("professor", []):
+				var pn: String = str(p).strip_edges()
+				if not pn.is_empty():
+					profs[pn] = true
+		# Parte 2: professores que dão as disciplinas listadas — escolher filtra por aquele professor.
+		if not profs.is_empty():
+			var nomes: Array = profs.keys()
+			nomes.sort()
+			_menu_celula.add_separator("Professor (filtra por professor)")
+			_menu_celula_acoes.append({})
+			for pn in nomes:
+				_menu_celula.add_item(str(pn).capitalize())
+				_menu_celula_acoes.append({"tipo": "professor", "valor": pn})
+	# Parte 3: outras interações (restringir/remover restrição conforme o filtro ativo).
+	_adicionar_menu_outras_interacoes(linha, coluna)
 	_menu_celula.reset_size()
 	# Subjanelas embutidas (padrao do Godot 4) + stretch "canvas_items": um popup embutido posiciona-se
 	# no espaco do viewport (coords logicas), nao da tela. DisplayServer.mouse_get_position() devolve
@@ -1499,6 +1619,87 @@ func _on_menu_celula_index_pressed(idx: int) -> void:
 				$"%PainelDisciplinas".selecionar_filtro_semestre_unico(sem)
 		"professor":
 			$"%PainelDisciplinas".selecionar_filtro_professor_unico(acao.get("valor", ""))
+		"restringir":
+			_aplicar_restricao(int(acao.get("linha", 0)), int(acao.get("coluna", 0)), acao.get("escopo", {}))
+		"desrestringir":
+			_remover_restricao(int(acao.get("linha", 0)), int(acao.get("coluna", 0)), acao.get("escopo", {}))
+
+# Adiciona ao menu de contexto o divisor "Outras interações" com a opção de restringir/remover a
+# restrição da célula. A restrição herda o escopo do filtro ativo (exatamente um: professor OU um
+# único semestre); sem isso, a opção fica desabilitada com um aviso explicativo.
+func _adicionar_menu_outras_interacoes(linha: int, coluna: int) -> void:
+	_menu_celula.add_separator("Outras interações")
+	_menu_celula_acoes.append({})
+	var escopo: Dictionary = _escopo_restricao_atual()
+	if escopo.is_empty():
+		_menu_celula.add_item("Restringir alocação (ative um filtro de professor ou um único semestre)")
+		_menu_celula.set_item_disabled(_menu_celula.item_count - 1, true)
+		_menu_celula_acoes.append({})
+		return
+	var rotulo: String = _rotulo_escopo(escopo)
+	if _celula_tem_restricao("%d_%d" % [linha, coluna], escopo):
+		_menu_celula.add_item("Remover restrição (%s)" % rotulo)
+		_menu_celula_acoes.append({"tipo": "desrestringir", "linha": linha, "coluna": coluna, "escopo": escopo})
+	else:
+		_menu_celula.add_item("Restringir alocação (%s)" % rotulo)
+		_menu_celula_acoes.append({"tipo": "restringir", "linha": linha, "coluna": coluna, "escopo": escopo})
+
+# Escopo de restrição implícito pelo filtro ativo: exige exatamente um filtro (professor OU um único
+# semestre). Vazio quando nenhum, ambos, ou vários semestres estão ativos.
+func _escopo_restricao_atual() -> Dictionary:
+	var prof: String = $"%PainelDisciplinas".filtro_professor
+	var sems: Array = $"%PainelDisciplinas".filtro_semestre
+	var prof_ativo: bool = not prof.is_empty()
+	if prof_ativo and sems.is_empty():
+		return {"tipo": "professor", "valor": prof}
+	if not prof_ativo and sems.size() == 1:
+		return {"tipo": "semestre", "valor": str(sems[0])}
+	return {}
+
+# Rótulo legível de um escopo de restrição, para o texto do item de menu.
+func _rotulo_escopo(escopo: Dictionary) -> String:
+	if escopo.get("tipo", "") == "professor":
+		return "professor " + str(escopo.get("valor", "")).capitalize()
+	return "semestre " + str(escopo.get("valor", ""))
+
+# Verdadeiro se a célula já tem uma restrição com o mesmo tipo+valor de [param escopo].
+func _celula_tem_restricao(chave_celula: String, escopo: Dictionary) -> bool:
+	for r in _restricoes.get(chave_celula, []):
+		if _mesma_restricao(r as Dictionary, escopo):
+			return true
+	return false
+
+# Compara duas restrições por tipo + valor (valor case-insensitive).
+func _mesma_restricao(a: Dictionary, b: Dictionary) -> bool:
+	return a.get("tipo", "") == b.get("tipo", "") \
+		and str(a.get("valor", "")).to_lower() == str(b.get("valor", "")).to_lower()
+
+# Marca a célula como restrita no escopo do filtro ativo e repinta a grade.
+func _aplicar_restricao(linha: int, coluna: int, escopo: Dictionary) -> void:
+	if linha <= 0 or coluna <= 0 or escopo.is_empty():
+		return
+	var chave_celula := "%d_%d" % [linha, coluna]
+	if not _restricoes.has(chave_celula):
+		_restricoes[chave_celula] = []
+	if not _celula_tem_restricao(chave_celula, escopo):
+		_restricoes[chave_celula].append({"tipo": escopo.get("tipo", ""), "valor": str(escopo.get("valor", ""))})
+	_recalcular_grade(false)
+
+# Remove a restrição de mesmo escopo da célula; se a célula ficar sem restrição e sem alocação,
+# restaura o fundo (ela sai da união de pintura e não seria revisitada).
+func _remover_restricao(linha: int, coluna: int, escopo: Dictionary) -> void:
+	if linha <= 0 or coluna <= 0 or escopo.is_empty():
+		return
+	var chave_celula := "%d_%d" % [linha, coluna]
+	var arr: Array = _restricoes.get(chave_celula, [])
+	for i in range(arr.size() - 1, -1, -1):
+		if _mesma_restricao(arr[i] as Dictionary, escopo):
+			arr.remove_at(i)
+	if arr.is_empty():
+		_restricoes.erase(chave_celula)
+		if _ger_alocacoes.obter_alocacoes(chave_celula).is_empty():
+			_ger_alocacoes.limpar_celula(linha, coluna)
+	_recalcular_grade(false)
 
 func _detectar_choques(_celulas_afetadas: Array[String] = []) -> void:
 	_recalcular_grade(true)
@@ -1935,6 +2136,8 @@ func _enviar_para_servidor_confirmado(cod: String) -> void:
 	# Filtra a exportacao para mandar apenas as disciplinas deste curso (1 record por curso).
 	var prefixos: Array = cursos.get(cod, {}).get("prefixos_semestre", [])
 	var json: Dictionary = _dados.exportar_planejamento_json(_ger_alocacoes.alocacoes, prefixos)
+	# Restrições viajam junto (dado funcional: professor/semestre) para quem trabalha só com o servidor.
+	json["restricoes"] = _restricoes_para_json()
 	_fazer_backup_planejamento("enviar")
 	$"%Terminal".text_edit("Enviando planejamento de %s ao servidor..." % cod, "padrao", true, false)
 	var r: Dictionary = await _sync.enviar(cod, json)
@@ -2041,6 +2244,10 @@ func _baixar_curso(chave_curso: String) -> void:
 		$"%Terminal".text_edit("O planejamento recebido esta vazio ou em formato invalido.", "erro", true, true)
 		return
 	_fazer_backup_planejamento("baixar")
+	# As restrições trafegam no record (chave "restricoes"); o servidor é autoritativo ao baixar.
+	# Fallback de compatibilidade: records legados sem a chave preservam as restrições locais.
+	if not planejamento.has("restricoes"):
+		planejamento["restricoes"] = _restricoes_para_json()
 	file_handling.save_json(diretorio_exportacao, "planejamento.json", planejamento)
 	# Modo nao-verboso: sem o despejo do planejamento; so um resumo. A confirmacao "Baixado:" fica por
 	# ultimo, clara (ver _importar_planejamento_json).
@@ -2774,6 +2981,7 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 	if not verbose:
 		$"%Terminal".text_edit("Planejamento carregado: %d disciplinas, %d alocações." \
 			% [_dados._planejamento_csv.size(), cont_aloc], "sucesso", true, false)
+	_carregar_restricoes_do_json(dados, dias_json, horas_json)
 	_sincronizar_referencias()
 	_ger_alocacoes.reaplicar_todas()
 	_detectar_choques()
@@ -2790,6 +2998,29 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 			_confirmar_limpar_grade()
 		"atualizar_planejamento":
 			_on_mesclar_csv_e_txt_button_up()
+		"limpar_restricoes":
+			_confirmar_limpar_restricoes()
+
+# Pede confirmação antes de remover todas as restrições de alocação. Sem restrições, apenas avisa.
+func _confirmar_limpar_restricoes() -> void:
+	if _restricoes.is_empty():
+		$"%Terminal".text_edit("Não há restrições de alocação para limpar.", "aviso", true, false)
+		return
+	Dialogos.confirmar(self, "Limpar todas as restrições", \
+		"Remover todas as restrições de alocação da grade? As alocações não são afetadas.", \
+		_limpar_todas_restricoes, "Sim, limpar")
+
+# Remove todas as restrições e repinta a grade. Células restritas sem alocação saem da união de
+# pintura, então têm o fundo resetado manualmente antes de zerar o dicionário.
+func _limpar_todas_restricoes() -> void:
+	for chave_celula in _restricoes:
+		if _ger_alocacoes.obter_alocacoes(chave_celula).is_empty():
+			var partes: PackedStringArray = str(chave_celula).split("_")
+			if partes.size() == 2:
+				_ger_alocacoes.limpar_celula(int(partes[0]), int(partes[1]))
+	_restricoes.clear()
+	_recalcular_grade(false)
+	$"%Terminal".text_edit("Restrições de alocação removidas.", "sucesso", true, false)
 
 func _confirmar_limpar_grade() -> void:
 	Dialogos.confirmar(self, "Limpar preenchimento", \

@@ -69,8 +69,10 @@ O módulo **Planejamento de horário** pode enviar/baixar o planejamento de ofer
 `standalone_scripts/io/sincronizacao.gd`). Esta é a **única** exceção à regra "nada pessoal sai do
 PC", e é controlada:
 
-- **Só o planejamento de oferta** trafega (disciplinas + nomes de professores, dado funcional).
-  **Nunca** enviar `hist.csv`, `email.csv` ou qualquer dado de aluno.
+- **Só o planejamento de oferta** trafega (disciplinas + nomes de professores, dado funcional), mais
+  as **restrições de alocação** do planejamento de horário (escopo por professor/semestre, na chave
+  `restricoes` do record — também dado funcional). **Nunca** enviar `hist.csv`, `email.csv` ou qualquer
+  dado de aluno.
 - Acesso **sempre autenticado** (Basic Auth `usuario:token`, sem leitura pública) e restrito à
   **rede privada Tailscale** (o transporte já é cifrado pelo WireGuard).
 - Credenciais ficam em `config_usuario.json:sincronizacao` (gitignorado); o **token é revogável**

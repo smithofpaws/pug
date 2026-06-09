@@ -321,7 +321,7 @@ Exibe as disciplinas a alocar como cartões coloridos. Filtros permitem navegar 
 
 Tabela com horários (linhas) × dias da semana (colunas). Cada célula pode conter uma ou mais disciplinas. As células são coloridas por semestre para facilitar a leitura visual.
 
-- **Clique direito** em uma célula: abre um menu com as disciplinas daquele horário; ao escolher uma, o filtro de semestre é aplicado automaticamente ao semestre dela.
+- **Clique direito** em uma célula: abre um menu com as disciplinas daquele horário (escolher uma aplica o filtro de semestre dela) e os professores que as lecionam (escolher um aplica o filtro daquele professor). Sob **Outras interações**, a opção **Restringir alocação** marca a célula como restrita (ver [Restrições de alocação](#restrições-de-alocação)). O menu também abre em **células vazias** (mostrando só "Outras interações").
 - **Clique do meio** em uma célula: remove a alocação dali.
 - Clique em um **card** na lista de disciplinas (à esquerda) para destacar, com **fundo verde claro**, apenas as células daquela disciplina na grade.
 
@@ -341,6 +341,19 @@ Para ajudar a achar um horário livre dos **dois** tipos de choque, durante o ar
 - Com **filtro de semestre** ativo: os horários do semestre ficam em verde e os horários do **professor** da disciplina ficam **hachurados**.
 
 Assim, uma célula livre de verde e de hachura é segura (sem choque de professor nem de semestre). A hachura é temporária: aparece ao iniciar o arraste e some ao soltar.
+
+#### Restrições de alocação
+
+Use a restrição para marcar horários que devem ser **evitados** (ex.: um professor indisponível na segunda de manhã). Pelo **clique direito** numa célula, em **Outras interações → Restringir alocação**, a célula passa a ter **fundo vermelho**. A restrição herda o escopo do **filtro ativo**:
+
+- com **filtro de professor** ativo, vale só para aquele professor;
+- com **filtro de um único semestre** ativo, vale só para aquele semestre.
+
+A opção exige **exatamente um** filtro ativo (professor **ou** um único semestre); sem isso — nenhum filtro, ambos, ou vários semestres — ela aparece **desabilitada** com um aviso. Para remover, abra o menu com o mesmo filtro ativo: a opção vira **Remover restrição**.
+
+A restrição fica **vermelha apenas quando o filtro correspondente está ativo** (uma restrição de professor não polui a vista de outro professor ou de semestre). Mesmo assim, ao **arrastar** uma disciplina cujo professor/semestre coincide com uma restrição, a célula restrita fica **vermelha + hachurada durante o arraste**, qualquer que seja o filtro — para você não esquecer da restrição ao reposicionar. É um **aviso**: arrastar e soltar continuam permitidos.
+
+As restrições são **salvas no `planejamento.json`** (sobrevivem a fechar o programa e entram nos backups) e **acompanham a sincronização**: ao **enviar**, vão junto no registro do curso; ao **baixar**, vêm do servidor (útil para quem trabalha só com o plano do servidor). Para apagar todas de uma vez, use **Ações → Limpar todas as restrições** (não afeta as alocações).
 
 #### Indicadores de problemas
 

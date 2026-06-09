@@ -21,6 +21,7 @@
 		"mesclar_horarios_planejamento": "[b]Reconcilia[/b] um [b]horarios.txt[/b] já montado com o [b]planejamento[/b] atualmente carregado.\n\n• Disciplinas que [b]permanecem[/b] no planejamento mantêm o horário/dia/sala que já tinham no horarios.txt.\n• Disciplinas [b]novas[/b] (no planejamento, mas não no horarios.txt) entram [b]sem horário[/b], prontas para posicionar.\n• Disciplinas que [b]saíram[/b] do planejamento (estavam no horarios.txt) são listadas, e você decide se [b]reinclui[/b] ou [b]descarta[/b].\n\nDisponível apenas quando há, ao mesmo tempo, um horarios.txt e um planejamento carregados.",
 		"posicionar_automatico": "Abre o diálogo de [b]posicionamento automático[/b] e tenta alocar as disciplinas ainda [b]sem horário[/b], respeitando preferências de professores e choques existentes.",
 		"limpar_preenchimento": "[b]Remove todas as alocações[/b] da grade, mantendo as disciplinas na lista à esquerda para reposicionar.",
+		"limpar_restricoes": "[b]Remove todas as restrições[/b] de alocação (células marcadas como restritas) de uma só vez. As [b]alocações não são afetadas[/b].",
 		"ocultar_curso": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas que não passam pelo filtro de [b]curso[/b].",
 		"ocultar_semestre": "Quando marcado, [b]oculta[/b] (em vez de esmaecer) as disciplinas fora dos [b]semestres[/b] filtrados.",
 		"ocultar_professor": "Quando marcado, mostra [b]apenas[/b] as disciplinas do [b]professor[/b] filtrado, ocultando as demais."
