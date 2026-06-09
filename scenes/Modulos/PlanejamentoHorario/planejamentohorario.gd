@@ -2913,10 +2913,22 @@ func _verificar_compartilhadas_divergentes() -> Array[String]:
 			continue  # precisa dos dois lados para comparar
 		for curso in refs:
 			if not _mesmas_celulas(seu, refs[curso]):
-				divergencias.append("• %s — você: %s · %s: %s" % [cod.to_upper(), \
+				var nome_disc: String = _nome_disciplina(cod)
+				var rotulo: String = cod.to_upper()
+				if not nome_disc.is_empty():
+					rotulo = "%s (%s)" % [cod.to_upper(), nome_disc]
+				divergencias.append("• %s — você: %s · %s: %s" % [rotulo, \
 					_descrever_celulas(seu, dias, horas), curso, \
 					_descrever_celulas(refs[curso], dias, horas)])
 	return divergencias
+
+
+# Nome da disciplina (formatado para exibição) a partir do código; vazio quando não consta na grade.
+func _nome_disciplina(cod: String) -> String:
+	var nome: String = analise_grades.info_grade(grades_disciplinas_curriculos, cod, "nome", "", true)
+	if nome.begins_with("Codigo") or nome.begins_with("Informa"):
+		return ""
+	return nome.capitalize()
 
 
 # Verdadeiro se os dois conjuntos de células ("linha_coluna") são exatamente iguais.
