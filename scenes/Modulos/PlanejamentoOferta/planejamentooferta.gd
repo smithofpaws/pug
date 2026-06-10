@@ -149,8 +149,8 @@ func _ready() -> void:
 		"Grades": grades_ordenadas,
 		"Importar": ["planejamento.csv"],
 		"Importar_retorno": ["importar_csv"],
-		"Exportar": ["planejamento.csv", "alteracoes.md"],
-		"Exportar_retorno": ["exportar_csv", "exportar_alteracoes"],
+		"Exportar": ["planejamento.csv", "alteracoes.md", "oferta.txt"],
+		"Exportar_retorno": ["exportar_csv", "exportar_alteracoes", "exportar_oferta_txt"],
 	}
 	_seletor_importar.opcao_selecionada.connect(_on_importar_opcao_selecionada)
 
@@ -536,6 +536,8 @@ func _on_importar_opcao_selecionada(retorno: String, _lista_selecionada: Array[S
 		_exportar_planejamento_csv()
 	elif retorno == "exportar_alteracoes":
 		_exportar_alteracoes()
+	elif retorno == "exportar_oferta_txt":
+		_exportar_oferta_txt()
 	elif grades_disciplinas_curriculos.has(retorno):
 		_abrir_janela_selecao_grade(retorno)
 
@@ -1105,6 +1107,63 @@ func _exportar_planejamento_csv() -> void:
 		file.store_line(linha)
 	_log("Planejamento exportado para %splanejamento.csv (%d linhas)." % \
 		[diretorio_exportacao, linhas.size() - 1], "sucesso", true, true)
+
+
+## Exporta para [code]oferta.txt[/code] uma linha por disciplina, no formato
+## [code]Nome - Professor(es) - CODIGO - Turma[/code] (varios professores separados por " - ").
+## Respeita o filtro de curso ativo no painel (todas as disciplinas se nao houver filtro);
+## disciplinas sem professor alocado sao omitidas. Ordem alfabetica pelo nome da disciplina.
+func _exportar_oferta_txt() -> void:
+	if _alocacoes.is_empty():
+		_log("Nenhuma disciplina no planejamento para exportar.", "erro", true, true)
+		return
+
+	var cod_filtro: String = _painel_disciplinas.filtro_curso
+	var entradas: Array = []
+	for chave in _alocacoes:
+		var dados: Dictionary = _alocacoes[chave]
+		var semestre: String = str(dados.get("semestre", ""))
+		if not cod_filtro.is_empty() and not _painel_disciplinas.semestre_pertence_ao_curso(semestre, cod_filtro):
+			continue
+		var profs: Dictionary = dados.get("professores", {})
+		if profs.is_empty():
+			continue
+		var nome: String = str(dados.get("nome", ""))
+		var codigo: String = str(dados.get("codigo", "")).to_upper()
+		var turma: String = _turma_da_disciplina(semestre)
+		var professores: String = " - ".join(PackedStringArray(profs.keys()))
+		entradas.append({"nome": nome, "linha": "%s - %s - %s - %s" % [nome, professores, codigo, turma]})
+
+	if entradas.is_empty():
+		_log("Nenhuma disciplina com professor alocado para exportar.", "aviso", true, true)
+		return
+
+	entradas.sort_custom(func(a, b): return a["nome"].naturalnocasecmp_to(b["nome"]) < 0)
+	var linhas: Array[String] = []
+	for e in entradas:
+		linhas.append(e["linha"])
+
+	file_handling.check_create_dir(diretorio_exportacao)
+	file_handling.save_text_file(diretorio_exportacao, "oferta.txt", linhas)
+	_log("Oferta exportada para %soferta.txt (%d disciplinas)." % \
+		[diretorio_exportacao, linhas.size()], "sucesso", true, true)
+
+
+# Retorna a turma da disciplina no formato [code]T<n>[/code] (ex.: "T20") a partir do prefixo do
+# [param semestre]: identifica o curso por [code]cursos.<cod>.prefixos_semestre[/code] e usa a
+# PRIMEIRA turma de [code]cursos.<cod>.turmas[/code]. Retorna "" se nenhum curso casar ou se o
+# curso nao tiver turmas.
+func _turma_da_disciplina(semestre: String) -> String:
+	var sem_lower: String = semestre.to_lower()
+	for cod_curso in cursos:
+		var prefixos: Array = cursos[cod_curso].get("prefixos_semestre", [])
+		for pref in prefixos:
+			if sem_lower.begins_with(str(pref).to_lower()):
+				var turmas: Array = cursos[cod_curso].get("turmas", [])
+				if turmas.size() > 0:
+					return "T%d" % int(turmas[0])
+				return ""
+	return ""
 
 
 ## Exporta para [code]alteracoes.md[/code] a diferenca entre o planejamento importado (baseline em
