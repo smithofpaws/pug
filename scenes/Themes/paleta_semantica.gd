@@ -50,6 +50,14 @@ const PALETA: Dictionary = {
 	"aviso": Color.YELLOW,
 }
 
+## Fundos ([code][bgcolor][/code] do BBCode) que destacam disciplinas no Modo Ajuste (Situação dos
+## Alunos): verde = o discente quer INCLUIR, vermelho = quer EXCLUIR. São hex com alpha translúcido
+## (não passam por adaptação de contraste) — o alpha deixa o fundo do tema atravessar, mantendo o
+## texto (já colorido pela condição) legível em qualquer tema. Usados na grade de horários
+## ([code]analise_horarios.gd[/code]) e no terminal ([code]situacao_alunos.gd[/code]).
+const FUNDO_AJUSTE_INCLUIR: String = "#2e7d3280"
+const FUNDO_AJUSTE_EXCLUIR: String = "#c6282880"
+
 ## Sobrescritas opcionais por tema: [code]{ nome_do_tema: { token: Color } }[/code]. Vazio por padrão.
 const OVERRIDES: Dictionary = {}
 

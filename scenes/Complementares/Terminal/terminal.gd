@@ -57,12 +57,15 @@ func _atualizar_fundo() -> void:
 ## hex). O Terminal resolve e adapta a cor ao tema atual; o módulo só informa o token. [br]
 ## [param newline] insere quebra de linha antes do texto; [param clear] limpa o histórico antes de
 ## escrever; [param effect] aplica um efeito (ex.: [code]"shake"[/code]).
-func text_edit(text: String, color: String = "padrao", newline: bool = true, clear: bool = false, effect: String = "") -> void:
+## [param bg] (opcional): cor de fundo em hex (ex.: [code]"#2e7d3280"[/code], aceita alpha) aplicada
+## via [code][bgcolor][/code]. Diferente de [param color], não é um token semântico nem passa por
+## adaptação de tema — é emitida literal (usar hex com alpha para legibilidade).
+func text_edit(text: String, color: String = "padrao", newline: bool = true, clear: bool = false, effect: String = "", bg: String = "") -> void:
 	if clear:
 		_buffer.clear()
 		_meta_tooltips.clear()
 		$"%TextEdit".set_text("")
-	var entrada: Dictionary = {"texto": text, "token": color, "efeito": effect, "nl": newline and not clear}
+	var entrada: Dictionary = {"texto": text, "token": color, "efeito": effect, "nl": newline and not clear, "bg": bg}
 	_buffer.append(entrada)
 	# Acrescimo incremental (mesmo custo de antes); a re-renderização total só ocorre na troca de tema.
 	$"%TextEdit".set_text($"%TextEdit".get_text() + _segmento_bbcode(entrada))
@@ -85,9 +88,10 @@ func subsecao(texto: String) -> void:
 
 
 ## Item de lista em markdown ([code]- texto[/code]). [param nivel] indenta com 2 espaços por
-## nível; [param token] colore a linha (padrão neutro).
-func item(texto: String, nivel: int = 0, token: String = "padrao") -> void:
-	text_edit("  ".repeat(nivel) + "- " + texto, token)
+## nível; [param token] colore a linha (padrão neutro); [param bg] (hex, opcional) aplica cor de
+## fundo na linha (ver [method text_edit]).
+func item(texto: String, nivel: int = 0, token: String = "padrao", bg: String = "") -> void:
+	text_edit("  ".repeat(nivel) + "- " + texto, token, true, false, "", bg)
 
 
 ## Linha simples (corpo ou status), colorida pelo [param token].
@@ -121,5 +125,9 @@ func _segmento_bbcode(entrada: Dictionary) -> String:
 	if entrada["efeito"] == "shake":
 		efeito_ini = "[shake rate=20.0 level=10]"
 		efeito_fim = "[/shake]"
+	# Fundo opcional (hex literal): envolve o texto por dentro da tag de cor.
+	var bg: String = entrada.get("bg", "")
+	var bg_ini: String = "[bgcolor=" + bg + "]" if not bg.is_empty() else ""
+	var bg_fim: String = "[/bgcolor]" if not bg.is_empty() else ""
 	var prefixo: String = "\n" if entrada["nl"] else ""
-	return prefixo + "[color=" + cor_hex + "]" + efeito_ini + entrada["texto"] + efeito_fim + "[/color]"
+	return prefixo + "[color=" + cor_hex + "]" + bg_ini + efeito_ini + entrada["texto"] + efeito_fim + bg_fim + "[/color]"

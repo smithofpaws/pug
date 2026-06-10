@@ -56,8 +56,9 @@ func horas_das_aulas(_horarios_ini: Dictionary = {}) -> Array[String]:
 ## [ "07:30", ... ]
 ## [ "08:30", ... ]
 ## [param codigos_incluir]/[param codigos_excluir] (Modo Ajuste, em minúsculas) marcam as disciplinas
-## solicitadas no formulário de ajuste: as de incluir saem sublinhadas ([code][u][/code]) e as de
-## excluir riscadas ([code][s][/code]). Vazios (padrão) não alteram nada.
+## solicitadas no formulário de ajuste: as de incluir saem com fundo verde
+## ([code]PaletaSemantica.FUNDO_AJUSTE_INCLUIR[/code]) e as de excluir com fundo vermelho
+## ([code]FUNDO_AJUSTE_EXCLUIR[/code]). Vazios (padrão) não alteram nada.
 func determinar_horarios(horarios_ini: Dictionary, horarios_txt: Array, disc_cursaveis: Dictionary,\
 historico_matricula: Dictionary, condicoes: Array = ["matriculado_agora"], \
 lista_cores: Dictionary = {"matriculado_agora": "GREEN"}, forma_apresentacao: String = "somente_codigo", \
@@ -360,13 +361,14 @@ forma_apresentacao: String = "somente_codigo", codigos_incluir: Array = [], codi
 				_:
 					texto_para_matriz = "forma de apresentação inválida"
 			
-			# Modo Ajuste: sublinha a disciplina que o discente quer incluir e risca a que quer excluir.
-			# As listas chegam em minusculas; o [u]/[s] envolve o rotulo dentro das tags de cor.
+			# Modo Ajuste: fundo verde p/ a disciplina que o discente quer incluir e vermelho p/ a que
+			# quer excluir (substitui o antigo [u]/[s], fraco demais). O hex literal do [bgcolor]
+			# atravessa a tradução de tokens da Celula intacto.
 			var cod_lower: String = codigo.to_lower()
 			if cod_lower in codigos_incluir:
-				texto_para_matriz = "[u]" + texto_para_matriz + "[/u]"
+				texto_para_matriz = "[bgcolor=" + PaletaSemantica.FUNDO_AJUSTE_INCLUIR + "]" + texto_para_matriz + "[/bgcolor]"
 			elif cod_lower in codigos_excluir:
-				texto_para_matriz = "[s]" + texto_para_matriz + "[/s]"
+				texto_para_matriz = "[bgcolor=" + PaletaSemantica.FUNDO_AJUSTE_EXCLUIR + "]" + texto_para_matriz + "[/bgcolor]"
 
 			var virgula: String = "[color=orange], [/color]"
 			if forma_apresentacao == "esferas" or matriz_grade[linha][coluna].length() == 0:

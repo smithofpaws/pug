@@ -257,9 +257,9 @@ func _rodar_análise() -> void:
 		$"%Terminal".item("Carga horária exigida não cadastrada para a grade " + _grade_ativa \
 			+ " (crie arquivos/cargaexigida/" + _grade_ativa + ".json). Percentual de conclusão indisponível.", \
 			0, cores_terminal["aviso"])
+	# Modo Ajuste: a listagem incluir/excluir é impressa dentro de _imprimir_analise, logo antes da
+	# seção "Matriculado Agora" (ver _imprimir_analise).
 	_analisar_matricula(_matricula_atual)
-	# Modo Ajuste: se o discente selecionado preencheu o formulário, lista incluir/excluir no terminal.
-	_imprimir_ajuste(_matricula_atual)
 
 # Verifica se [_grade_ativa] e chave valida no dicionario de grades (requisito real da analise).
 # A carga exigida NAO e verificada aqui: e opcional (ver [method _rodar_análise]).
@@ -297,7 +297,7 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 	var creditos_disciplinas: Dictionary
 	creditos_disciplinas = analise_historico.creditos_disciplinas(matricula, _historico, disc_cursaveis, grades_disciplinas_curriculos)
 	# Envia para a grade de horarios os horarios a listagem de disciplinas. Modo Ajuste: se o discente
-	# preencheu o formulario, forca a exibicao das disciplinas pedidas (sublinhadas p/ incluir, riscadas
+	# preencheu o formulario, forca a exibicao das disciplinas pedidas (fundo verde p/ incluir, vermelho
 	# p/ excluir) via condicoes sinteticas, independente dos toggles e da elegibilidade.
 	var registro_aj: Dictionary = _ajuste_por_matricula.get(matricula.to_lower(), {})
 	var cods_incluir: Array = registro_aj.get("incluir", [])
@@ -321,7 +321,8 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 		condicoes_grade.append_array($"%Horarios".lista_condicoes_verdadeiras)
 		condicoes_grade.append("ajuste_incluir")
 		condicoes_grade.append("ajuste_excluir")
-		# Token de cor desconhecido cai na cor de texto (sem [shake]); o [u]/[s] faz a distincao.
+		# Token de cor desconhecido cai na cor de texto (sem [shake]); o fundo verde/vermelho aplicado
+		# em analise_horarios (FUNDO_AJUSTE_INCLUIR/EXCLUIR) faz a distincao incluir vs excluir.
 		cores_grade = lista_cores.duplicate()
 		cores_grade["ajuste_incluir"] = "ajuste_incluir"
 		cores_grade["ajuste_excluir"] = "ajuste_excluir"
@@ -533,7 +534,15 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 	var secoes: Array[Dictionary] = _formatar_analise(matricula, disc_cursaveis, disc_semgrade, \
 		ch_vencida, creditos_disciplinas, analisado_reprov)
 	var primeiro: bool = true
+	# Modo Ajuste: imprime incluir/excluir uma única vez, logo antes da primeira seção
+	# "matriculado_agora*". Fallback após o laço cobre discentes sem essa seção (no-op se não houver
+	# ajuste — _imprimir_ajuste retorna cedo).
+	var ajuste_impresso: bool = false
 	for secao in secoes:
+		if not ajuste_impresso and secao["tipo"] == "condicao" \
+		and str(secao["nome"]).begins_with("matriculado_agora"):
+			_imprimir_ajuste(matricula)
+			ajuste_impresso = true
 		match secao["tipo"]:
 			"versao":
 				var texto: String = "Versão do currículo: " + secao["texto"]
@@ -603,6 +612,9 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 					$"%Terminal".item(disc["codigo"] + ": " + disc["nome_disc"] + " (" + \
 						disc["creditos"] + " Créditos)", 0, lista_cores[secao["nome"]])
 				$"%Terminal".espaco()
+	# Sem seção "matriculado_agora" (discente não matriculado em nada): imprime o ajuste ao final.
+	if not ajuste_impresso:
+		_imprimir_ajuste(matricula)
 
 
 # Formata os dados de um aluno em linhas markdown.
@@ -1187,37 +1199,39 @@ func _imprimir_ajuste(matricula: String) -> void:
 		$"%Terminal".item("(nenhuma)")
 	for codigo in registro["incluir"]:
 		var st: Dictionary = _status_incluir(codigo, disc_cursaveis)
-		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st["texto"], 0, st["token"])
+		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st["texto"], 0, st["token"], PaletaSemantica.FUNDO_AJUSTE_INCLUIR)
 	for prob in registro["incluir_problemas"]:
-		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"])
+		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"], PaletaSemantica.FUNDO_AJUSTE_INCLUIR)
 	$"%Terminal".espaco()
 	$"%Terminal".secao("Ajuste de matrícula — deseja EXCLUIR")
 	if registro["excluir"].is_empty() and registro["excluir_problemas"].is_empty():
 		$"%Terminal".item("(nenhuma)")
 	for codigo in registro["excluir"]:
 		var st2: Dictionary = _status_excluir(codigo, disc_cursaveis)
-		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st2["texto"], 0, st2["token"])
+		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st2["texto"], 0, st2["token"], PaletaSemantica.FUNDO_AJUSTE_EXCLUIR)
 	for prob in registro["excluir_problemas"]:
-		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"])
+		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"], PaletaSemantica.FUNDO_AJUSTE_EXCLUIR)
 	$"%Terminal".espaco()
 
 # Status de uma disciplina que o aluno quer incluir, conforme a condição em que ela cai para ele.
+# A cor (token) segue a da própria condição (mesma regra das seções de condição), via lista_cores.
 func _status_incluir(codigo: String, disc_cursaveis: Dictionary) -> Dictionary:
 	var cond: String = _condicao_do_codigo(codigo, disc_cursaveis)
 	if cond.begins_with("matriculavel") or cond.begins_with("corequisito_matriculavel"):
 		var aprov: String = " (com aproveitamento)" if cond.ends_with("_aproveitamento") else ""
-		return { "texto": "matriculável" + aprov, "token": cores_terminal["sucesso"] }
+		return { "texto": "matriculável" + aprov, "token": lista_cores.get(cond, cores_terminal["sucesso"]) }
 	if cond.begins_with("matriculado_agora"):
-		return { "texto": "já está matriculado", "token": cores_terminal["aviso"] }
+		return { "texto": "já está matriculado", "token": lista_cores.get(cond, cores_terminal["aviso"]) }
 	if cond.is_empty():
 		return { "texto": "não está matriculável", "token": cores_terminal["erro"] }
-	return { "texto": cond.replacen("_", " "), "token": cores_terminal["aviso"] }
+	return { "texto": cond.replacen("_", " "), "token": lista_cores.get(cond, cores_terminal["aviso"]) }
 
 # Status de uma disciplina que o aluno quer excluir (espera-se que esteja matriculado nela).
+# A cor (token) segue a da própria condição, via lista_cores.
 func _status_excluir(codigo: String, disc_cursaveis: Dictionary) -> Dictionary:
 	var cond: String = _condicao_do_codigo(codigo, disc_cursaveis)
 	if cond.begins_with("matriculado_agora") or cond.begins_with("matricula_irregular"):
-		return { "texto": "matriculado (pode remover)", "token": cores_terminal["sucesso"] }
+		return { "texto": "matriculado", "token": lista_cores.get(cond, cores_terminal["sucesso"]) }
 	return { "texto": "não consta como matriculado", "token": cores_terminal["aviso"] }
 
 # Retorna a primeira condição de [disc_cursaveis] que contém [codigo] (minúsculo), ou "" se nenhuma.
