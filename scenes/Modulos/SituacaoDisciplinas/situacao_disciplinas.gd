@@ -9,7 +9,7 @@ extends ReferenceRect
 # Classes instanciadas.
 var file_handling := FileHandling.new()
 var analise_historico := AnaliseHistorico.new()
-#var analise_grades := AnaliseGrades.new().
+var analise_grades := AnaliseGrades.new()
 var analise_horarios := AnaliseHorarios.new()
 var horarios_exe := HorariosExe.new()
 
@@ -278,8 +278,8 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 	$"%Terminal".titulo("A disciplina pertence ao grupo: " + nucleo, true)
 	$"%Terminal".espaco()
 	$"%Terminal".secao("Lista de discentes na disciplina")
-	$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (os valores \
-	são referentes APENAS a este currículo).")
+	$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (somando \
+	disciplinas equivalentes de outras grades).")
 	for condicao in discentes_disc_condicoes.keys():
 		if discentes_disc_condicoes[condicao].size() > 0:
 			$"%Terminal".espaco()
@@ -289,12 +289,16 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 			for b in _lista_alunos.size():
 				if discentes_disc_condicoes[condicao][a] == _lista_alunos[b][0]:
 					var codigo = _lista_disciplinas[_linha_selecionada1][0]
-					var reprov_nota: int = _analisado_reprov[_lista_alunos[b][0]].get("reprovado com nota",{}).get(codigo, 0)
-					var reprov_falta: int = _analisado_reprov[_lista_alunos[b][0]].get("reprovado por frequência",{}).get(codigo, 0)
+					# Soma as reprovações desta disciplina com as de suas equivalentes de outras
+					# grades (aproveitamento de reprovações entre PPCs).
+					var reprov: Dictionary = analise_grades.reprovacoes_aproveitadas(
+						_analisado_reprov[_lista_alunos[b][0]], codigo, equivalencias, _grade_ativa)
+					var reprov_nota: int = reprov["nota"]
+					var reprov_falta: int = reprov["falta"]
 					var reprovacoes: String = ""
 					if reprov_falta != 0 or reprov_nota != 0:
 						reprovacoes = "(" + str(reprov_nota) + " RN / " + str(reprov_falta) + " RF)"
-					$"%Terminal".item(_lista_alunos[b][1] + " " + reprovacoes, 0, lista_cores[condicao])
+					$"%Terminal".item(_lista_alunos[b][1].capitalize() + " " + reprovacoes, 0, lista_cores[condicao])
 					break
 #endregion
 

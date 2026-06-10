@@ -463,22 +463,12 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 				var nome_disc: String = str(analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome"))
 				var creditos: String = str(creditos_disciplinas.get(codigo, 0))
 				var nucleo: String = str(analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nucleo"))
-				var cod_lower: String = codigo.to_lower()
-				var reprov_nota: int = analisado_reprov.get("reprovado com nota", {}).get(cod_lower, 0)
-				var reprov_falta: int = analisado_reprov.get("reprovado por frequência", {}).get(cod_lower, 0)
-				# Fallback: busca reprovacao nos codigos de origem por equivalencia
-				if reprov_nota == 0 and reprov_falta == 0:
-					var codigos_origem: Array[String] = analise_grades.codigos_origem_equivalencia(
-						codigo, equivalencias, _grade_ativa
-					)
-					for cod_origem in codigos_origem:
-						var orig_lower: String = cod_origem.to_lower()
-						if reprov_nota == 0:
-							reprov_nota = analisado_reprov.get("reprovado com nota", {}).get(orig_lower, 0)
-						if reprov_falta == 0:
-							reprov_falta = analisado_reprov.get("reprovado por frequência", {}).get(orig_lower, 0)
-						if reprov_nota > 0 and reprov_falta > 0:
-							break
+				# Soma as reprovações desta disciplina com as de suas equivalentes de outras grades
+				# (aproveitamento): aluno que reprovou na versão antiga e migrou de PPC carrega o total.
+				var reprov: Dictionary = analise_grades.reprovacoes_aproveitadas(
+					analisado_reprov, codigo, equivalencias, _grade_ativa)
+				var reprov_nota: int = reprov["nota"]
+				var reprov_falta: int = reprov["falta"]
 				var reprovacoes: String = ""
 				if reprov_falta != 0 or reprov_nota != 0:
 					reprovacoes = "(" + str(reprov_nota) + " RN / " + str(reprov_falta) + " RF)"
@@ -582,7 +572,7 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 					$"%Terminal".item(item[0] + ": " + item[1], 0, cores_terminal["alerta"])
 				$"%Terminal".espaco()
 			"aviso_reprovacoes":
-				$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas.")
+				$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (somando disciplinas equivalentes de outras grades).")
 				$"%Terminal".espaco()
 			"condicao":
 				$"%Terminal".secao(secao["nome"].replacen("_", " ").capitalize())
@@ -659,7 +649,7 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 				for item in secao["itens"]:
 					md.append("- " + item[0] + ": " + item[1])
 			"aviso_reprovacoes":
-				md.append("*Valores entre parenteses indicam reprovacoes por nota e por faltas.*")
+				md.append("*Valores entre parenteses indicam reprovacoes por nota e por faltas (somando disciplinas equivalentes de outras grades).*")
 			"condicao":
 				md.append("### " + secao["nome"].replacen("_", " ").capitalize())
 				for disc in secao["itens"]:

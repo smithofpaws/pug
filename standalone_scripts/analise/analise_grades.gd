@@ -449,6 +449,27 @@ func codigos_origem_equivalencia(codigo_alvo: String, equivalencias: Dictionary,
 				codigos_origem.append(src_codigo)
 	return codigos_origem
 
+## Soma as reprovações (por nota e por falta) de [param codigo] na grade [param versao_grade] com as
+## de seus códigos equivalentes de outras grades — aproveitamento de reprovações. Ex.: o aluno reprovou
+## várias vezes na disciplina da grade antiga e, após migrar de PPC, cursa a equivalente na grade nova;
+## as reprovações da versão antiga são contadas junto. [br]
+## [param reprov_matr] é a entrada de UMA matrícula em [method AnaliseReprovacoes.analise_reprovacoes]:
+## [code]{ "reprovado com nota": {cod: n}, "reprovado por frequência": {cod: n} }[/code] (códigos em
+## minúsculas). Retorna [code]{ "nota": int, "falta": int }[/code].
+func reprovacoes_aproveitadas(reprov_matr: Dictionary, codigo: String, equivalencias: Dictionary, versao_grade: String) -> Dictionary:
+	var rn: Dictionary = reprov_matr.get("reprovado com nota", {})
+	var rf: Dictionary = reprov_matr.get("reprovado por frequência", {})
+	var cl: String = codigo.to_lower()
+	var nota: int = int(rn.get(cl, 0))
+	var falta: int = int(rf.get(cl, 0))
+	for cod_origem in codigos_origem_equivalencia(codigo, equivalencias, versao_grade):
+		var ol: String = str(cod_origem).to_lower()
+		if ol == cl:
+			continue
+		nota += int(rn.get(ol, 0))
+		falta += int(rf.get(ol, 0))
+	return { "nota": nota, "falta": falta }
+
 ## Retorna true se [param cod_alvo] é "completo" para o aluno: existe ao menos um grupo de
 ## equivalência (mesma grade-fonte, i.e. mesma chave em [member equivalencias]) cujas TODAS as fontes
 ## que mapeiam para [param cod_alvo] estão em [param codigos_presentes] ([code]{ cod_lower: true }[/code]).
