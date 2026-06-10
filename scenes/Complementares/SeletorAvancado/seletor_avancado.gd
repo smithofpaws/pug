@@ -285,7 +285,12 @@ func _on_popupmenu_option_chosen(index: int) -> void:
 		if $MenuButton.get_popup().is_item_checkable(a):
 			if $MenuButton.get_popup().is_item_checked(a):
 				lista_selecionada.append(_retorno[a])
-	
+	# Selecao unica ("*"): o item escolhido nao tem checkbox (logo nao entra no laco acima), entao
+	# incluimos explicitamente o seu retorno — sem isso a lista sairia vazia e o consumidor nao
+	# saberia o que foi selecionado.
+	if _selecao_unica[index][1] and not _retorno[index] in lista_selecionada:
+		lista_selecionada.append(_retorno[index])
+
 	if atualizar_texto_padrao:
 		_set_textopadrao($MenuButton.get_popup().get_item_text(index))
 
