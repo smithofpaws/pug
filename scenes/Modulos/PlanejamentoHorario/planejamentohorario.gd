@@ -3160,11 +3160,21 @@ func _verificar_problemas() -> void:
 	var res_carga: Dictionary = _verif_carga.verificar(horas)
 	var sem_prof: Dictionary = _ger_alocacoes.celulas_sem_professor()
 
+	# Outros choques (sala/semestre): mostra a contagem e, se a preferência correspondente estiver
+	# ligada, detalha quais disciplinas colidem; senão, sugere reexecutar com a opção marcada.
 	var outros: Array[String] = []
 	if int(res_choques.get("choques_sala", 0)) > 0:
 		outros.append("%d choque(s) de sala." % int(res_choques["choques_sala"]))
+		if IND_CHOQUE_SALA in _indicadores_ativos:
+			outros.append_array(_detalhar_choque_recurso(res_choques, "sala", dias, horas))
+		else:
+			outros.append("Para ver as disciplinas em choque, ative a preferência \"%s\" e execute novamente." % IND_CHOQUE_SALA)
 	if int(res_choques.get("choques_sem", 0)) > 0:
 		outros.append("%d choque(s) de semestre." % int(res_choques["choques_sem"]))
+		if IND_CHOQUE_SEM in _indicadores_ativos:
+			outros.append_array(_detalhar_choque_recurso(res_choques, "sem", dias, horas))
+		else:
+			outros.append("Para ver as disciplinas em choque, ative a preferência \"%s\" e execute novamente." % IND_CHOQUE_SEM)
 	var carga_itens: Array[String] = []
 	for a in res_carga.get("avisos", []):
 		carga_itens.append(str(a))
@@ -3176,7 +3186,7 @@ func _verificar_problemas() -> void:
 			"itens": _detalhar_sem_professor(sem_prof, dias, horas)},
 		{"titulo": "Carga horária excedida", "token": "aviso", "itens": _detalhar_ch_excedida()},
 		{"titulo": "Sobrecarga (≥6h no mesmo dia, noturna → manhã cedo)", "token": "aviso", "itens": carga_itens},
-		{"titulo": "Outros choques", "token": "aviso", "itens": outros},
+		{"titulo": "Análise de choques", "token": "aviso", "itens": outros},
 	]
 	_relatorios.verificacao_completa(secoes)
 
@@ -3192,6 +3202,14 @@ func _rotulo_celula(chave_celula: String, dias: Array[String], horas: Array[Stri
 	var hora: String = horas[l - 1] if l >= 1 and l <= horas.size() else "lin %d" % l
 	return "%s %s" % [dia, hora]
 
+# Rótulo da disciplina de uma alocação para os relatórios de choque, conforme o modo de visualização
+# selecionado (mesma regra das células, via GerenciadorAlocacoes.rotulo_alocacao). No modo "esferas"
+# (só pontos na grade) cai no código, o único rótulo textual útil num relatório.
+func _rotulo_disc_choque(aloc: Dictionary) -> String:
+	if _ger_alocacoes.modo_visualizacao == "esferas":
+		return str(aloc.get("codigo", "")).to_upper()
+	return _ger_alocacoes.rotulo_alocacao(aloc)
+
 # Detalha os choques de professor: para cada célula marcada com choque de professor, agrupa as
 # disciplinas por professor e lista quem aparece em duas ou mais ("Quinta 08:30 — Prof X: AL0003, AL0009").
 func _detalhar_choque_professor(res: Dictionary, dias: Array[String], horas: Array[String]) -> Array[String]:
@@ -3205,13 +3223,13 @@ func _detalhar_choque_professor(res: Dictionary, dias: Array[String], horas: Arr
 		var por_prof: Dictionary = {}
 		for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
 			var dados_csv: Dictionary = _dados._planejamento_csv.get((aloc as Dictionary).get("chave", ""), {})
-			var cod: String = str((aloc as Dictionary).get("codigo", "")).to_upper()
+			var rot: String = _rotulo_disc_choque(aloc)
 			for prof in dados_csv.get("professor", []):
 				var pn: String = str(prof)
 				if not por_prof.has(pn):
 					por_prof[pn] = []
-				if cod not in por_prof[pn]:
-					por_prof[pn].append(cod)
+				if rot not in por_prof[pn]:
+					por_prof[pn].append(rot)
 		var quando: String = _rotulo_celula(chave_celula, dias, horas)
 		for pn in por_prof:
 			if (por_prof[pn] as Array).size() >= 2:
@@ -3231,8 +3249,40 @@ func _detalhar_sem_professor(sem_prof: Dictionary, dias: Array[String], horas: A
 			var profs: Array = dados_csv.get("professor", [])
 			var pn: String = str(profs[0]) if profs.size() > 0 else ""
 			if pn.is_empty():
-				cods.append(str((aloc as Dictionary).get("codigo", "")).to_upper())
+				cods.append(_rotulo_disc_choque(aloc))
 		itens.append("%s — %s" % [_rotulo_celula(chave_celula, dias, horas), ", ".join(cods)])
+	return itens
+
+# Detalha choques de um recurso compartilhado numa célula: agrupa as disciplinas pela chave do recurso
+# ([param tipo] = "sala" → a sala; "sem" → o semestre) e lista as que colidem (mesma chave, ≥2 no mesmo
+# horário), espelhando _detalhar_choque_professor. Para "sem", ignora alocações de referência (outro
+# curso), como o DetectorDeChoques faz na contagem.
+func _detalhar_choque_recurso(res: Dictionary, tipo: String, dias: Array[String], horas: Array[String]) -> Array[String]:
+	var itens: Array[String] = []
+	var cel_choque: Dictionary = res.get("celulas_choque", {})
+	var chaves: Array = cel_choque.keys()
+	chaves.sort()
+	var rotulo_rec: String = "Sala" if tipo == "sala" else "Semestre"
+	for chave_celula in chaves:
+		if not (cel_choque[chave_celula] as Dictionary).get(tipo, false):
+			continue
+		var por_chave: Dictionary = {}
+		for aloc in _ger_alocacoes.obter_alocacoes(chave_celula):
+			var ad: Dictionary = aloc
+			if tipo == "sem" and _aloc_e_referencia(ad):
+				continue
+			var rec: String = str(ad.get("sala", "")) if tipo == "sala" else _semestre_da_aloc(ad)
+			if rec.strip_edges().is_empty():
+				continue
+			var rot: String = _rotulo_disc_choque(ad)
+			if not por_chave.has(rec):
+				por_chave[rec] = []
+			if rot not in por_chave[rec]:
+				por_chave[rec].append(rot)
+		var quando: String = _rotulo_celula(chave_celula, dias, horas)
+		for rec in por_chave:
+			if (por_chave[rec] as Array).size() >= 2:
+				itens.append("%s — %s %s: %s" % [quando, rotulo_rec, str(rec).to_upper(), ", ".join(por_chave[rec])])
 	return itens
 
 # Detalha as disciplinas com CH excedida: horas alocadas (descontando horas extras explícitas, como o
@@ -3254,8 +3304,8 @@ func _detalhar_ch_excedida() -> Array[String]:
 		var card: CardDisciplina = cards[chave]
 		var extras: int = int(extras_por_chave.get(chave, 0))
 		if card.ch_alocada - extras > card.ch_total:
-			itens.append("%s (%s): %dh alocadas / %dh previstas" \
-				% [card.codigo.to_upper(), card.semestre.to_upper(), card.ch_alocada - extras, card.ch_total])
+			itens.append("%s - %s (%s): %dh alocadas / %dh previstas" \
+				% [card.codigo.to_upper(), card.nome, card.semestre.to_upper(), card.ch_alocada - extras, card.ch_total])
 	return itens
 
 # Pede confirmação antes de remover todas as restrições de alocação. Sem restrições, apenas avisa.

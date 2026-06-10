@@ -412,9 +412,11 @@ A opção **Ações › Verificar problemas** faz uma **varredura completa** da 
 
 - **Choque de professor** — o mesmo professor em duas disciplinas no mesmo dia/horário (lista o horário, o professor e as disciplinas envolvidas).
 - **Células sem professor** — alocações sem professor atribuído (lista o horário e as disciplinas).
-- **Carga horária excedida** — disciplinas com mais horas alocadas do que o previsto (desconta horas extras explícitas).
+- **Carga horária excedida** — disciplinas com mais horas alocadas do que o previsto (lista código, nome, horas alocadas e previstas; desconta horas extras explícitas).
 - **Sobrecarga** — professores com ≥6h num mesmo dia e casos de aula noturna seguida de manhã cedo no dia seguinte.
-- **Outros choques** — contagem de choques de sala e de semestre.
+- **Análise de choques** — choques de sala e de semestre. Mostra a contagem e, quando a **Preferência da grade** correspondente (*Choque de sala* / *Choque de semestre*) está marcada, detalha quais disciplinas colidem em cada horário; se estiver desmarcada, sugere reexecutar com a opção ativada para ver os detalhes.
+
+As disciplinas listadas nos choques seguem o **modo de visualização** selecionado para a grade (*somente código*, *completo*, *nome reduzido* etc.); no modo *esferas*, cai no código.
 
 Diferentemente dos indicadores das **Preferências da grade** (que pintam a grade conforme o que está ligado), esta ação roda **todas** as checagens de uma vez, independentemente dos indicadores marcados, e produz um relatório textual — útil para uma conferência final antes de salvar/enviar. Quando nada é encontrado, informa **"Nenhum problema encontrado"**; com a grade vazia, avisa que não há o que verificar.
 
