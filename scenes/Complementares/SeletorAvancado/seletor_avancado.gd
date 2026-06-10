@@ -37,7 +37,7 @@ signal opcao_selecionada
 ## item sem separador [br]
 var lista_itens: Dictionary : set = _set_lista_itens
 
-## Quando verdadeiro atualiza [param texto_padrao] sempre que um item for selecionado, inserindo 
+## Quando verdadeiro atualiza [param texto_padrao] sempre que um item for selecionado, inserindo
 ## o texto do item selecionado no texto padrao
 var atualizar_texto_padrao: bool = false
 
@@ -48,6 +48,11 @@ var _retorno: Array[String] = []
 # definições mais complexas do comportamento dos grupos, como grupos que só podem ter um item
 # marcado por vez, por exemplo.
 var _selecao_unica: Array[Array] = []
+
+# Índice do último item escolhido. Como a seleção única ("*") agora usa itens sem checkbox (não
+# marcáveis), o scroll do mouse não consegue achar o "atual" via is_item_checked — este membro
+# preserva a posição para a navegação por scroll continuar funcionando.
+var _indice_atual: int = -1
 
 # Dicas por item do dropdown (índice do PopupMenu → texto BBCode), exibidas via DicaFlutuante ao
 # passar o mouse / focar o item. Itens de PopupMenu não são Controls (DicaFlutuante.vincular exige um
@@ -63,6 +68,17 @@ func definir_dica_item(index: int, texto_bbcode: String) -> void:
 		_dicas_itens.erase(index)
 	else:
 		_dicas_itens[index] = texto_bbcode
+
+## Define (ou remove, com [param textura] nula) o ícone do item cujo valor de retorno é
+## [param valor_retorno], sem reconstruir a lista — preserva a seleção atual. Útil para marcar itens
+## em runtime (ex.: ícone verde para alunos que preencheram o formulário de ajuste). Como o índice em
+## [member _retorno] coincide com o índice do item no PopupMenu, basta localizá-lo ali.
+func definir_icone_item(valor_retorno: String, textura: Texture2D) -> void:
+	var idx: int = _retorno.find(valor_retorno)
+	if idx < 0:
+		return
+	$MenuButton.get_popup().set_item_icon(idx, textura)
+
 
 func selecionar_item(index: int) -> void:
 	if index >= _selecao_unica.size():
@@ -154,12 +170,15 @@ func _criar_lista() -> void:
 	_retorno.clear()
 	# Itera entre itens da lista para criar a lista de seleção.
 	for key in lista_itens.keys():
-		if not key.ends_with("_retorno") and not key.ends_with("_disabled"):
+		if not key.ends_with("_retorno") and not key.ends_with("_disabled") and not key.ends_with("_icones"):
 			if not key.begins_with("_"):
 				$MenuButton.get_popup().add_separator(key.trim_suffix("_"))
 				_retorno.append(key)
 				_selecao_unica.append([grupo, false])
-			if key.ends_with("_") or key.ends_with("*"):
+			# Caixa de marcar (checkbox) só em seleção MÚLTIPLA ("_", marca vários). Seleção única ("*")
+			# e itens simples viram um dropdown limpo (add_item, sem caixa) — a escolha aparece no texto
+			# do botão. Assim o checkbox fica só onde é pertinente.
+			if key.ends_with("_"):
 				multipla_selecao = true
 			else:
 				multipla_selecao = false
@@ -183,6 +202,11 @@ func _criar_lista() -> void:
 					var disabled_arr: Array = lista_itens[key_base + "_disabled"]
 					if a < disabled_arr.size() and disabled_arr[a]:
 						$MenuButton.get_popup().set_item_disabled(item_start + a, true)
+				# Aplica icone se houver array paralela _icones (ex.: marca quem preencheu o ajuste).
+				if lista_itens.has(key_base + "_icones"):
+					var icones_arr: Array = lista_itens[key_base + "_icones"]
+					if a < icones_arr.size() and icones_arr[a] != null:
+						$MenuButton.get_popup().set_item_icon(item_start + a, icones_arr[a])
 		grupo += 1
 	pass
 
@@ -215,6 +239,9 @@ func _on_gui_input(event: InputEvent) -> void:
 		if popup.is_item_checked(i):
 			atual = i
 			break
+	# Seleção única não tem item marcado (sem checkbox): usa o último índice escolhido como referência.
+	if atual < 0:
+		atual = _indice_atual
 	# Se o item pertence a um grupo de multipla selecao (_ sem *), desmarca
 	# todos do grupo antes de avancar (scroll = single, clique = multi).
 	if atual >= 0 and popup.is_item_checkable(atual) and not _selecao_unica[atual][1]:
@@ -261,6 +288,8 @@ func _on_popupmenu_option_chosen(index: int) -> void:
 	
 	if atualizar_texto_padrao:
 		_set_textopadrao($MenuButton.get_popup().get_item_text(index))
-	
+
+	# Guarda a posição para a navegação por scroll (a seleção única não fica marcada para consultar).
+	_indice_atual = index
 	emit_signal("opcao_selecionada", _retorno[index], lista_selecionada)
 #endregion
