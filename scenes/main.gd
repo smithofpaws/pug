@@ -530,6 +530,10 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.config_interface = GV.configuracao_base["interface"]
 			modulo.formatos_grade = GV.configuracao_base.get("formatos_grade", {})
 			modulo.cursos = GV.configuracao_base.get("cursos", {})
+			# URL da planilha de apoio do Modo Ajuste (config do usuario). O modulo emite override_config
+			# ao confirmar o dialogo e o main centraliza a gravacao em config_usuario.json.
+			modulo.url_planilha_ajuste = GV.configuracao_base.get("modo_ajuste", {}).get("url_planilha", "")
+			modulo.override_config.connect(_on_config_parametro_alterado)
 			$Modulo.add_child(modulo)
 		"situacao_disciplinas":
 			var modulo = load("res://scenes/Modulos/SituacaoDisciplinas/SituacaoDisciplinas.tscn").instantiate()

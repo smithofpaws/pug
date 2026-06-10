@@ -63,6 +63,18 @@ size_flags_horizontal = 3
 [node name="VSeparator7" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1018505392]
 layout_mode = 2
 
+[node name="ModoAjuste" type="Button" parent="Topo/HBoxContainer" unique_id=967597774]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+text = "Modo Ajuste"
+icon_alignment = 1
+expand_icon = true
+
+[node name="VSeparator5" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1041586300]
+layout_mode = 2
+
 [node name="Exportar" type="Button" parent="Topo/HBoxContainer" unique_id=1961516023]
 custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
@@ -161,6 +173,7 @@ layout_mode = 2
 
 [connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaAlunos" to="." method="_on_seletor_lista_alunos_opcao_selecionada"]
 [connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorCurso" to="." method="_on_seletor_curso_opcao_selecionada"]
+[connection signal="pressed" from="Topo/HBoxContainer/ModoAjuste" to="." method="_on_modo_ajuste_button_up"]
 [connection signal="pressed" from="Topo/HBoxContainer/Exportar" to="." method="_on_exportar_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffTerminal" to="." method="_on_on_off_terminal_button_up"]
 [connection signal="button_up" from="Topo/HBoxContainer/OnOffHorarios" to="." method="_on_on_off_horarios_button_up"]

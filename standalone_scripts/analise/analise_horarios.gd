@@ -55,14 +55,19 @@ func horas_das_aulas(_horarios_ini: Dictionary = {}) -> Array[String]:
 ## ["", "segunda", "terça", ... ] [br]
 ## [ "07:30", ... ]
 ## [ "08:30", ... ]
+## [param codigos_incluir]/[param codigos_excluir] (Modo Ajuste, em minúsculas) marcam as disciplinas
+## solicitadas no formulário de ajuste: as de incluir saem sublinhadas ([code][u][/code]) e as de
+## excluir riscadas ([code][s][/code]). Vazios (padrão) não alteram nada.
 func determinar_horarios(horarios_ini: Dictionary, horarios_txt: Array, disc_cursaveis: Dictionary,\
 historico_matricula: Dictionary, condicoes: Array = ["matriculado_agora"], \
-lista_cores: Dictionary = {"matriculado_agora": "GREEN"}, forma_apresentacao: String = "somente_codigo") -> Array:
+lista_cores: Dictionary = {"matriculado_agora": "GREEN"}, forma_apresentacao: String = "somente_codigo", \
+codigos_incluir: Array = [], codigos_excluir: Array = []) -> Array:
 	var dias: Array[String] = dias_da_semana(horarios_ini)
 	var horas: Array[String] = horas_das_aulas(horarios_ini)
 	var matriculada_com_turma: Dictionary = analise_historico.matriculada_com_turma(disc_cursaveis, historico_matricula)
 	var horarios_txt_condicao: Dictionary = extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
-	var matriz_grade: Array[Array] = _preparar_horarios(dias, horas, horarios_txt_condicao, condicoes, lista_cores, forma_apresentacao)
+	var matriz_grade: Array[Array] = _preparar_horarios(dias, horas, horarios_txt_condicao, condicoes, \
+	lista_cores, forma_apresentacao, codigos_incluir, codigos_excluir)
 	return matriz_grade
 
 ## Calcula a taxa de presenca possivel para uma disciplina alvo considerando [br]
@@ -270,7 +275,7 @@ func _obter_turmas(turma: String) -> Array:
 # Retorna uma matriz bidimensional de dias da semana versus horarios das aulas.
 func _preparar_horarios(dias_da_semana: Array, horas_das_aulas: Array, horarios_txt_condicao: Dictionary, \
 condicoes: Array = ["matriculado_agora"], lista_cores: Dictionary = {"matriculado_agora": "GREEN"}, \
-forma_apresentacao: String = "somente_codigo") -> Array:
+forma_apresentacao: String = "somente_codigo", codigos_incluir: Array = [], codigos_excluir: Array = []) -> Array:
 	var matriz_grade: Array[Array] = []
 	# Remove situações em [param condicoes] que não sejam validas para [param horarios_txt_condicao]
 	var counter: int = 0
@@ -355,6 +360,14 @@ forma_apresentacao: String = "somente_codigo") -> Array:
 				_:
 					texto_para_matriz = "forma de apresentação inválida"
 			
+			# Modo Ajuste: sublinha a disciplina que o discente quer incluir e risca a que quer excluir.
+			# As listas chegam em minusculas; o [u]/[s] envolve o rotulo dentro das tags de cor.
+			var cod_lower: String = codigo.to_lower()
+			if cod_lower in codigos_incluir:
+				texto_para_matriz = "[u]" + texto_para_matriz + "[/u]"
+			elif cod_lower in codigos_excluir:
+				texto_para_matriz = "[s]" + texto_para_matriz + "[/s]"
+
 			var virgula: String = "[color=orange], [/color]"
 			if forma_apresentacao == "esferas" or matriz_grade[linha][coluna].length() == 0:
 				virgula = ""

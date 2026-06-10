@@ -1,4 +1,9 @@
 class_name SituacaoAlunos extends ReferenceRect
+
+## Emitido para que o [code]main.gd[/code] centralize a gravacao de configuracoes do usuario em
+## [code]config_usuario.json[/code] (mesmo caminho usado pela JanelaConfiguracoes e pelo
+## PlanejamentoHorario). O modulo nunca grava arquivos diretamente.
+signal override_config(caminho: Array, valor: Variant)
 ## Relacionado a ilustração da situação dos discentes em disciplinas. Especialmente interessante 
 ## na realização dos ajustes de matrícula. [br]
 ##
@@ -15,6 +20,9 @@ var analise_historico := AnaliseHistorico.new()
 var analise_grades := AnaliseGrades.new()
 var analise_horarios := AnaliseHorarios.new()
 var horarios_exe := HorariosExe.new()
+# Cliente do Modo Ajuste (baixa+parseia a planilha de respostas). É um Node: adicionado à árvore no
+# _ready (precisa de um HTTPRequest filho) e liberado junto com o módulo ao sair.
+var planilha_ajuste := PlanilhaAjuste.new()
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
 var condicoes: Array[String]
@@ -64,6 +72,30 @@ var config_interface: Dictionary = {}
 
 ## Modos de exibição das células da grade (lista canônica), de [code]base_config.json:formatos_grade[/code].
 var formatos_grade: Dictionary = {}
+
+## Endereço da planilha do Google publicada em CSV, usada pelo Modo Ajuste. Recebido pelo main em sua
+## criação (vem de [code]config_usuario.json:modo_ajuste.url_planilha[/code]) e persistido de volta
+## pelo main ao confirmar o diálogo.
+var url_planilha_ajuste: String = ""
+
+# Modo Ajuste — respostas processadas do formulário de ajuste de matrícula.
+# Chave: matrícula em minúsculas. Valor: { "matricula", "valida", "incluir":[cods], "excluir":[cods],
+# "incluir_problemas":[entradas], "excluir_problemas":[entradas], "assinatura" }.
+var _ajuste_por_matricula: Dictionary = {}
+
+# Assinaturas de preenchimento já alertadas nesta sessão (dedup dos avisos). Como o módulo é recriado
+# ao reabrir, este conjunto reseta naturalmente — então sair e voltar realerta os mesmos problemas.
+var _assinaturas_alertadas: Dictionary = {}
+
+# Timer da verificação automática da planilha (a cada 5 min enquanto o módulo está aberto).
+var _timer_ajuste: Timer
+
+# Ícone verde reaproveitado para marcar, na lista, os alunos que preencheram o formulário.
+var _icone_ajuste: Texture2D
+
+# Evita verificações sobrepostas (timer disparando durante uma verificação manual): a segunda é
+# silenciosamente ignorada, em vez de poluir o terminal com um erro de "já em andamento".
+var _verificando: bool = false
 
 # Contém os dados do historico, de todos os alunos, que importam para esta análise.
 var _historico: Dictionary
@@ -192,6 +224,17 @@ func _ready() -> void:
 	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
 	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
+	# Modo Ajuste: prepara o cliente da planilha, o ícone de destaque e os gestos do botão. NÃO inicia
+	# sozinho ao abrir o módulo (mesmo com URL já configurada) — só sob demanda do usuário, pois na
+	# maior parte do tempo não se está em ajuste.
+	add_child(planilha_ajuste)
+	_icone_ajuste = _criar_icone_ajuste()
+	var btn_ajuste := $"Topo/HBoxContainer/ModoAjuste"
+	btn_ajuste.gui_input.connect(_on_modo_ajuste_gui_input)
+	DicaFlutuante.vincular(btn_ajuste, "[b]Esquerdo[/b]: configurar o endereço da planilha (CSV publicado).\n" \
+		+ "[b]Direito[/b]: iniciar/atualizar o ajuste agora.\n" \
+		+ "Cor do botão — vermelho: falha · laranja: obtendo · verde: obtido.")
+
 
 # Roda a análise para a seleção atual.
 func _rodar_análise() -> void:
@@ -215,6 +258,8 @@ func _rodar_análise() -> void:
 			+ " (crie arquivos/cargaexigida/" + _grade_ativa + ".json). Percentual de conclusão indisponível.", \
 			0, cores_terminal["aviso"])
 	_analisar_matricula(_matricula_atual)
+	# Modo Ajuste: se o discente selecionado preencheu o formulário, lista incluir/excluir no terminal.
+	_imprimir_ajuste(_matricula_atual)
 
 # Verifica se [_grade_ativa] e chave valida no dicionario de grades (requisito real da analise).
 # A carga exigida NAO e verificada aqui: e opcional (ver [method _rodar_análise]).
@@ -251,9 +296,37 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 	# Determina o numero de créditos matriculado nas condições "matriculado_agora" e "matriculado_agora_aproveitamento".
 	var creditos_disciplinas: Dictionary
 	creditos_disciplinas = analise_historico.creditos_disciplinas(matricula, _historico, disc_cursaveis, grades_disciplinas_curriculos)
-	# Envia para a grade de horarios os horarios a listagem de disciplinas.
-	$"%Horarios".dados = analise_horarios.determinar_horarios(_horarios_ini, _horarios_txt, disc_cursaveis, \
-	_historico.get(matricula), $"%Horarios".lista_condicoes_verdadeiras, lista_cores, _forma_de_apresentacao)
+	# Envia para a grade de horarios os horarios a listagem de disciplinas. Modo Ajuste: se o discente
+	# preencheu o formulario, forca a exibicao das disciplinas pedidas (sublinhadas p/ incluir, riscadas
+	# p/ excluir) via condicoes sinteticas, independente dos toggles e da elegibilidade.
+	var registro_aj: Dictionary = _ajuste_por_matricula.get(matricula.to_lower(), {})
+	var cods_incluir: Array = registro_aj.get("incluir", [])
+	var cods_excluir: Array = registro_aj.get("excluir", [])
+	var disc_cursaveis_grade: Dictionary = disc_cursaveis
+	var condicoes_grade: Array = $"%Horarios".lista_condicoes_verdadeiras
+	var cores_grade: Dictionary = lista_cores
+	if not cods_incluir.is_empty() or not cods_excluir.is_empty():
+		disc_cursaveis_grade = disc_cursaveis.duplicate(true)
+		# Remove os codigos do ajuste das condicoes reais para nao renderizar em duplicidade.
+		for cond in disc_cursaveis_grade.keys():
+			var filtrada: Array = []
+			for c in disc_cursaveis_grade[cond]:
+				var cl: String = str(c).to_lower()
+				if not cl in cods_incluir and not cl in cods_excluir:
+					filtrada.append(c)
+			disc_cursaveis_grade[cond] = filtrada
+		disc_cursaveis_grade["ajuste_incluir"] = cods_incluir.duplicate()
+		disc_cursaveis_grade["ajuste_excluir"] = cods_excluir.duplicate()
+		condicoes_grade = []
+		condicoes_grade.append_array($"%Horarios".lista_condicoes_verdadeiras)
+		condicoes_grade.append("ajuste_incluir")
+		condicoes_grade.append("ajuste_excluir")
+		# Token de cor desconhecido cai na cor de texto (sem [shake]); o [u]/[s] faz a distincao.
+		cores_grade = lista_cores.duplicate()
+		cores_grade["ajuste_incluir"] = "ajuste_incluir"
+		cores_grade["ajuste_excluir"] = "ajuste_excluir"
+	$"%Horarios".dados = analise_horarios.determinar_horarios(_horarios_ini, _horarios_txt, disc_cursaveis_grade, \
+	_historico.get(matricula), condicoes_grade, cores_grade, _forma_de_apresentacao, cods_incluir, cods_excluir)
 	# Monta e envia a grade curricular do discente, colorindo conforme a situacao.
 	var cursadas: Array[String] = analise_historico.disciplinas_concluidas(matricula, _historico)
 	$"%GradeCurricular".dados = analise_grades.montar_grade_curricular(grades_disciplinas_curriculos[_grade_ativa], \
@@ -660,12 +733,16 @@ func _montar_lista_alunos() -> void:
 			_lista_alunos.append(aluno)
 	var alunos_itens: Array[String] = []
 	var alunos_retorno: Array[String] = []
+	# Ícone verde (Modo Ajuste) para os alunos que já preencheram o formulário.
+	var alunos_icones: Array = []
 	for a in _lista_alunos.size():
 		alunos_itens.append(_lista_alunos[a][1].capitalize())
 		alunos_retorno.append(_lista_alunos[a][0])
+		alunos_icones.append(_icone_ajuste if _ajuste_por_matricula.has(_lista_alunos[a][0].to_lower()) else null)
 	$"%SeletorListaAlunos".lista_itens = {
 		"_alunos*": alunos_itens,
-		"_alunos_retorno": alunos_retorno
+		"_alunos_retorno": alunos_retorno,
+		"_alunos_icones": alunos_icones
 	}
 	if _lista_alunos.size() > 0:
 		_matricula_atual = _lista_alunos[0][0]
@@ -875,6 +952,303 @@ func _on_horarios_celula_clicada(linha: int, coluna: int) -> void:
 		_realcar_por_codigo(codigos[0])
 	else:
 		_mostrar_selecao_disciplinas(partes, codigos)
+
+## Clique ESQUERDO no botão Modo Ajuste abre as opções (diálogo de configuração da URL da planilha).
+func _on_modo_ajuste_button_up() -> void:
+	_abrir_dialogo_url()
+
+## Clique DIREITO inicia/atualiza o Modo Ajuste agora (verifica e liga a atualização automática). O
+## botão indica o status pela cor (laranja obtendo, verde obtido, vermelho falha).
+func _on_modo_ajuste_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		_iniciar_modo_ajuste()
+
+## Diálogo que pede o endereço da planilha publicada em CSV. O campo vem pré-preenchido com a URL
+## salva; ao confirmar, atualiza o membro, emite [signal override_config] para o main persistir em
+## [code]config_usuario.json[/code] e, se a URL não ficar vazia, inicia o timer e verifica de imediato.
+func _abrir_dialogo_url() -> void:
+	var dialogo := ConfirmationDialog.new()
+	dialogo.title = "Modo Ajuste — Planilha de respostas"
+	dialogo.get_ok_button().text = "Ok"
+	dialogo.get_cancel_button().text = "Cancelar"
+
+	var vbox := VBoxContainer.new()
+	dialogo.add_child(vbox)
+	var rotulo := Label.new()
+	rotulo.text = "Endereço da planilha do Google publicada em CSV:"
+	vbox.add_child(rotulo)
+	var ed_url := LineEdit.new()
+	ed_url.placeholder_text = "https://docs.google.com/spreadsheets/d/.../export?format=csv"
+	ed_url.text = url_planilha_ajuste
+	ed_url.custom_minimum_size = Vector2(460, 0)
+	vbox.add_child(ed_url)
+
+	dialogo.confirmed.connect(func():
+		var url: String = ed_url.text.strip_edges()
+		# Atualiza o membro local (uso imediato na sessão) e emite para o main persistir em disco.
+		url_planilha_ajuste = url
+		override_config.emit(["modo_ajuste", "url_planilha"], url)
+		# Dar "Ok" com uma URL inicia o Modo Ajuste (verifica agora + liga a atualização automática).
+		_iniciar_modo_ajuste())
+	# Libera o nó em qualquer caminho de fechamento (Ok/Cancelar/Esc/X), sem risco de free duplo.
+	dialogo.visibility_changed.connect(func():
+		if not dialogo.visible:
+			dialogo.queue_free())
+	add_child(dialogo)
+	dialogo.popup_centered()
+	Dialogos.limitar_a_tela(dialogo)
+
+# Inicia o Modo Ajuste sob demanda (nunca automaticamente ao abrir o módulo): faz uma verificação
+# imediata e liga a atualização automática a cada 5 min. Sem URL configurada, orienta a configurar.
+func _iniciar_modo_ajuste() -> void:
+	if url_planilha_ajuste.strip_edges().is_empty():
+		$"%Terminal".text_edit("Modo Ajuste: configure o endereço da planilha primeiro (clique esquerdo no botão).", \
+			cores_terminal["aviso"], true, false)
+		return
+	_iniciar_timer_ajuste()
+	_verificar_planilha()
+
+# Cria (uma vez) e (re)inicia o timer de verificação automática a cada 5 minutos.
+func _iniciar_timer_ajuste() -> void:
+	if _timer_ajuste == null:
+		_timer_ajuste = Timer.new()
+		_timer_ajuste.one_shot = false
+		_timer_ajuste.wait_time = 300.0
+		_timer_ajuste.timeout.connect(_verificar_planilha)
+		add_child(_timer_ajuste)
+	_timer_ajuste.start()
+
+## Baixa e processa a planilha de ajuste: marca quem preencheu (ícone verde), alerta uma única vez
+## sobre respostas problemáticas e atualiza terminal/grade do aluno selecionado, se ele preencheu.
+func _verificar_planilha() -> void:
+	var url: String = url_planilha_ajuste.strip_edges()
+	if url.is_empty() or _verificando:
+		return
+	_verificando = true
+	_definir_estado_botao_ajuste("ch_extra")  # laranja: obtendo (ou tentando)
+	var baixa: Dictionary = await planilha_ajuste.baixar(url)
+	if not baixa["ok"]:
+		_verificando = false
+		_definir_estado_botao_ajuste("erro")  # vermelho: falha
+		$"%Terminal".text_edit("Modo Ajuste: " + str(baixa["erro"]), cores_terminal["erro"], true, false)
+		return
+	var resultado: Dictionary = planilha_ajuste.parse(baixa["csv"])
+	if not resultado["ok"]:
+		_verificando = false
+		_definir_estado_botao_ajuste("erro")  # vermelho: falha
+		$"%Terminal".text_edit("Modo Ajuste: " + str(resultado["erro"]), cores_terminal["erro"], true, false)
+		# Diagnóstico: mostra o início do conteúdo recebido. Uma resposta HTML (em vez de CSV) indica
+		# que a URL exige login — use o link "Publicar na web › CSV" ou compartilhe a planilha como
+		# "qualquer pessoa com o link".
+		var amostra: String = str(baixa["csv"]).strip_edges().replace("\n", " ").replace("\r", " ")
+		if amostra.length() > 200:
+			amostra = amostra.substr(0, 200) + "…"
+		if amostra.is_empty():
+			$"%Terminal".item("A planilha respondeu vazia.", 1, cores_terminal["aviso"])
+		elif amostra.begins_with("<") or amostra.to_lower().contains("<html") or amostra.to_lower().contains("<!doctype"):
+			$"%Terminal".item("A URL retornou HTML, não CSV (provável página de login). Publique a " \
+				+ "planilha em CSV (Arquivo › Compartilhar › Publicar na web › CSV) ou compartilhe como " \
+				+ "'qualquer pessoa com o link'.", 1, cores_terminal["aviso"])
+		else:
+			$"%Terminal".item("Conteúdo recebido (início): " + amostra, 1, cores_terminal["aviso"])
+		return
+	_processar_respostas_ajuste(resultado["respostas"])
+	_verificando = false
+	_definir_estado_botao_ajuste("sucesso")  # verde: dados obtidos
+
+# Converte as respostas cruas em [_ajuste_por_matricula], dispara os alertas dos preenchimentos novos
+# (dedup por assinatura) e repinta os ícones. Só re-roda a análise se a resposta DO aluno selecionado
+# mudou, para não atrapalhar o estudo de outro aluno.
+func _processar_respostas_ajuste(respostas: Array) -> void:
+	var assinatura_antes: String = _assinatura_de(_matricula_atual)
+	var novo_ajuste: Dictionary = {}
+	var a_alertar: Array[Dictionary] = []
+	for resp in respostas:
+		var matricula: String = str(resp["matricula"]).strip_edges()
+		var valida: bool = _curso_por_matricula.has(matricula)
+		var grade: String = analise_historico.detectar_versao_grade(matricula, _historico) if valida else ""
+		var inc: Dictionary = _classificar_codigos(resp["incluir"], grade)
+		var exc: Dictionary = _classificar_codigos(resp["excluir"], grade)
+		var registro: Dictionary = {
+			"matricula": matricula,
+			"valida": valida,
+			"incluir": inc["codigos"],
+			"excluir": exc["codigos"],
+			"incluir_problemas": inc["problemas"],
+			"excluir_problemas": exc["problemas"],
+			"assinatura": _assinatura_resposta(matricula, resp["incluir"], resp["excluir"]),
+		}
+		if valida:
+			novo_ajuste[matricula.to_lower()] = registro
+		# Enfileira o alerta dos preenchimentos NOVOS (assinatura inédita nesta sessão).
+		if not _assinaturas_alertadas.has(registro["assinatura"]):
+			_assinaturas_alertadas[registro["assinatura"]] = true
+			a_alertar.append(registro)
+	_ajuste_por_matricula = novo_ajuste
+	_atualizar_icones_ajuste()
+	# Re-roda a análise ANTES de alertar: [_imprimir_analise] limpa o terminal (titulo com clear), então
+	# os alertas têm de ser emitidos por último para não serem apagados (matrícula inválida só aparece
+	# aqui — não há outra superfície para ela).
+	if _pronto and not _matricula_atual.is_empty() and _assinatura_de(_matricula_atual) != assinatura_antes:
+		_rodar_análise()
+	for registro in a_alertar:
+		_alertar_problemas_ajuste(registro)
+
+# Para cada entrada de texto livre, extrai o código de disciplina e o valida no escopo do curso do
+# aluno (grade dele primeiro; qualquer grade como reconhecedor). Retorna { "codigos", "problemas" },
+# onde "problemas" guarda as entradas sem código válido (alvo dos alertas).
+func _classificar_codigos(entradas: Array, grade: String) -> Dictionary:
+	var codigos: Array[String] = []
+	var problemas: Array[String] = []
+	for entrada in entradas:
+		var candidatos: Array = planilha_ajuste.extrair_codigos(str(entrada))
+		var achou: String = ""
+		# Preferência: código presente na grade do aluno (desempata disciplinas de mesmo código entre
+		# cursos). Senão, qualquer código existente em alguma grade.
+		for cand in candidatos:
+			if not grade.is_empty() and grades_disciplinas_curriculos.get(grade, {}).has(cand):
+				achou = cand
+				break
+		if achou.is_empty():
+			for cand in candidatos:
+				if analise_grades.existe_codigo(grades_disciplinas_curriculos, cand):
+					achou = cand
+					break
+		if achou.is_empty():
+			problemas.append(str(entrada))
+		elif not achou in codigos:
+			codigos.append(achou)
+	return { "codigos": codigos, "problemas": problemas }
+
+# Emite no terminal os alertas de uma resposta nova: matrícula inválida, ou disciplinas sem código
+# válido. Respostas íntegras não geram alerta (só o destaque verde na lista).
+func _alertar_problemas_ajuste(registro: Dictionary) -> void:
+	if not registro["valida"]:
+		$"%Terminal".text_edit("Modo Ajuste: recebida resposta com matrícula inválida ou desconhecida (" \
+			+ str(registro["matricula"]) + ").", cores_terminal["erro"], true, false)
+		return
+	var problemas: Array = registro["incluir_problemas"] + registro["excluir_problemas"]
+	if problemas.is_empty():
+		return
+	$"%Terminal".text_edit("Modo Ajuste: a resposta de " + _nome_de(registro["matricula"]) + " (" \
+		+ str(registro["matricula"]) + ") tem disciplina(s) sem código válido:", cores_terminal["aviso"], true, false)
+	for p in problemas:
+		$"%Terminal".item(str(p), 1, cores_terminal["aviso"])
+
+# Repinta os ícones do seletor: verde para quem preencheu, nada para os demais. Sem reconstruir a
+# lista (preserva a seleção atual).
+func _atualizar_icones_ajuste() -> void:
+	for aluno in _lista_alunos:
+		var marcado: bool = _ajuste_por_matricula.has(str(aluno[0]).to_lower())
+		$"%SeletorListaAlunos".definir_icone_item(aluno[0], _icone_ajuste if marcado else null)
+
+# Pinta o botão Modo Ajuste como indicador de status da conexão com a planilha: laranja ("ch_extra")
+# obtendo, verde ("sucesso") obtido, vermelho ("erro") falha. Fundo via StyleBoxFlat e texto
+# escuro/claro conforme a luminância da cor, para leitura em qualquer tema.
+func _definir_estado_botao_ajuste(token: String) -> void:
+	var btn: Button = $"Topo/HBoxContainer/ModoAjuste"
+	var cor: Color = PaletaSemantica.cor(token)
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = cor
+	estilo.set_corner_radius_all(4)
+	estilo.set_content_margin_all(4)
+	for estado in ["normal", "hover", "pressed", "focus"]:
+		btn.add_theme_stylebox_override(estado, estilo)
+	var cor_texto: Color = Color.BLACK if cor.get_luminance() > 0.45 else Color.WHITE
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(c, cor_texto)
+
+# Gera uma pequena bolinha verde (cor semântica "sucesso") para marcar os alunos que preencheram.
+# É um círculo (não quadrado) para não se confundir com a caixa de seleção do item da lista.
+func _criar_icone_ajuste() -> Texture2D:
+	var tam: int = 16
+	var img := Image.create(tam, tam, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))  # fundo transparente
+	var cor: Color = PaletaSemantica.cor("sucesso")
+	var centro: float = (tam - 1) / 2.0
+	var raio: float = tam / 2.0 - 1.5
+	for y in tam:
+		for x in tam:
+			var dx: float = x - centro
+			var dy: float = y - centro
+			if dx * dx + dy * dy <= raio * raio:
+				img.set_pixel(x, y, cor)
+	return ImageTexture.create_from_image(img)
+
+## Imprime no terminal as disciplinas que o discente pediu para incluir/excluir, cruzando com as
+## condições (matriculável, já matriculado, etc.) para apoiar a decisão de deferimento.
+func _imprimir_ajuste(matricula: String) -> void:
+	var registro: Dictionary = _ajuste_por_matricula.get(matricula.to_lower(), {})
+	if registro.is_empty():
+		return
+	var disc_cursaveis: Dictionary = _condicoes_discentes.get(matricula, {})
+	$"%Terminal".secao("Ajuste de matrícula — deseja INCLUIR")
+	if registro["incluir"].is_empty() and registro["incluir_problemas"].is_empty():
+		$"%Terminal".item("(nenhuma)")
+	for codigo in registro["incluir"]:
+		var st: Dictionary = _status_incluir(codigo, disc_cursaveis)
+		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st["texto"], 0, st["token"])
+	for prob in registro["incluir_problemas"]:
+		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"])
+	$"%Terminal".espaco()
+	$"%Terminal".secao("Ajuste de matrícula — deseja EXCLUIR")
+	if registro["excluir"].is_empty() and registro["excluir_problemas"].is_empty():
+		$"%Terminal".item("(nenhuma)")
+	for codigo in registro["excluir"]:
+		var st2: Dictionary = _status_excluir(codigo, disc_cursaveis)
+		$"%Terminal".item(_rotulo_disc(codigo) + " — " + st2["texto"], 0, st2["token"])
+	for prob in registro["excluir_problemas"]:
+		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"])
+	$"%Terminal".espaco()
+
+# Status de uma disciplina que o aluno quer incluir, conforme a condição em que ela cai para ele.
+func _status_incluir(codigo: String, disc_cursaveis: Dictionary) -> Dictionary:
+	var cond: String = _condicao_do_codigo(codigo, disc_cursaveis)
+	if cond.begins_with("matriculavel") or cond.begins_with("corequisito_matriculavel"):
+		var aprov: String = " (com aproveitamento)" if cond.ends_with("_aproveitamento") else ""
+		return { "texto": "matriculável" + aprov, "token": cores_terminal["sucesso"] }
+	if cond.begins_with("matriculado_agora"):
+		return { "texto": "já está matriculado", "token": cores_terminal["aviso"] }
+	if cond.is_empty():
+		return { "texto": "não está matriculável", "token": cores_terminal["erro"] }
+	return { "texto": cond.replacen("_", " "), "token": cores_terminal["aviso"] }
+
+# Status de uma disciplina que o aluno quer excluir (espera-se que esteja matriculado nela).
+func _status_excluir(codigo: String, disc_cursaveis: Dictionary) -> Dictionary:
+	var cond: String = _condicao_do_codigo(codigo, disc_cursaveis)
+	if cond.begins_with("matriculado_agora") or cond.begins_with("matricula_irregular"):
+		return { "texto": "matriculado (pode remover)", "token": cores_terminal["sucesso"] }
+	return { "texto": "não consta como matriculado", "token": cores_terminal["aviso"] }
+
+# Retorna a primeira condição de [disc_cursaveis] que contém [codigo] (minúsculo), ou "" se nenhuma.
+func _condicao_do_codigo(codigo: String, disc_cursaveis: Dictionary) -> String:
+	for cond in disc_cursaveis.keys():
+		for c in disc_cursaveis[cond]:
+			if str(c).to_lower() == codigo:
+				return cond
+	return ""
+
+# Rótulo "CODIGO: Nome da disciplina" a partir das grades.
+func _rotulo_disc(codigo: String) -> String:
+	return codigo.to_upper() + ": " + str(analise_grades.info_grade(grades_disciplinas_curriculos, codigo, "nome"))
+
+# Nome (capitalizado) do aluno de uma matrícula, buscando na lista completa; devolve a matrícula se
+# não encontrar.
+func _nome_de(matricula: String) -> String:
+	for aluno in _lista_alunos_todos:
+		if aluno[0] == matricula:
+			return str(aluno[1]).capitalize()
+	return matricula
+
+# Assinatura de uma resposta (matrícula + entradas cruas), usada para detectar mudanças e deduplicar
+# alertas. Qualquer alteração no texto preenchido muda a assinatura.
+func _assinatura_resposta(matricula: String, incluir: Array, excluir: Array) -> String:
+	return matricula + "|" + "/".join(PackedStringArray(incluir)) + "|" + "/".join(PackedStringArray(excluir))
+
+# Assinatura atualmente armazenada para uma matrícula (ou "" se ela não preencheu).
+func _assinatura_de(matricula: String) -> String:
+	return str(_ajuste_por_matricula.get(matricula.to_lower(), {}).get("assinatura", ""))
+
 
 ## Abre um diálogo de confirmação antes de exportar a situação dos alunos (do curso filtrado).
 func _on_exportar_button_up() -> void:
