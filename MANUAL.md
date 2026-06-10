@@ -473,6 +473,8 @@ Gera uma lista formatada de disciplinas por professor, facilitando o preenchimen
 
 Identifica alunos matriculados em disciplinas sem cumprir os pré-requisitos exigidos.
 
+No topo há um **seletor de grade** que define o **curso** analisado — já vem com o curso principal das configurações pré-selecionado. A lista mostra **apenas os discentes do curso** escolhido, **independentemente da versão da grade** de cada um (selecionar `alec_2010` ou `alec_2023`, por exemplo, dá o mesmo resultado: todos os irregulares de Engenharia Civil). Troque o curso pelo seletor para ver outro.
+
 O terminal exibe, para cada aluno com irregularidade detectada:
 
 - Nome e matrícula.

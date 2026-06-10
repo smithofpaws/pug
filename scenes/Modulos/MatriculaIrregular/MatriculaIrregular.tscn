@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dsqjdxu4kn3l6" path="res://scenes/Modulos/MatriculaIrregular/matricula_irregular.gd" id="1_ybrx0"]
 [ext_resource type="PackedScene" uid="uid://hfr04nwubwo6" path="res://scenes/Complementares/Terminal/Terminal.tscn" id="2_qvuxo"]
+[ext_resource type="PackedScene" uid="uid://t0bre5me4cqm" path="res://scenes/Complementares/SeletorAvancado/SeletorAvancado.tscn" id="3_grade"]
 
 [node name="MatriculaIrregular" type="ReferenceRect" unique_id=1721537177]
 anchors_preset = 15
@@ -17,11 +18,30 @@ anchors_preset = -1
 anchor_right = 1.0
 offset_bottom = 30.0
 
+[node name="HBoxContainer" type="HBoxContainer" parent="Topo" unique_id=1331506021]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelGrade" type="Label" parent="Topo/HBoxContainer" unique_id=707371516]
+layout_mode = 2
+text = "Grade:"
+
+[node name="SeletorListaGrades" parent="Topo/HBoxContainer" unique_id=490220875 instance=ExtResource("3_grade")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 30)
+layout_mode = 2
+texto_padrao = "Grade"
+
 [node name="Principal" type="ReferenceRect" parent="." unique_id=1857513530]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 35.0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Principal" unique_id=1616332566]
 layout_mode = 1
@@ -34,3 +54,5 @@ grow_vertical = 2
 [node name="Terminal" parent="Principal/HBoxContainer" unique_id=2038495031 instance=ExtResource("2_qvuxo")]
 unique_name_in_owner = true
 layout_mode = 2
+
+[connection signal="opcao_selecionada" from="Topo/HBoxContainer/SeletorListaGrades" to="." method="_on_seletor_lista_grades_opcao_selecionada"]
