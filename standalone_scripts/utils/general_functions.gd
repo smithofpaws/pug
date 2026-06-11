@@ -110,6 +110,14 @@ func replace_text(find: Array[String], replace: Array[String], data: Array[Strin
 static func semestre_atual() -> String:
 	return "2" if Time.get_date_dict_from_system()["month"] > 7 else "1"
 
+## Avança o período letivo [param semestre] (1 ou 2) do [param ano] em [param n] meios-anos
+## (n >= 0). Útil para projetar prazos como a previsão de formatura. Retorna
+## [code]{ "ano": int, "semestre": int }[/code]; formata-se como [code]"<ano>/<semestre>"[/code].
+## Ex.: [code]avancar_semestre(2026, 1, 4)[/code] -> [code]{ "ano": 2028, "semestre": 1 }[/code].
+static func avancar_semestre(ano: int, semestre: int, n: int) -> Dictionary:
+	var total: int = (semestre - 1) + n
+	return { "ano": ano + total / 2, "semestre": total % 2 + 1 }
+
 ## Remove acentos e converte para minusculas. Util para normalizar textos de busca
 ## (codigos, nomes de disciplina) onde "João" deve equivaler a "joao".
 static func remover_acentos(s: String) -> String:

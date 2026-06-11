@@ -166,6 +166,7 @@ O terminal apresenta um relatório completo do aluno:
 
 - Versão do currículo e matrícula.
 - Carga horária vencida por categoria (obrigatória, complementar, etc.).
+- **Previsão de formatura** — período letivo mínimo em que o aluno pode se formar, calculado pela maior cadeia de pré-requisitos obrigatórios ainda pendente (o *caminho crítico*). Como cada disciplina dessa cadeia só pode ser cursada depois da anterior, ela define o prazo mínimo mesmo quando, "na teoria", faltariam poucos semestres. O relatório mostra o período previsto, o número mínimo de semestres (contando o atual) e a sequência de disciplinas que determina o prazo. O período de partida é o das matrículas em curso do aluno; eletivas/CCCG não entram nessa conta.
 - Disciplinas cursadas fora da grade atual.
 - Histórico de reprovações (por nota e por frequência).
 - Lista de disciplinas organizadas por condição de matrícula:

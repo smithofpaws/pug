@@ -320,6 +320,88 @@ func obter_prerequisitos(codigo: String, grade: Dictionary) -> Array[String]:
 		i += 1
 	return prerequisitos
 
+## Calcula o caminho crítico de formatura: a maior cadeia de pré-requisitos OBRIGATÓRIOS ainda
+## pendente, que determina o prazo mínimo até a formatura. [br]
+## Considera apenas disciplinas obrigatórias (as que têm [code]posicao_grade[/code] em [param grade]);
+## eletivas/CCCGs são ignoradas. [br]
+## Formato de [param cursadas] e [param em_curso] devem ser listas de códigos em minúsculas (saída de
+## [method AnaliseHistorico.disciplinas_concluidas] e dos códigos com situação [code]matr[/code]). [br]
+## Para cada obrigatória, o "offset de conclusão" (em períodos, a partir do período atual) é: [br]
+## - já concluída: [code]-1[/code] (não estende a cadeia); [br]
+## - em curso: [code]0[/code] (conclui no período atual); [br]
+## - pendente: [code]max(1, max(offset dos pré-requisitos) + 1)[/code] (piso de 1 período, pois a
+## matrícula do período atual já está fechada). [br]
+## Retorna [code]{ "offset": int, "cadeia": Array[Dictionary] }[/code], onde [code]offset[/code] é o
+## maior offset entre as obrigatórias pendentes/em curso ([code]-1[/code] se nenhuma restar) e
+## [code]cadeia[/code] é a sequência determinante (do início ao fim), cada item
+## [code]{ "codigo": String, "nome": String }[/code].
+func caminho_critico_formatura(grade: Dictionary, cursadas: Array, em_curso: Array) -> Dictionary:
+	# Conjuntos de consulta rápida (códigos em minúsculas).
+	var concluidas: Dictionary = {}
+	for c in cursadas:
+		concluidas[str(c).to_lower()] = true
+	var matriculadas: Dictionary = {}
+	for c in em_curso:
+		matriculadas[str(c).to_lower()] = true
+	# Memoização do offset de conclusão e do pré-requisito escolhido (para reconstruir a cadeia).
+	var offsets: Dictionary = {}
+	var escolhido: Dictionary = {}  # codigo -> codigo do pré-requisito que gerou o offset, ou ""
+	for codigo in grade.keys():
+		var cod: String = str(codigo).to_lower()
+		if grade[codigo].has("posicao_grade"):
+			_offset_conclusao(cod, grade, concluidas, matriculadas, offsets, escolhido)
+	# Disciplina obrigatória pendente/em curso de maior offset (o gargalo).
+	var offset_max: int = -1
+	var alvo: String = ""
+	for cod in offsets.keys():
+		if offsets[cod] > offset_max:
+			offset_max = offsets[cod]
+			alvo = cod
+	# Reconstrói a cadeia retrocedendo pelo pré-requisito escolhido a cada nó.
+	var cadeia: Array[Dictionary] = []
+	if offset_max >= 0:
+		var caminho: Array[String] = []
+		var atual: String = alvo
+		while atual != "":
+			caminho.append(atual)
+			atual = escolhido.get(atual, "")
+		caminho.reverse()
+		for cod in caminho:
+			cadeia.append({
+				"codigo": cod,
+				"nome": str(grade.get(cod, {}).get("nome", cod.to_upper())),
+			})
+	return { "offset": offset_max, "cadeia": cadeia }
+
+# Offset de conclusão de [param cod] (memoizado em [param offsets]), registrando em [param escolhido]
+# o pré-requisito que determinou o offset. Disciplinas concluídas retornam -1; em curso, 0; pendentes,
+# max(1, melhor pré-requisito + 1). Só pré-requisitos OBRIGATÓRIOS (presentes na grade) contam.
+func _offset_conclusao(cod: String, grade: Dictionary, concluidas: Dictionary, matriculadas: Dictionary, \
+offsets: Dictionary, escolhido: Dictionary) -> int:
+	if offsets.has(cod):
+		return offsets[cod]
+	if concluidas.has(cod):
+		return -1  # Concluída: não memoiza no mapa de pendentes (não conta para o offset máximo).
+	# Marca em andamento (evita laço em grades eventualmente cíclicas) antes de recorrer.
+	offsets[cod] = 0
+	escolhido[cod] = ""
+	if matriculadas.has(cod):
+		return 0
+	var melhor: int = -1
+	var melhor_pre: String = ""
+	for pre in obter_prerequisitos(cod, grade):
+		if not grade.has(pre):
+			continue
+		var off_pre: int = _offset_conclusao(pre, grade, concluidas, matriculadas, offsets, escolhido)
+		if off_pre > melhor:
+			melhor = off_pre
+			melhor_pre = pre
+	var resultado: int = max(1, melhor + 1)
+	offsets[cod] = resultado
+	# Só encadeia o pré-requisito se ele próprio ainda for pendente/em curso (offset >= 0).
+	escolhido[cod] = melhor_pre if melhor >= 0 else ""
+	return resultado
+
 ## Retorna os códigos das disciplinas que têm [param codigo] como pré-requisito em [param grade]. [br]
 ## Itera todas as disciplinas verificando suas chaves [code]prerequisito{N}[/code]. [br]
 ## Retorna Array vazia se nenhuma disciplina depender de [param codigo].

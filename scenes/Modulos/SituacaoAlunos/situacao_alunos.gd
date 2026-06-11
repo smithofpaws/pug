@@ -351,6 +351,51 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 		ch_secao["para_tcc"] = {"horas": "2550", "total_aluno": ch_total}
 	secoes.append(ch_secao)
 
+	# Previsão de formatura: maior cadeia de pré-requisitos obrigatórios ainda pendente (caminho
+	# crítico). Ancora o período no ano/semestre mais recente das disciplinas em curso (situação
+	# "matr"); sem matrícula em aberto, recai na data do sistema.
+	var grade_atual: Dictionary = grades_disciplinas_curriculos.get(_grade_ativa, {})
+	var cursadas_prev: Array[String] = analise_historico.disciplinas_concluidas(matricula, _historico)
+	# Disciplinas em curso, já nos códigos da grade atual: inclui as matriculadas diretamente
+	# (matriculado_agora) e as cursadas agora sob código equivalente de outra grade
+	# (matriculado_agora_aproveitamento). Usar disc_cursaveis (e não o histórico bruto) garante que
+	# uma disciplina retomada por aproveitamento — ex.: al0388 (grade 2023) cobrindo al0107 (grade
+	# 2010) — conte como em curso (offset 0), e não como pendente, evitando inflar a cadeia.
+	var em_curso: Array[String] = []
+	for cod in disc_cursaveis.get("matriculado_agora", []):
+		var cl: String = str(cod).to_lower()
+		if not cl in em_curso:
+			em_curso.append(cl)
+	for cod in disc_cursaveis.get("matriculado_agora_aproveitamento", []):
+		var cl: String = str(cod).to_lower()
+		if not cl in em_curso:
+			em_curso.append(cl)
+	# Âncora do período: ano/semestre mais recente entre as matrículas em aberto do histórico bruto
+	# (independe do filtro de grade). Sem matrícula em aberto, recai na data do sistema.
+	var ano_ancora: int = Time.get_date_dict_from_system()["year"]
+	var sem_ancora: int = int(GeneralFunctions.semestre_atual())
+	var tem_matricula: bool = false
+	for dado in _historico.get(matricula, {}).get("dados", []):
+		if not str(dado.get("situacao", "")).begins_with("matr"):
+			continue
+		var ano_dado: int = int(dado.get("ano", ""))
+		var sem_dado: int = int(dado.get("semestre", ""))
+		if ano_dado > 0 and sem_dado > 0 and (not tem_matricula \
+		or ano_dado > ano_ancora or (ano_dado == ano_ancora and sem_dado > sem_ancora)):
+			ano_ancora = ano_dado
+			sem_ancora = sem_dado
+			tem_matricula = true
+	var critico: Dictionary = analise_grades.caminho_critico_formatura(grade_atual, cursadas_prev, em_curso)
+	var offset_form: int = critico["offset"]
+	var periodo: Dictionary = GeneralFunctions.avancar_semestre(ano_ancora, sem_ancora, max(offset_form, 0))
+	secoes.append({
+		"tipo": "previsao_formatura",
+		"periodo": "%d/%d" % [periodo["ano"], periodo["semestre"]],
+		"semestres": offset_form + 1,
+		"cadeia": critico["cadeia"],
+		"integralizado": offset_form < 0,
+	})
+
 	# Disciplinas sem grade - separadas por matriculadas (situacao "matr*") e nao matriculadas
 	var sem_grade_matriculadas: Array[Array] = []
 	var sem_grade_nao_matriculadas: Array[Array] = []
@@ -538,6 +583,19 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 					$"%Terminal".linha("Para TCC são necessárias " + secao["para_tcc"]["horas"] + \
 						" horas. O discente tem " + str(secao["para_tcc"]["total_aluno"]) + ".")
 				$"%Terminal".espaco()
+			"previsao_formatura":
+				$"%Terminal".secao("Previsão de formatura")
+				if secao["integralizado"]:
+					$"%Terminal".item("Todas as disciplinas obrigatórias concluídas ou em curso.")
+				else:
+					$"%Terminal".linha(secao["periodo"] + " (mínimo de " + str(secao["semestres"]) \
+						+ " semestres, contando o atual)", cores_terminal["alerta"])
+					var nomes_cadeia: Array[String] = []
+					for disc in secao["cadeia"]:
+						nomes_cadeia.append(disc["nome"])
+					if nomes_cadeia.size() > 0:
+						$"%Terminal".item("Caminho crítico: " + " → ".join(nomes_cadeia))
+				$"%Terminal".espaco()
 			"sem_grade_matriculadas":
 				$"%Terminal".secao("Disciplinas sem grade (matriculadas atualmente)")
 				for item in secao["itens"]:
@@ -618,6 +676,18 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 					md.append("*Para TCC sao necessarias " + secao["para_tcc"]["horas"] + \
 						" horas. O discente tem " + str(secao["para_tcc"]["total_aluno"]) + ".*")
 				md.append("**Total:** " + str(secao["total"]) + " horas")
+			"previsao_formatura":
+				md.append("### Previsao de formatura")
+				if secao["integralizado"]:
+					md.append("- *Todas as disciplinas obrigatorias concluidas ou em curso.*")
+				else:
+					md.append("**" + secao["periodo"] + "** (minimo de " + str(secao["semestres"]) \
+						+ " semestres, contando o atual)")
+					var nomes_cadeia: Array[String] = []
+					for disc in secao["cadeia"]:
+						nomes_cadeia.append(disc["nome"])
+					if nomes_cadeia.size() > 0:
+						md.append("- Caminho critico: " + " -> ".join(nomes_cadeia))
 			"sem_grade_matriculadas":
 				md.append("### Disciplinas sem grade (matriculadas)")
 				for item in secao["itens"]:
