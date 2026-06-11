@@ -169,7 +169,7 @@ func _carregar_dados_choques() -> void:
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 	else:
 		$"%Terminal".text_edit("Dados discentes indisponíveis (hist.csv ausente ou módulo aberto " + \
-			"fora do fluxo principal).", "yellow", true, true)
+			"fora do fluxo principal).", cores_terminal["aviso"], true, true)
 	# Lê os horários (arquivos pequenos; mantidos locais ao módulo).
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida, "horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida, "horarios.txt", posicoes_horarios_txt)
