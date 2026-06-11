@@ -249,10 +249,7 @@ func _ready() -> void:
 				break
 
 	# Configura o seletor de semestre de edicao no topo do modulo.
-	$"%FiltroSemestreEdicao".lista_itens = {
-		"_Semestre*": ["Todos", "1° semestre", "2° semestre"],
-		"_Semestre_retorno": ["", "1", "2"],
-	}
+	$"%FiltroSemestreEdicao".popular("Semestre", ["Todos", "1° semestre", "2° semestre"], ["", "1", "2"])
 	$"%FiltroSemestreEdicao".opcao_selecionada.connect(_on_semestre_edicao_selecionado)
 	# Auto-define o semestre de edicao baseado na data.
 	var sem_atual: String = GeneralFunctions.semestre_atual()
@@ -267,9 +264,7 @@ func _ready() -> void:
 	_config_posic = ConfigPosicionamento.new(self)
 	_config_posic.configuracao_definida.connect(_on_config_posicionamento_definida)
 
-	$"%SeletorPreferencias".lista_itens = {
-		"_Indicadores_": INDICADORES_DISPONIVEIS,
-	}
+	$"%SeletorPreferencias".popular("Indicadores", INDICADORES_DISPONIVEIS, [], true)
 	var popup_pref: PopupMenu = $"%SeletorPreferencias".get_node("MenuButton").get_popup()
 	for i in INDICADORES_DISPONIVEIS.size():
 		popup_pref.set_item_checked(i, INDICADORES_DISPONIVEIS[i] in INDICADORES_PADRAO)
@@ -322,10 +317,7 @@ func _ready() -> void:
 	# Verifica em segundo plano se ha versao mais recente do curso no servidor (avisa, nao baixa).
 	_verificar_atualizacao_servidor.call_deferred()
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	var altura_seletor: int = 30
-	for seletor in [$"%SeletorImportar", $"%SeletorAcoes", $"%FiltroSemestreEdicao"]:
-		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
+	SeletorAvancado.dimensionar([$"%SeletorImportar", $"%SeletorAcoes", $"%FiltroSemestreEdicao"], config_interface)
 
 	$"%SeletorAcoes".lista_itens = {
 		"_Ações": ["Posicionar automaticamente", "Limpar preenchimento", "Mesclar horários.txt e planejamento.json (.csv)", "Limpar todas as restrições", "Verificar problemas"],
@@ -1863,13 +1855,10 @@ func _carregar_dados_discentes() -> void:
 # Popula o SeletorCondicoesChoque com as condições do base_config.json, marcando
 # todas exceto as de matrícula irregular.
 func _configurar_seletor_condicoes_choque() -> void:
-	var lista_itens: Dictionary = {}
-	lista_itens["_Condições choque_"] = []
-	lista_itens["_Condições choque_retorno"] = []
+	var exibicao: Array[String] = []
 	for condicao in condicoes:
-		lista_itens["_Condições choque_"].append(condicao.replacen("_", " ").capitalize())
-		lista_itens["_Condições choque_retorno"].append(condicao)
-	$"%SeletorCondicoesChoque".lista_itens = lista_itens
+		exibicao.append(condicao.replacen("_", " ").capitalize())
+	$"%SeletorCondicoesChoque".popular("Condições choque", exibicao, condicoes, true)
 	DicasPrograma.vincular_itens($"%SeletorCondicoesChoque", condicoes, ["condicoes_matricula"])
 	# Marca todas as condições exceto as de matrícula irregular.
 	_condicoes_choque_selecionadas = []

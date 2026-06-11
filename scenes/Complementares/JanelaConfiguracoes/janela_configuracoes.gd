@@ -232,10 +232,7 @@ func _popular_situacoes_rodape(cfg: Dictionary) -> void:
 		exibicao.append(str(base).replacen("_", " ").capitalize())
 		retorno.append(str(base))
 	var seletor = $TabContainer/PlanejamentoOferta/CondicoesRodape/Seletor
-	seletor.lista_itens = {
-		"_situacoes_": exibicao,
-		"_situacoes_retorno": retorno,
-	}
+	seletor.popular("situacoes", exibicao, retorno, true)
 	# Normaliza as marcadas para condicoes-base, absorvendo overrides antigos com "_aproveitamento".
 	var selecionadas: Array = []
 	for s in oferta.get("situacoes_rodape", ["matriculado_agora", "matriculavel", "seaprovado"]):
@@ -312,10 +309,7 @@ func _popular_temas(temas_internos: Array[String], tema_atual: String) -> void:
 	for nome in temas_internos:
 		exibicao.append(nome.replace("_", " ").capitalize())
 	var tema_node = $TabContainer/Interface/TemaContainer/Tema
-	tema_node.lista_itens = {
-		"_tema*": exibicao,
-		"_tema_retorno": temas_internos
-	}
+	tema_node.popular("tema", exibicao, temas_internos)
 	tema_node.atualizar_texto_padrao = true
 	var menu: MenuButton = tema_node.get_node("MenuButton")
 	menu.text = tema_atual.replace("_", " ").capitalize()

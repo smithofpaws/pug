@@ -93,7 +93,7 @@ func _preparar_seletor_grades() -> void:
 			continue
 		chaves_validas.append(str(key))
 	chaves_validas.sort()
-	$"%SeletorListaGrades".lista_itens = { "_grades*": chaves_validas }
+	$"%SeletorListaGrades".popular("grades", chaves_validas)
 	$"%SeletorListaGrades".atualizar_texto_padrao = true
 	if chaves_validas.size() > 0:
 		var indice: int = chaves_validas.size() - 1

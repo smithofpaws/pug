@@ -88,10 +88,9 @@ func _ready() -> void:
 	file_handling.check_create_dir(diretorio_exportacao)
 
 	# Popula as opcoes de tipo de exportacao
-	$"%SeletorTipoExportacao".lista_itens = {
-		"_tipo*": ["Lista de pré-requisitos", "Ementa de disciplina", "Choques de horário", "Validar cadastro com relatório GURI 5104", "Lista para planos de ensino"],
-		"_tipo_retorno": ["lista", "ementa", "choques", "validacao", "planos"]
-	}
+	$"%SeletorTipoExportacao".popular("tipo", \
+		["Lista de pré-requisitos", "Ementa de disciplina", "Choques de horário", "Validar cadastro com relatório GURI 5104", "Lista para planos de ensino"], \
+		["lista", "ementa", "choques", "validacao", "planos"])
 	DicasPrograma.vincular_itens($"%SeletorTipoExportacao", ["lista", "ementa", "choques", "validacao", "planos"], ["exportadores_tipo"])
 	$"%SeletorTipoExportacao".atualizar_texto_padrao = true
 	$"%SeletorTipoExportacao".selecionar_item(0)
@@ -100,9 +99,7 @@ func _ready() -> void:
 	# Popula as versoes de grade dinamicamente
 	var versoes := grades_disciplinas_curriculos.keys()
 	versoes.sort()
-	$"%SeletorVersaoGrade".lista_itens = {
-		"_versoes*": versoes
-	}
+	$"%SeletorVersaoGrade".popular("versoes", versoes)
 	$"%SeletorVersaoGrade".atualizar_texto_padrao = true
 	if versoes.size() > 0:
 		var indice: int = 0
@@ -126,10 +123,7 @@ func _ready() -> void:
 	for g in grades_validas:
 		grades_exibicao.append(g)
 		grades_retorno.append(g)
-	$"%SeletorListaGrades".lista_itens = {
-		"_grades*": grades_exibicao,
-		"_grades_retorno": grades_retorno
-	}
+	$"%SeletorListaGrades".popular("grades", grades_exibicao, grades_retorno)
 	$"%SeletorListaGrades".atualizar_texto_padrao = true
 	$"%SeletorListaGrades".selecionar_item(0)
 	
@@ -145,9 +139,8 @@ func _ready() -> void:
 	$"%Validar5104FileDialog".current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
 	$"%Terminal".text_edit("Módulo de exportação pronto. Selecione uma opção.", "white", true, true)
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	for seletor in [$"%SeletorTipoExportacao", $"%SeletorVersaoGrade", $"%SeletorListaGrades", $"%SeletorCondicoesChoque", $"%SeletorAluno"]:
-		seletor.custom_minimum_size = Vector2(largura_seletor, 30)
+	SeletorAvancado.dimensionar([$"%SeletorTipoExportacao", $"%SeletorVersaoGrade", \
+		$"%SeletorListaGrades", $"%SeletorCondicoesChoque", $"%SeletorAluno"], config_interface)
 	# Realce inicial do botao OnOff conforme a visibilidade do terminal.
 	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
@@ -192,10 +185,7 @@ func _carregar_dados_choques() -> void:
 	for aluno in _lista_alunos:
 		alunos_itens.append(aluno[1].capitalize())
 		alunos_retorno.append(aluno[0])
-	$"%SeletorAluno".lista_itens = {
-		"_alunos*": alunos_itens,
-		"_alunos_retorno": alunos_retorno
-	}
+	$"%SeletorAluno".popular("alunos", alunos_itens, alunos_retorno)
 	$"%SeletorAluno".atualizar_texto_padrao = true
 	$"%SeletorAluno".selecionar_item(0)
 

@@ -195,10 +195,7 @@ func _ready() -> void:
 		"completas": "Completas: 0",
 	})
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	var altura_seletor: int = 30
-	for seletor: SeletorAvancado in [_seletor_importar, _seletor_acoes, $"%FiltroSemestreEdicao"]:
-		seletor.custom_minimum_size = Vector2(largura_seletor, altura_seletor)
+	SeletorAvancado.dimensionar([_seletor_importar, _seletor_acoes, $"%FiltroSemestreEdicao"], config_interface)
 
 	# Planejamento de Oferta opera em creditos (a coluna "CH" do planejamento.csv eh creditos);
 	# passamos "cr" para os paineis para que os rotulos refleitam isto.
@@ -215,10 +212,7 @@ func _ready() -> void:
 	_painel_disciplinas.filtro_limpo.connect(_on_filtro_curso_alterado.bind({}))
 
 	# Configura o seletor de semestre de edicao no topo do modulo.
-	$"%FiltroSemestreEdicao".lista_itens = {
-		"_Semestre*": ["Todos", "1° semestre", "2° semestre"],
-		"_Semestre_retorno": ["", "1", "2"],
-	}
+	$"%FiltroSemestreEdicao".popular("Semestre", ["Todos", "1° semestre", "2° semestre"], ["", "1", "2"])
 	$"%FiltroSemestreEdicao".opcao_selecionada.connect(_on_semestre_edicao_selecionado)
 	# Auto-define o semestre de edicao baseado na data: no primeiro semestre
 	# (jan-jul), planejamos o segundo; no segundo (ago-dez), o primeiro.

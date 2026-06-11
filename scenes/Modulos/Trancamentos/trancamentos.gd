@@ -26,10 +26,7 @@ func _ready() -> void:
 	for a in lista_alunos.size():
 		alunos_itens.append(lista_alunos[a][1].capitalize())
 		alunos_retorno.append(lista_alunos[a][0])
-	$"%SeletorListaAlunos".lista_itens = {
-		"_alunos*": alunos_itens,
-		"_alunos_retorno": alunos_retorno
-	}
+	$"%SeletorListaAlunos".popular("alunos", alunos_itens, alunos_retorno)
 	$"%SeletorListaAlunos".atualizar_texto_padrao = true
 	if lista_alunos.size() > 0:
 		$"%SeletorListaAlunos".selecionar_item(0)

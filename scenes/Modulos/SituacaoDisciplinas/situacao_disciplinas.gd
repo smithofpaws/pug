@@ -136,9 +136,8 @@ func _ready() -> void:
 	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
 	TogglePaineis.sincronizar_botoes(_mapa_toggles())
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	for seletor in [$"%SeletorTipoAnalise", $"%SeletorListaDisciplinas1", $"%SeletorListaDisciplinas2", $"%SeletorListaGrades"]:
-		seletor.custom_minimum_size = Vector2(largura_seletor, 30)
+	SeletorAvancado.dimensionar([$"%SeletorTipoAnalise", $"%SeletorListaDisciplinas1", \
+		$"%SeletorListaDisciplinas2", $"%SeletorListaGrades"], config_interface)
 
 #region Preparação dos dados iniciais
 # Prepara a lista de grades disponíveis na pasta de grades. Ignora placeholders com sufixo [code]_0000[/code]
@@ -150,9 +149,7 @@ func _preparar_grades() -> void:
 			continue
 		chaves_validas.append(str(key))
 	chaves_validas.sort()
-	$"%SeletorListaGrades".lista_itens = {
-		"_grades*": chaves_validas
-	}
+	$"%SeletorListaGrades".popular("grades", chaves_validas)
 	$"%SeletorListaGrades".atualizar_texto_padrao = true
 	if chaves_validas.size() > 0:
 		var indice: int = chaves_validas.size() - 1

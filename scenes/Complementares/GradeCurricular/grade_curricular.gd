@@ -60,7 +60,7 @@ func _aplicar_lista_grades() -> void:
 	if lista_grades.is_empty():
 		sg.visible = false
 		return
-	sg.lista_itens = {"_grades*": lista_grades.duplicate(), "_grades_retorno": lista_grades.duplicate()}
+	sg.popular("grades", lista_grades.duplicate(), lista_grades.duplicate())
 	sg.visible = true
 
 ## Seleciona uma grade no SeletorGrade pelo nome (dispara [signal grade_alterada]).

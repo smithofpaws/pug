@@ -197,9 +197,7 @@ func _ready() -> void:
 	# Mapeia cada matrícula ao seu cod_curso (uma única vez) para alimentar o filtro de curso.
 	_mapear_cursos()
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	$"%SeletorListaAlunos".custom_minimum_size = Vector2(largura_seletor, 30)
-	$"%SeletorCurso".custom_minimum_size = Vector2(largura_seletor, 30)
+	SeletorAvancado.dimensionar([$"%SeletorListaAlunos", $"%SeletorCurso"], config_interface)
 	$"%SeletorListaAlunos".atualizar_texto_padrao = true
 	$"%SeletorCurso".atualizar_texto_padrao = true
 	# Monta o seletor de curso e pré-seleciona o curso do ppc_principal. Ao selecionar, o handler
@@ -713,10 +711,7 @@ func _montar_seletor_curso() -> void:
 	for cod in presentes:
 		nomes.append(str(cursos[cod].get("nome", cod)))
 		cods.append(cod)
-	$"%SeletorCurso".lista_itens = {
-		"_cursos*": nomes,
-		"_cursos_retorno": cods
-	}
+	$"%SeletorCurso".popular("cursos", nomes, cods)
 	# Índice 0 = "Todos os cursos". Tenta posicionar no curso do ppc_principal.
 	var indice: int = 0
 	var ppc: String = GV.configuracao_base.get("ppc_principal", "")

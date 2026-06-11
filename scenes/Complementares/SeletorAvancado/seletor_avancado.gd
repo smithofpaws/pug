@@ -60,6 +60,25 @@ var _indice_atual: int = -1
 # itens forem criados por add_item/add_check_item sem id explícito (caso desta cena).
 var _dicas_itens: Dictionary = {}
 
+## Atalho para o caso mais comum de lista: um único grupo, sem separador visível, de seleção
+## única ("*") ou de marcar vários ("_" quando [param multipla]), com retornos opcionais.
+## Equivale a montar à mão: [code]{"_<chave>*": exibicao, "_<chave>_retorno": retorno}[/code].
+## Listas com vários grupos ou arrays paralelas ([code]_disabled[/code]/[code]_icones[/code])
+## continuam atribuindo [member lista_itens] diretamente.
+func popular(chave: String, exibicao: Array, retorno: Array = [], multipla: bool = false) -> void:
+	var sufixo: String = "_" if multipla else "*"
+	var itens: Dictionary = {"_" + chave + sufixo: exibicao}
+	if not retorno.is_empty():
+		itens["_" + chave + "_retorno"] = retorno
+	lista_itens = itens
+
+## Aplica a [param seletores] o tamanho mínimo padrão dos seletores de módulo
+## (largura de [code]config_interface.largura_padrao_seletor[/code], altura 30).
+static func dimensionar(seletores: Array, config_interface: Dictionary) -> void:
+	var largura: int = int(config_interface.get("largura_padrao_seletor", 180))
+	for seletor in seletores:
+		seletor.custom_minimum_size = Vector2(largura, 30)
+
 ## Vincula uma DicaFlutuante ao item de índice [param index] do dropdown, exibida ao passar o mouse.
 ## Chame [b]após[/b] definir [member lista_itens] (reconstruir a lista não preserva as dicas). Texto
 ## vazio remove a dica do item.

@@ -43,10 +43,7 @@ func selecionar_opcao_por_valor(valor: String) -> void:
 func _set_formatos_grade(new_value: Dictionary) -> void:
 	formatos_grade = new_value
 	_valores_opcoes = new_value.get("valores", [])
-	$"%SeletorOpcoes".lista_itens = {
-		"_lista*": new_value.get("rotulos", []),
-		"_lista_retorno": _valores_opcoes
-	}
+	$"%SeletorOpcoes".popular("lista", new_value.get("rotulos", []), _valores_opcoes)
 
 func _set_dados(new_state: Array[Array]) -> void:
 	dados = new_state

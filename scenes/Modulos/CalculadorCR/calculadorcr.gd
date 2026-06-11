@@ -30,26 +30,19 @@ func _ready() -> void:
 	for a in lista_alunos.size():
 		alunos_itens.append(lista_alunos[a][1].capitalize())
 		alunos_retorno.append(lista_alunos[a][0])
-	$"%SeletorListaAlunos".lista_itens = {
-		"_alunos*": alunos_itens,
-		"_alunos_retorno": alunos_retorno
-	}
+	$"%SeletorListaAlunos".popular("alunos", alunos_itens, alunos_retorno)
 	$"%SeletorListaAlunos".atualizar_texto_padrao = true
 	if lista_alunos.size() > 0:
 		$"%SeletorListaAlunos".selecionar_item(0)
 		_aluno_cr_retorno = alunos_retorno[0]
 
-	$"%SeletorMetodoAnalise".lista_itens = {
-		"_metodo*": ["Prováveis formandos", "Aluno específico"],
-		"_metodo_retorno": ["provaveis_formandos", "aluno_especifico"]
-	}
+	$"%SeletorMetodoAnalise".popular("metodo", ["Prováveis formandos", "Aluno específico"], \
+		["provaveis_formandos", "aluno_especifico"])
 	$"%SeletorMetodoAnalise".atualizar_texto_padrao = true
 	$"%SeletorMetodoAnalise".selecionar_item(0)
 	_metodo_analise = "provaveis_formandos"
 
-	var largura_seletor: int = int(config_interface.get("largura_padrao_seletor", 180))
-	for seletor: SeletorAvancado in [$"%SeletorMetodoAnalise", $"%SeletorListaAlunos"]:
-		seletor.custom_minimum_size = Vector2(largura_seletor, 30)
+	SeletorAvancado.dimensionar([$"%SeletorMetodoAnalise", $"%SeletorListaAlunos"], config_interface)
 
 	# Abre já com o relatório de prováveis formandos (coerente com o método pré-selecionado).
 	_calcular_cr()
