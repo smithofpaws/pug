@@ -372,8 +372,7 @@ func _derivar_grades_cursos() -> void:
 		cursos[cod]["grades"].sort()
 
 func _limpar_modulo() -> void:
-	for child in $Modulo.get_children():
-		child.queue_free()
+	GeneralFunctions.limpar_filhos($Modulo)
 
 # Callback do dialogo "alteracoes nao salvas": o usuario confirmou a saida. Marca a confirmacao e
 # re-seleciona o destino no seletor, reentrando em _on_barra_principal_modulo_selecionado (que agora

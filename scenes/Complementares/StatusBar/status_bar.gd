@@ -15,8 +15,7 @@ var _segmentos: Dictionary = {}
 ## [code]{ chave: texto_inicial }[/code]), inserindo um [VSeparator] entre eles. Limpa quaisquer
 ## segmentos anteriores.
 func definir_segmentos(textos_iniciais: Dictionary) -> void:
-	for filho in get_children():
-		filho.queue_free()
+	GeneralFunctions.limpar_filhos(self)
 	_segmentos.clear()
 	var primeiro: bool = true
 	for chave in textos_iniciais:

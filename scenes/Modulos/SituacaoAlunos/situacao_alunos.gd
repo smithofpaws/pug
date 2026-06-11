@@ -875,15 +875,7 @@ func _realcar_por_codigo(codigo: String) -> void:
 			var cel: Celula = grade_horarios.get_celula(lin, col)
 			if not cel:
 				continue
-			var txt: String = cel.texto_central
-			txt = txt.replace("[/color]", "")
-			while txt.contains("[color="):
-				var ini: int = txt.find("[color=")
-				var fim: int = txt.find("]", ini)
-				if fim >= 0:
-					txt = txt.erase(ini, fim - ini + 1)
-				else:
-					break
+			var txt: String = GeneralFunctions.remover_bbcode_cor(cel.texto_central)
 			# Verifica se algum codigo na celula corresponde ao alvo
 			var partes_txt: PackedStringArray = txt.split(",")
 			var encontrou: bool = false
@@ -926,15 +918,7 @@ func _on_horarios_celula_clicada(linha: int, coluna: int) -> void:
 		_limpar_realces_horarios()
 		return
 	# Extrai todos os codigos da celula (separados por virgula no texto BBCode)
-	var texto_limpo: String = celula.texto_central
-	texto_limpo = texto_limpo.replace("[/color]", "")
-	while texto_limpo.contains("[color="):
-		var ini: int = texto_limpo.find("[color=")
-		var fim_col: int = texto_limpo.find("]", ini)
-		if fim_col >= 0:
-			texto_limpo = texto_limpo.erase(ini, fim_col - ini + 1)
-		else:
-			break
+	var texto_limpo: String = GeneralFunctions.remover_bbcode_cor(celula.texto_central)
 	var codigos: Array[String] = []
 	var partes: PackedStringArray = texto_limpo.split(",")
 	for parte in partes:

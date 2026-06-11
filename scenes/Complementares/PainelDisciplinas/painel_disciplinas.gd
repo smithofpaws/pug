@@ -435,8 +435,7 @@ func _aplicar_listas_filtros(filtros: Dictionary) -> void:
 
 ## Remove todos os cards do painel e reseta os filtros.
 func limpar() -> void:
-	for child in $"%ListaDisciplinas".get_children():
-		child.queue_free()
+	GeneralFunctions.limpar_filhos($"%ListaDisciplinas")
 	cards_disciplinas.clear()
 	filtro_curso = ""
 	filtro_semestre = []

@@ -116,10 +116,8 @@ func _limpar_exibicao() -> void:
 	$"%InfoSemestre".visible = false
 	$"%Placeholder".visible = true
 	$"%CHLabel".text = ""
-	for filho in $"%PainelProfessores".get_children():
-		filho.queue_free()
-	for filho in $"%PainelAfinidade".get_children():
-		filho.queue_free()
+	GeneralFunctions.limpar_filhos($"%PainelProfessores")
+	GeneralFunctions.limpar_filhos($"%PainelAfinidade")
 	bloquear_edicao(true)
 
 
@@ -168,8 +166,7 @@ func _on_clicar_afinidade(prof_nome: String) -> void:
 
 
 func _atualizar_linhas_professores() -> void:
-	for filho in $"%PainelProfessores".get_children():
-		filho.queue_free()
+	GeneralFunctions.limpar_filhos($"%PainelProfessores")
 	if _professores_alocados.is_empty():
 		var label_vazio := Label.new()
 		label_vazio.text = "Nenhum professor alocado."
@@ -228,8 +225,7 @@ func _completar_afinidade(afinidade: Array[Dictionary]) -> Array[Dictionary]:
 
 
 func _atualizar_afinidade() -> void:
-	for filho in $"%PainelAfinidade".get_children():
-		filho.queue_free()
+	GeneralFunctions.limpar_filhos($"%PainelAfinidade")
 	if _afinidade_atual.is_empty():
 		var label_vazio := Label.new()
 		label_vazio.text = "Sem histórico de oferta."

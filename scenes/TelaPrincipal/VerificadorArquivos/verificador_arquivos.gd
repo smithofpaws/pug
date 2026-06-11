@@ -41,8 +41,7 @@ var _ui_info: Dictionary = {
 }
 
 func _criar_botoes() -> void:
-	for child in $VBoxContainer.get_children():
-		child.queue_free()
+	GeneralFunctions.limpar_filhos($VBoxContainer)
 	var itens: Array[String] = []
 	itens.assign(_arquivos.keys() + _diretorios.keys())
 	for key in _ui_info.keys():

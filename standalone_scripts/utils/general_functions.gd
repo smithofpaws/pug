@@ -198,3 +198,24 @@ static func definir_por_caminho(dict: Dictionary, caminho: Array, valor: Variant
 			atual[chave] = {}
 		atual = atual[chave]
 	atual[caminho[caminho.size() - 1]] = valor
+
+
+## Remove (via [code]queue_free[/code]) todos os filhos de [param no].
+## Para limpezas condicionais (que preservam alguns filhos), itere manualmente.
+static func limpar_filhos(no: Node) -> void:
+	for filho in no.get_children():
+		filho.queue_free()
+
+
+## Remove as tags BBCode de cor ([code][color=...][/code] e [code][/color][/code]) de
+## [param texto], preservando o conteúdo entre elas.
+static func remover_bbcode_cor(texto: String) -> String:
+	var limpo: String = texto.replace("[/color]", "")
+	while limpo.contains("[color="):
+		var ini: int = limpo.find("[color=")
+		var fim: int = limpo.find("]", ini)
+		if fim >= 0:
+			limpo = limpo.erase(ini, fim - ini + 1)
+		else:
+			break
+	return limpo
