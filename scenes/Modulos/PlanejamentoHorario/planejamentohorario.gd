@@ -126,6 +126,10 @@ var _restricoes_mgr := GerenciadorRestricoes.new()
 # Pilha de desfazer (Ctrl+Z); snapshots e restauração em HistoricoUndo (Complementos).
 var _undo := HistoricoUndo.new()
 
+# Contagem e relato dos choques de horário entre alunos (ChoquesAlunos, Complementos). A política
+# de indicadores (quando contar/relatar/detalhar) fica neste módulo.
+var _choques_alunos := ChoquesAlunos.new()
+
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
 # uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
 # ({"tipo": "semestre"/"professor", "valor": ...}); separadores/cabeçalhos guardam {} (sem ação).
@@ -226,6 +230,8 @@ func _ready() -> void:
 
 	_undo.configurar(_ger_alocacoes, _restricoes_mgr, $"%PainelDisciplinas", $"%GradeHorarios", \
 		_dados, _recalcular_grade, $"%Terminal")
+
+	_choques_alunos.configurar(_ger_alocacoes, analise_historico, $"%Terminal")
 
 	_posicionador = PosicionadorAutomatico.new()
 
@@ -1487,7 +1493,7 @@ func _on_grade_celula_clicada(linha: int, coluna: int) -> void:
 	if linha == 0 or coluna == 0:
 		return
 	$"%Terminal".text_edit("", "padrao", false, true)
-	var celulas_dia: Array = _celulas_do_dia(coluna)
+	var celulas_dia: Array = _choques_alunos.celulas_do_dia(coluna)
 	var painel := $"%PainelDisciplinas"
 	if painel.filtro_ativo() or not _filtro_grade_semestre.is_empty():
 		# Âncora = só as disciplinas EM FOCO na célula clicada (as que passam o filtro), não todas as
@@ -1703,6 +1709,7 @@ func _carregar_dados_discentes() -> void:
 	_historico = GV.dados_discentes["historico"]
 	_lista_alunos = GV.dados_discentes["lista_alunos"]
 	_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+	_choques_alunos.definir_dados(_condicoes_discentes, _condicoes_choque_selecionadas, _historico)
 
 # Popula o SeletorCondicoesChoque com as condições do base_config.json, marcando
 # todas exceto as de matrícula irregular.
@@ -1719,9 +1726,11 @@ func _configurar_seletor_condicoes_choque() -> void:
 			continue
 		$"%SeletorCondicoesChoque".selecionar_item(i)
 		_condicoes_choque_selecionadas.append(condicoes[i])
+	_choques_alunos.definir_dados(_condicoes_discentes, _condicoes_choque_selecionadas, _historico)
 
 func _on_condicoes_choque_selecionada(_retorno: String, lista_selecionada: Array[String]) -> void:
 	_condicoes_choque_selecionadas = lista_selecionada
+	_choques_alunos.definir_dados(_condicoes_discentes, _condicoes_choque_selecionadas, _historico)
 	_atualizar_choques_alunos()
 
 # Recalcula o total de alunos em choque (par a par) e atualiza a barra de status. Só computa
@@ -1729,67 +1738,18 @@ func _on_condicoes_choque_selecionada(_retorno: String, lista_selecionada: Array
 # Não imprime no terminal: o detalhamento no terminal é feito por ação (soltar/clicar numa célula).
 func _atualizar_choques_alunos() -> void:
 	if IND_CHOQUE_ALUNOS in _indicadores_ativos:
-		_ultimo_total_alunos_choque = _contar_choques_alunos()
+		_ultimo_total_alunos_choque = _choques_alunos.contar()
 	else:
 		_ultimo_total_alunos_choque = 0
 	_atualizar_status_bar()
 
-# Soma, sobre TODA a grade, quantos discentes estão em ambas as disciplinas de cada par de códigos
-# distintos co-alocados (nas condições selecionadas). Silencioso — alimenta apenas a barra de status.
-func _contar_choques_alunos() -> int:
-	if _condicoes_discentes.is_empty() or _condicoes_choque_selecionadas.is_empty():
-		return 0
-	var pares: Dictionary = {}
-	for chave_celula in _ger_alocacoes.alocacoes:
-		var arr: Array = _ger_alocacoes.alocacoes[chave_celula]
-		for i in arr.size():
-			var cod_i: String = (arr[i] as Dictionary).get("codigo", "").to_lower()
-			for j in range(i + 1, arr.size()):
-				var cod_j: String = (arr[j] as Dictionary).get("codigo", "").to_lower()
-				if cod_i.is_empty() or cod_j.is_empty() or cod_i == cod_j:
-					continue
-				var a: String = cod_i if cod_i < cod_j else cod_j
-				var b: String = cod_j if cod_i < cod_j else cod_i
-				pares["%s|%s" % [a, b]] = true
-	var total: int = 0
-	for k in pares:
-		var partes: PackedStringArray = str(k).split("|")
-		var discentes: Dictionary = analise_historico.comparar_discentes_disciplina(\
-			partes[0], partes[1], _condicoes_discentes, _condicoes_choque_selecionadas)
-		total += discentes.size()
-	return total
-
-# Imprime no terminal os choques de alunos entre disciplinas sobrepostas nas células dadas (cada item
-# de [param celulas] é [linha, coluna]). Deduplica pares repetidos entre as células. Só age com o
-# indicador "Choques de horário" ativo. [br]
-# [param eh_ancora]: quando válido, só reporta um par se ao menos uma das disciplinas for âncora
-# (eh_ancora.call(aloc) == true). Usado para focar o relato: ao soltar, âncora = a disciplina movida
-# (só seus choques); ao clicar com filtro, âncora = as disciplinas que passam o filtro. Inválido =
-# reporta todos os pares (ex.: clique sem filtro mostra todos os choques do dia).
+# Imprime no terminal os choques de alunos entre disciplinas sobrepostas nas células dadas. Só age
+# com o indicador "Choques de horário" ativo; o detalhamento por aluno segue "Detalhar alunos".
+# (Cálculo e impressão em ChoquesAlunos; ver lá a semântica de [param eh_ancora].)
 func _reportar_choques_alunos_celulas(celulas: Array, eh_ancora: Callable = Callable()) -> void:
 	if not (IND_CHOQUE_ALUNOS in _indicadores_ativos):
 		return
-	if _condicoes_discentes.is_empty() or _condicoes_choque_selecionadas.is_empty():
-		return
-	var vistos: Dictionary = {}
-	for cel in celulas:
-		var arr: Array = _ger_alocacoes.obter_alocacoes("%d_%d" % [cel[0], cel[1]])
-		for i in arr.size():
-			for j in range(i + 1, arr.size()):
-				var aloc_a: Dictionary = arr[i]
-				var aloc_b: Dictionary = arr[j]
-				var cod_a: String = aloc_a.get("codigo", "").to_lower()
-				var cod_b: String = aloc_b.get("codigo", "").to_lower()
-				if cod_a.is_empty() or cod_b.is_empty() or cod_a == cod_b:
-					continue
-				# Foco: ao menos um lado do par precisa ser âncora (quando há predicado).
-				if eh_ancora.is_valid() and not (eh_ancora.call(aloc_a) or eh_ancora.call(aloc_b)):
-					continue
-				var k: String = (cod_a + "|" + cod_b) if cod_a < cod_b else (cod_b + "|" + cod_a)
-				if vistos.has(k):
-					continue
-				vistos[k] = true
-				_imprimir_choque_par(aloc_a, aloc_b)
+	_choques_alunos.reportar_celulas(celulas, IND_DETALHAR_ALUNOS in _indicadores_ativos, eh_ancora)
 
 
 # Códigos (minúsculo) das alocações da célula que passam pelo filtro ativo — as disciplinas "em foco"
@@ -1811,91 +1771,6 @@ func _ancora_por_codigo(cod_alvo: String) -> Callable:
 	return func(aloc: Dictionary) -> bool:
 		return str(aloc.get("codigo", "")).to_lower() == cod_alvo
 
-
-# Lista [linha, coluna] de todas as células ocupadas no dia (coluna) informado. "Dia" é a coluna da
-# grade (as horas de uma disciplina empilham na mesma coluna).
-func _celulas_do_dia(coluna: int) -> Array:
-	var celulas: Array = []
-	for chave_celula in _ger_alocacoes.alocacoes:
-		var partes: PackedStringArray = chave_celula.split("_")
-		if partes.size() == 2 and int(partes[1]) == coluna:
-			celulas.append([int(partes[0]), coluna])
-	# Ordena por horário (linha) para o relato sair de cima para baixo no terminal.
-	celulas.sort_custom(func(a, b): return a[0] < b[0])
-	return celulas
-
-# Imprime no terminal a contagem de alunos em choque entre duas disciplinas e, se o detalhamento
-# estiver ativo, a lista de alunos com a situação em cada uma. O rótulo segue o modo de visualização.
-func _imprimir_choque_par(aloc_a: Dictionary, aloc_b: Dictionary) -> void:
-	var cod_a: String = aloc_a.get("codigo", "").to_lower()
-	var cod_b: String = aloc_b.get("codigo", "").to_lower()
-	var discentes: Dictionary = analise_historico.comparar_discentes_disciplina(\
-		cod_a, cod_b, _condicoes_discentes, _condicoes_choque_selecionadas)
-	var n: int = discentes.size()
-	var rot_a: String = _ger_alocacoes.rotulo_alocacao(aloc_a)
-	var rot_b: String = _ger_alocacoes.rotulo_alocacao(aloc_b)
-	$"%Terminal".linha("Choque de alunos: %s × %s → %d aluno(s) em ambas." % \
-		[rot_a, rot_b, n], "aviso")
-	if n > 0 and IND_DETALHAR_ALUNOS in _indicadores_ativos:
-		_listar_alunos_em_choque(discentes, rot_a, rot_b)
-
-# Imprime, para um par de disciplinas, o nome de cada discente em choque e a situação em que se
-# enquadra em cada uma. Útil para distinguir choques certos de choques condicionais (ex.: o aluno
-# é "matriculável" em uma e "seaprovado" em outra — só haverá choque se for aprovado primeiro). [br]
-# A lista é ordenada por prioridade da situação: já matriculados primeiro, depois matriculáveis,
-# por último os seaprovado (ver [method _prioridade_condicao]).
-func _listar_alunos_em_choque(discentes: Dictionary, rot_a: String, rot_b: String) -> void:
-	var entradas: Array = []
-	for matr in discentes.keys():
-		var nome: String = _historico.get(matr, {}).get("nomedoaluno", str(matr))
-		# Deduplica pares de condições repetidos para o mesmo aluno e guarda a prioridade de cada par.
-		var vistos: Dictionary = {}
-		var pares_prio: Array = []  # cada item: [prio_min, prio_max, texto]
-		for par_cond in discentes[matr]:
-			var cond_a: String = str(par_cond[0])
-			var cond_b: String = str(par_cond[1])
-			var chave_par: String = cond_a + "|" + cond_b
-			if vistos.has(chave_par):
-				continue
-			vistos[chave_par] = true
-			var pa: int = _prioridade_condicao(cond_a)
-			var pb: int = _prioridade_condicao(cond_b)
-			# Cada lado leva a cor (BBCode) da sua condição — a mesma paleta das situações curriculares
-			# (ex.: matriculado_agora = verde; matriculavel = neutro). Facilita distinguir o tipo de choque.
-			var texto: String = "[color=%s]%s: %s[/color] / [color=%s]%s: %s[/color]" % \
-				[PaletaSemantica.cor_hex(cond_a), rot_a, cond_a.replacen("_", " ").capitalize(), \
-				PaletaSemantica.cor_hex(cond_b), rot_b, cond_b.replacen("_", " ").capitalize()]
-			pares_prio.append([min(pa, pb), max(pa, pb), texto])
-		# Ordena as situações do próprio aluno (mais "matriculado" primeiro).
-		pares_prio.sort_custom(func(x, y): return x[0] < y[0] if x[0] != y[0] else x[1] < y[1])
-		var situacoes: Array[String] = []
-		for pp in pares_prio:
-			situacoes.append(pp[2])
-		# Chave de ordenação do aluno: o melhor (menor) par de prioridades que ele possui.
-		var kmin: int = pares_prio[0][0] if pares_prio.size() > 0 else 9
-		var kmax: int = pares_prio[0][1] if pares_prio.size() > 0 else 9
-		entradas.append({"nome": nome, "kmin": kmin, "kmax": kmax, "situacoes": situacoes})
-	# Ordena os alunos por prioridade de situação e, em empate, por nome.
-	entradas.sort_custom(func(x, y):
-		if x["kmin"] != y["kmin"]:
-			return x["kmin"] < y["kmin"]
-		if x["kmax"] != y["kmax"]:
-			return x["kmax"] < y["kmax"]
-		return str(x["nome"]) < str(y["nome"]))
-	for e in entradas:
-		$"%Terminal".item("%s — %s" % [str(e["nome"]).capitalize(), " ; ".join(e["situacoes"])])
-
-# Prioridade de uma condição de matrícula para ordenar a apresentação dos choques: [br]
-# 1 = já matriculado (normal, por aproveitamento ou irregular); 2 = matriculável (inclui
-# corequisito e aproveitamento); 3 = seaprovado (inclui corequisito e aproveitamento). Menor = antes.
-func _prioridade_condicao(cond: String) -> int:
-	if cond.contains("matriculado") or cond.contains("matricula_irregular"):
-		return 1
-	if cond.contains("matriculavel"):
-		return 2
-	if cond.contains("seaprovado"):
-		return 3
-	return 4
 
 func _sincronizar_referencias() -> void:
 	_ger_alocacoes.configurar($"%GradeHorarios", $"%PainelDisciplinas".cards_disciplinas, _dados._planejamento_csv, analise_grades, grades_disciplinas_curriculos)
