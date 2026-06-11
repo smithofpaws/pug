@@ -130,6 +130,10 @@ var _undo := HistoricoUndo.new()
 # de indicadores (quando contar/relatar/detalhar) fica neste módulo.
 var _choques_alunos := ChoquesAlunos.new()
 
+# Pipeline de importação de arquivos de preferências de professor (ImportadorPreferencias,
+# Complementos): xlsx→csv, reencodificação UTF-8 e cópia para o diretório de regras.
+var _importador_pref := ImportadorPreferencias.new()
+
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
 # uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
 # ({"tipo": "semestre"/"professor", "valor": ...}); separadores/cabeçalhos guardam {} (sem ação).
@@ -232,6 +236,8 @@ func _ready() -> void:
 		_dados, _recalcular_grade, $"%Terminal")
 
 	_choques_alunos.configurar(_ger_alocacoes, analise_historico, $"%Terminal")
+
+	_importador_pref.configurar(file_handling, diretorio_regras, GV.dir_temp)
 
 	_posicionador = PosicionadorAutomatico.new()
 
@@ -2537,58 +2543,42 @@ func _configurar_sincronizacao() -> void:
 	Dialogos.limitar_a_tela(dialog)
 
 
-## Abre um [FileDialog] para selecionar um CSV externo, converte para UTF-8 e o salva
-## como [code]planejamento.csv[/code] no diretorio de saida (sobreescrevendo o existente).
-## Util quando o CSV vem em encoding diferente de UTF-8 e precisa ser normalizado.
+## Abre um [FileDialog] para selecionar um arquivo externo, converte para UTF-8 e o salva como
+## [param nome_destino] no diretorio de saida (sobreescrevendo o existente). Util quando o arquivo
+## vem em encoding diferente de UTF-8 (ex.: ANSI/Windows-1252). [param ao_concluir] encadeia a
+## proxima acao (ex.: selecao de cursos para importar o arquivo recem-convertido), poupando o
+## usuario de acionar manualmente o "Arquivo > Abrir ..." correspondente.
+func _abrir_dialogo_conversao(titulo: String, filtro: String, descricao_filtro: String, \
+		nome_destino: String, ao_concluir: Callable) -> void:
+	var fd := FileDialog.new()
+	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.title = titulo
+	fd.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
+	fd.add_filter(filtro, descricao_filtro)
+	fd.file_selected.connect(func(path: String):
+		var dir_in: String = path.get_base_dir() + "/"
+		var file_name: String = path.get_file()
+		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, nome_destino)
+		$"%Terminal".text_edit("%s convertido e salvo como %s em %s." \
+			% [file_name, nome_destino, GV.dir_saida], "sucesso", true, true)
+		fd.queue_free()
+		if FileAccess.file_exists(GV.dir_saida + nome_destino):
+			ao_concluir.call())
+	fd.canceled.connect(fd.queue_free)
+	add_child(fd)
+	fd.popup_centered()
+	Dialogos.limitar_a_tela(fd)
+
+
 func _converter_planejamento_csv() -> void:
-	var fd := FileDialog.new()
-	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	fd.access = FileDialog.ACCESS_FILESYSTEM
-	fd.title = "Selecionar planejamento para converter"
-	fd.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
-	fd.add_filter("*.csv", "Arquivos CSV")
-	fd.file_selected.connect(func(path: String):
-		var dir_in: String = path.get_base_dir() + "/"
-		var file_name: String = path.get_file()
-		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, "planejamento.csv")
-		$"%Terminal".text_edit("%s convertido e salvo como planejamento.csv em %s." \
-			% [file_name, GV.dir_saida], "sucesso", true, true)
-		fd.queue_free()
-		# Encadeia direto na selecao de cursos para importar o arquivo recem-convertido,
-		# poupando o usuario de abrir manualmente "Arquivo > Abrir planejamento.csv".
-		if FileAccess.file_exists(GV.dir_saida + "planejamento.csv"):
-			_abrir_janela_selecao_cursos_planejamento())
-	fd.canceled.connect(fd.queue_free)
-	add_child(fd)
-	fd.popup_centered()
-	Dialogos.limitar_a_tela(fd)
+	_abrir_dialogo_conversao("Selecionar planejamento para converter", "*.csv", "Arquivos CSV", \
+		"planejamento.csv", _abrir_janela_selecao_cursos_planejamento)
 
 
-## Abre um [FileDialog] para selecionar um horarios.txt externo, converte para UTF-8 e o salva
-## como [code]horarios.txt[/code] no diretorio de saida (sobreescrevendo o existente).
-## Util quando o horarios.txt vem em encoding diferente de UTF-8 (ex.: ANSI/Windows-1252).
 func _converter_horarios_txt() -> void:
-	var fd := FileDialog.new()
-	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	fd.access = FileDialog.ACCESS_FILESYSTEM
-	fd.title = "Selecionar horarios.txt para importar"
-	fd.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
-	fd.add_filter("*.txt", "Arquivos de texto")
-	fd.file_selected.connect(func(path: String):
-		var dir_in: String = path.get_base_dir() + "/"
-		var file_name: String = path.get_file()
-		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, "horarios.txt")
-		$"%Terminal".text_edit("%s convertido e salvo como horarios.txt em %s." \
-			% [file_name, GV.dir_saida], "sucesso", true, true)
-		fd.queue_free()
-		# Encadeia direto na selecao de cursos para abrir o arquivo recem-convertido,
-		# poupando o usuario de acionar manualmente "Arquivo > Abrir horarios.txt".
-		if FileAccess.file_exists(GV.dir_saida + "horarios.txt"):
-			_abrir_janela_selecao_cursos_horario())
-	fd.canceled.connect(fd.queue_free)
-	add_child(fd)
-	fd.popup_centered()
-	Dialogos.limitar_a_tela(fd)
+	_abrir_dialogo_conversao("Selecionar horarios.txt para importar", "*.txt", "Arquivos de texto", \
+		"horarios.txt", _abrir_janela_selecao_cursos_horario)
 
 
 ## Abre um [FileDialog] para o usuario selecionar arquivos CSV ou XLSX de preferencias
@@ -2626,75 +2616,10 @@ func _on_preferencia_arquivos_selecionados(caminhos: PackedStringArray, dialog: 
 
 
 ## Importa um arquivo de preferencias ([param caminho]) para [member diretorio_regras],
-## convertendo encoding e formato conforme necessario.
+## convertendo encoding e formato conforme necessario (pipeline em ImportadorPreferencias).
 func _importar_arquivo_preferencia(caminho: String) -> void:
-	var ext: String = caminho.get_extension().to_lower()
-	var nome_base: String = caminho.get_file().trim_suffix("." + ext)
-	var nome_arquivo: String = nome_base + ".csv"
-
-	var csv_para_importar: String = caminho
-	var temp_xlsx: String = ""
-	if ext == "xlsx":
-		DirAccess.make_dir_recursive_absolute(GV.dir_temp)
-		temp_xlsx = GV.dir_temp + nome_arquivo
-		if not file_handling.converter_xlsx_para_csv(caminho, temp_xlsx):
-			$"%Terminal".text_edit("Conversor .xlsx nao encontrado. Coloque xlsx_to_csv.exe em externo/bin/ para importar arquivos Excel.", \
-				"erro", true, false)
-			return
-		csv_para_importar = temp_xlsx
-
-	var precisa_conversao: bool = false
-	var f := FileAccess.open(csv_para_importar, FileAccess.READ)
-	if f != null:
-		var raw: PackedByteArray = f.get_buffer(f.get_length())
-		f.close()
-		var teste_utf8: String = raw.get_string_from_utf8()
-		precisa_conversao = "\uFFFD" in teste_utf8
-
-	var destino_final: String
-	if precisa_conversao:
-		DirAccess.make_dir_recursive_absolute(GV.dir_temp)
-		var temp_nome: String = nome_arquivo
-		file_handling.convertto_utf8(csv_para_importar.get_base_dir() + "/", nome_arquivo, GV.dir_temp, temp_nome)
-		var temp_path: String = GV.dir_temp + temp_nome
-		var utf8_file := FileAccess.open(temp_path, FileAccess.READ)
-		if utf8_file == null:
-			$"%Terminal".text_edit("Erro ao ler arquivo convertido: " + temp_path, \
-				"erro", true, false)
-			if not temp_xlsx.is_empty():
-				DirAccess.remove_absolute(temp_xlsx)
-			return
-		var utf8_bytes: PackedByteArray = utf8_file.get_buffer(utf8_file.get_length())
-		utf8_file.close()
-		DirAccess.make_dir_recursive_absolute(diretorio_regras)
-		var destino := FileAccess.open(diretorio_regras + "/" + nome_arquivo, FileAccess.WRITE)
-		if destino == null:
-			$"%Terminal".text_edit("Erro ao salvar arquivo em " + diretorio_regras, \
-				"erro", true, false)
-			DirAccess.remove_absolute(temp_path)
-			if not temp_xlsx.is_empty():
-				DirAccess.remove_absolute(temp_xlsx)
-			return
-		destino.store_buffer(utf8_bytes)
-		destino.close()
-		DirAccess.remove_absolute(temp_path)
-		destino_final = diretorio_regras + "/" + nome_arquivo
-	else:
-		DirAccess.make_dir_recursive_absolute(diretorio_regras)
-		var err := DirAccess.copy_absolute(csv_para_importar, diretorio_regras + "/" + nome_arquivo)
-		if err != OK:
-			$"%Terminal".text_edit("Erro ao copiar arquivo para " + diretorio_regras, \
-				"erro", true, false)
-			if not temp_xlsx.is_empty():
-				DirAccess.remove_absolute(temp_xlsx)
-			return
-		destino_final = diretorio_regras + "/" + nome_arquivo
-
-	if not temp_xlsx.is_empty():
-		DirAccess.remove_absolute(temp_xlsx)
-
-	$"%Terminal".text_edit("Importado: " + destino_final, \
-		"sucesso", true, false)
+	var r: Dictionary = _importador_pref.importar(caminho)
+	$"%Terminal".text_edit(r["mensagem"], "sucesso" if r["ok"] else "erro", true, false)
 
 
 ## Importa o [code]planejamento.json[/code] exportado do modulo Planejamento de Oferta.
@@ -2731,9 +2656,43 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 		if partes_lc.size() == 2:
 			_ger_alocacoes.limpar_celula(int(partes_lc[0]), int(partes_lc[1]))
 	_ger_alocacoes.limpar_alocacoes()
-	# Converte o JSON para o formato _planejamento_csv.
-	_dados._planejamento_csv.clear()
 	var disciplinas: Array = dados["disciplinas"]
+	_converter_disciplinas_json(disciplinas)
+
+	if _dados._planejamento_csv.is_empty():
+		$"%Terminal".text_edit("Nenhuma disciplina valida encontrada no planejamento.json.", \
+			"aviso", true, true)
+		return
+
+	_dados.adicionar_planejamento()
+	if verbose:
+		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
+		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
+	_sincronizar_referencias()
+	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false, verbose)
+
+	# Aplica as alocações (alocacoes) do JSON na grade.
+	var dias_json: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
+	var horas_json: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+	var cont_aloc: int = _aplicar_alocacoes_json(disciplinas, dias_json, horas_json)
+	# Resumo curto antes dos choques (modo nao-verboso, ex.: baixar do servidor): substitui o despejo
+	# e a mensagem detalhada, deixando a confirmacao da acao (ex.: "Baixado:") por ultimo no chamador.
+	if not verbose:
+		$"%Terminal".text_edit("Planejamento carregado: %d disciplinas, %d alocações." \
+			% [_dados._planejamento_csv.size(), cont_aloc], "sucesso", true, false)
+	_restricoes_mgr.carregar_do_json(dados, dias_json, horas_json)
+	_sincronizar_referencias()
+	_ger_alocacoes.reaplicar_todas()
+	_detectar_choques()
+	_marcar_estado_salvo()
+	if verbose:
+		$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
+			% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
+
+# Converte a lista de disciplinas do planejamento.json para o formato _planejamento_csv de
+# ArquivosPlanejamento (limpa o anterior). Disciplinas repetidas mesclam professores.
+func _converter_disciplinas_json(disciplinas: Array) -> void:
+	_dados._planejamento_csv.clear()
 	for disc in disciplinas:
 		if not disc is Dictionary:
 			continue
@@ -2775,21 +2734,9 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 				"ch_disciplina": str(ch_total),
 			}
 
-	if _dados._planejamento_csv.is_empty():
-		$"%Terminal".text_edit("Nenhuma disciplina valida encontrada no planejamento.json.", \
-			"aviso", true, true)
-		return
-
-	_dados.adicionar_planejamento()
-	if verbose:
-		var converted: Array = horarios_exe.exportar_horariostxt(_dados._horarios_txt_lista["planejamento"])
-		_dados.imprimir_horarios_txt($"%Terminal", converted, "padrao")
-	_sincronizar_referencias()
-	$"%PainelDisciplinas".popular(_dados._planejamento_csv, $"%Terminal", false, verbose)
-
-	# Aplica as alocações (alocacoes) do JSON na grade.
-	var dias_json: Array[String] = analise_horarios.dias_da_semana(_dados._horarios_ini)
-	var horas_json: Array[String] = analise_horarios.horas_das_aulas(_dados._horarios_ini)
+# Aplica na grade as alocações de cada disciplina do planejamento.json (campo "alocacoes",
+# endereçado por dia/horário), atualizando a ch_alocada dos cards. Retorna o total aplicado.
+func _aplicar_alocacoes_json(disciplinas: Array, dias_json: Array[String], horas_json: Array[String]) -> int:
 	var painel_json := $"%PainelDisciplinas"
 	var cont_aloc: int = 0
 	for disc in disciplinas:
@@ -2830,19 +2777,7 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 			if card_json:
 				card_json.ch_alocada += 1
 			cont_aloc += 1
-	# Resumo curto antes dos choques (modo nao-verboso, ex.: baixar do servidor): substitui o despejo
-	# e a mensagem detalhada, deixando a confirmacao da acao (ex.: "Baixado:") por ultimo no chamador.
-	if not verbose:
-		$"%Terminal".text_edit("Planejamento carregado: %d disciplinas, %d alocações." \
-			% [_dados._planejamento_csv.size(), cont_aloc], "sucesso", true, false)
-	_restricoes_mgr.carregar_do_json(dados, dias_json, horas_json)
-	_sincronizar_referencias()
-	_ger_alocacoes.reaplicar_todas()
-	_detectar_choques()
-	_marcar_estado_salvo()
-	if verbose:
-		$"%Terminal".text_edit("Planejamento importado de planejamento.json (%d disciplinas, %d alocações, %s)." \
-			% [_dados._planejamento_csv.size(), cont_aloc, caminho], "sucesso", true, false)
+	return cont_aloc
 
 func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[String]) -> void:
 	match retorno:
