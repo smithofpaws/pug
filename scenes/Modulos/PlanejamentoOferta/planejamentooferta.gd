@@ -45,9 +45,6 @@ var equivalencias: Dictionary = {}
 ## Lista de condicoes de matricula (matriculavel, matriculado_agora, etc).
 var condicoes: Array[String] = []
 
-## Posicoes das colunas no arquivo [code]hist.csv[/code].
-var posicoes_histcsv: Dictionary = {}
-
 ## Delimitadores padrao do programa.
 var delimitadores: Dictionary = {}
 
@@ -1320,31 +1317,22 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 				_painel_disciplinas._semestre_edicao)
 
 
-# Carrega as condicoes de cada discente a partir do hist.csv, uma unica vez (cacheado em
-# [member _condicoes_discentes]). Retorna true se os dados estao disponiveis. Quando hist.csv
-# nao existe: loga um erro e retorna false se [param exigir] for true; caso contrario fica
-# silencioso (usado pela sugestao de oferta, que degrada sem demanda).
+# Obtem as condicoes de cada discente do cache pre-computado pelo main (a leitura de hist.csv é
+# centralizada em main._garantir_dados_discentes; cache vazio = hist.csv ausente ou cena aberta
+# fora do fluxo principal). Retorna true se os dados estao disponiveis. Quando indisponiveis:
+# loga um erro e retorna false se [param exigir] for true; caso contrario fica silencioso
+# (usado pela sugestao de oferta, que degrada sem demanda).
 func _carregar_dados_discentes(exigir: bool = true) -> bool:
 	if not _condicoes_discentes.is_empty():
 		return true
-	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
-	# modulo). Fallback (abaixo): se o cache estiver vazio, computa local.
 	if not GV.dados_discentes.is_empty():
 		_historico_discentes = GV.dados_discentes["historico"]
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 		return true
-	if not FileAccess.file_exists(GV.dir_saida + "hist.csv"):
-		if exigir:
-			_log("hist.csv nao encontrado em " + GV.dir_saida + \
-				" — nao e possivel determinar a demanda.", "erro", true, true)
-		return false
-	var historico: Dictionary = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-	_historico_discentes = historico
-	analise_historico.simplificar_historico(historico, "situacao", ["aprovado", "dispensado", "matr"])
-	var lista_alunos: Array[Array] = analise_historico.criar_lista_alunos(historico)
-	_condicoes_discentes = analise_historico.condicoes_discentes(lista_alunos, historico, condicoes, \
-		grades_disciplinas_curriculos, equivalencias)
-	return true
+	if exigir:
+		_log("Dados discentes indisponíveis (hist.csv ausente ou módulo aberto fora do " + \
+			"fluxo principal) — não é possível determinar a demanda.", "erro", true, true)
+	return false
 
 
 #endregion

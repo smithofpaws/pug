@@ -45,10 +45,6 @@ var diretorio_regras: String
 var posicoes_horarios_txt: Dictionary
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
-## Posições das colunas no arquivo [code]hist.csv[/code].
-var posicoes_histcsv: Dictionary = {}
-
-## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
 ## Lista de condições de matrícula (matriculavel, matriculado_agora, etc).
 var condicoes: Array[String] = []
 
@@ -1833,24 +1829,16 @@ func _atualizar_status_bar() -> void:
 	else:
 		status_bar.atualizar("compartilhadas_div", "")
 
-# Carrega hist.csv e pré-computa as condições de cada discente (necessário ao indicador de choque
-# de alunos). Feito uma vez no _ready, espelhando o módulo Situação Disciplinas. Falha graciosamente
-# se hist.csv estiver ausente: o indicador apenas reportará zero.
+# Obtém as condições de cada discente do cache pré-computado pelo main (necessário ao indicador
+# de choque de alunos; a leitura de hist.csv é centralizada em main._garantir_dados_discentes).
+# Falha graciosamente com o cache vazio (hist.csv ausente ou cena aberta fora do fluxo
+# principal): o indicador apenas reportará zero.
 func _carregar_dados_discentes() -> void:
-	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
-	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
-	if not GV.dados_discentes.is_empty():
-		_historico = GV.dados_discentes["historico"]
-		_lista_alunos = GV.dados_discentes["lista_alunos"]
-		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+	if GV.dados_discentes.is_empty():
 		return
-	if not FileAccess.file_exists(GV.dir_saida + "hist.csv"):
-		return
-	_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-	analise_historico.simplificar_historico(_historico, "situacao", ["aprovado", "dispensado", "matr"])
-	_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-	_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-		grades_disciplinas_curriculos, equivalencias)
+	_historico = GV.dados_discentes["historico"]
+	_lista_alunos = GV.dados_discentes["lista_alunos"]
+	_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 
 # Popula o SeletorCondicoesChoque com as condições do base_config.json, marcando
 # todas exceto as de matrícula irregular.

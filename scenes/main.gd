@@ -521,7 +521,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.grades_disciplinas_curriculos = GV.grades
 			modulo.cargas_exigidas = GV.ch_exigida
 			modulo.lista_cores = PaletaSemantica.tokens_lista()
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.posicoes_horarios_txt = GV.configuracao_base["horarios_txt"]
 			modulo.cores_terminal = PaletaSemantica.tokens_terminal()
 			modulo.efeitos = GV.configuracao_base["efeitos"]
@@ -540,7 +539,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.equivalencias = GV.equivalencias
 			modulo.grades_disciplinas_curriculos = GV.grades
 			modulo.lista_cores = PaletaSemantica.tokens_lista()
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.posicoes_horarios_txt = GV.configuracao_base["horarios_txt"]
 			modulo.cores_terminal = PaletaSemantica.tokens_terminal()
 			modulo.efeitos = GV.configuracao_base["efeitos"]
@@ -556,7 +554,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			$Modulo.add_child(modulo)
 		"matricula_irregular":
 			var modulo = load("res://scenes/Modulos/MatriculaIrregular/MatriculaIrregular.tscn").instantiate()
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.condicoes.assign(GV.configuracao_base["condicoes"])
 			modulo.grades_disciplinas_curriculos = GV.grades
 			modulo.equivalencias = GV.equivalencias
@@ -579,7 +576,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			var nome_dir_regras: String = str(dirs_ph[0]) if not dirs_ph.is_empty() else "preferenciashorarios"
 			modulo.diretorio_regras = GV.dir_saida + nome_dir_regras
 			modulo.posicoes_horarios_txt = GV.configuracao_base["horarios_txt"]
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.condicoes.assign(GV.configuracao_base["condicoes"])
 			modulo.equivalencias = GV.equivalencias
 			modulo.delimitadores = GV.configuracao_base["delimitadores"]
@@ -598,7 +594,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			var modulo = load("res://scenes/Modulos/Exportadores/Exportadores.tscn").instantiate()
 			modulo.grades_disciplinas_curriculos = GV.grades
 			modulo.diretorio_exportacao = GV.dir_exportacoes
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.posicoes_horarios_txt = GV.configuracao_base["horarios_txt"]
 			modulo.condicoes = GV.configuracao_base["condicoes"]
 			modulo.lista_cores = PaletaSemantica.tokens_lista()
@@ -612,7 +607,6 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.grades_disciplinas_curriculos = GV.grades
 			modulo.equivalencias = GV.equivalencias
 			modulo.condicoes.assign(GV.configuracao_base["condicoes"])
-			modulo.posicoes_histcsv = GV.configuracao_base["histfile"]
 			modulo.delimitadores = GV.configuracao_base["delimitadores"]
 			modulo.posicoes_planejamento = GV.configuracao_base.get("planejamento", {})
 			modulo.cursos = GV.configuracao_base.get("cursos", {})

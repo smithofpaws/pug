@@ -30,9 +30,6 @@ var grades_disciplinas_curriculos: Dictionary
 var diretorio_exportacao: String = ""
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
-var posicoes_histcsv: Dictionary
-
-## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
 var posicoes_horarios_txt: Dictionary
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
@@ -163,18 +160,16 @@ func _popular_seletor_condicoes() -> void:
 
 # Carrega historico e horarios, computa condicoes para todos os alunos.
 func _carregar_dados_choques() -> void:
-	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
-	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	# Consome o cache de dados discentes pre-computado pelo main (a leitura de hist.csv é
+	# centralizada em main._garantir_dados_discentes). Cache vazio = hist.csv ausente ou cena
+	# aberta fora do fluxo principal: avisa e segue (exportação de choques fica sem alunos).
 	if not GV.dados_discentes.is_empty():
 		_historico = GV.dados_discentes["historico"]
 		_lista_alunos = GV.dados_discentes["lista_alunos"]
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 	else:
-		_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-		analise_historico.simplificar_historico(_historico, "situacao", ["aprovado", "dispensado", "matr"])
-		_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-		_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-			grades_disciplinas_curriculos, equivalencias)
+		$"%Terminal".text_edit("Dados discentes indisponíveis (hist.csv ausente ou módulo aberto " + \
+			"fora do fluxo principal).", "yellow", true, true)
 	# Lê os horários (arquivos pequenos; mantidos locais ao módulo).
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida, "horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida, "horarios.txt", posicoes_horarios_txt)

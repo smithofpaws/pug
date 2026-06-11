@@ -7,7 +7,6 @@ extends ReferenceRect
 ## - Verificar choques de horário entre disciplinas.
 
 # Classes instanciadas.
-var file_handling := FileHandling.new()
 var analise_historico := AnaliseHistorico.new()
 var analise_grades := AnaliseGrades.new()
 var analise_horarios := AnaliseHorarios.new()
@@ -18,9 +17,6 @@ var lista_cores: Dictionary = {}
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
 var condicoes: Array[String]
-
-## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
-var posicoes_histcsv: Dictionary
 
 ## Recebido pelo main em sua criação e vem do arquivo [code]base_config.json[/code].
 var posicoes_horarios_txt: Dictionary
@@ -102,26 +98,17 @@ func _ready() -> void:
 	$"%SeletorTipoAnalise".lista_itens = _lista_opcoes
 	$"%SeletorTipoAnalise".atualizar_texto_padrao = true
 	_preparar_grades()
-	# Consome o cache de dados discentes pre-computado pelo main (evita recalcular a cada troca de
-	# modulo). Fallback: se o cache estiver vazio (ex.: cena aberta fora do fluxo), computa local.
+	# Consome o cache de dados discentes pre-computado pelo main (a leitura de hist.csv é
+	# centralizada em main._garantir_dados_discentes). Cache vazio = hist.csv ausente ou cena
+	# aberta fora do fluxo principal: avisa e segue com dados vazios.
 	if not GV.dados_discentes.is_empty():
 		_historico = GV.dados_discentes["historico"]
 		_analisado_reprov = GV.dados_discentes["reprovacoes"]
 		_lista_alunos = GV.dados_discentes["lista_alunos"]
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 	else:
-		# Lê o historico
-		_historico = file_handling.ler_dados(GV.dir_saida, "hist.csv", posicoes_histcsv, false, grades_disciplinas_curriculos)
-		# Analisa as reprovações de cada discente
-		var _lista_situacoes = analise_historico.listar_situacao(_historico, ["reprovado com nota", "Reprovado por Frequência"])
-		_analisado_reprov = analise_historico.processar_reprovacoes(_lista_situacoes)
-		# Simplifica para conter apenas as linhas aprovadas.
-		analise_historico.simplificar_historico(_historico, "situacao", ["aprovado","dispensado","matr"])
-		# Prepara a lista de alunos.
-		_lista_alunos = analise_historico.criar_lista_alunos(_historico)
-		# Verificar, para todos alunos, as disciplinas matriculadas, matriculáveis, etc (conforme [param condicoes]).
-		_condicoes_discentes = analise_historico.condicoes_discentes(_lista_alunos, _historico, condicoes, \
-		grades_disciplinas_curriculos, equivalencias)
+		$"%Terminal".linha("Dados discentes indisponíveis (hist.csv ausente ou módulo aberto " + \
+			"fora do fluxo principal).")
 	# Lê os horários (arquivos pequenos; mantidos locais ao módulo).
 	_horarios_ini = horarios_exe.carregar_horarios_ini(GV.dir_saida,"horarios.ini")
 	_horarios_txt = horarios_exe.carregar_horarios_txt(GV.dir_saida,"horarios.txt", posicoes_horarios_txt)
