@@ -123,13 +123,8 @@ var _mapa_condicoes: Dictionary = {}
 # professor/semestre. Persistidas no planejamento.json.
 var _restricoes_mgr := GerenciadorRestricoes.new()
 
-# Pilha de desfazer (Ctrl+Z). Cada item é um snapshot do estado da grade ANTES de uma ação:
-# { "alocacoes": <cópia profunda de _ger_alocacoes.alocacoes>, "restricoes": <cópia das restrições>,
-#   "cards": { <chave>: { ch_alocada, ch_extra, permite_extra } } }. Em memória e por sessão — não é
-# persistida; loads (abrir/baixar/horarios.txt) a esvaziam, pois desfazer através de uma troca de plano
-# seria confuso. Tamanho limitado por _UNDO_MAX (descarta o mais antigo).
-const _UNDO_MAX := 50
-var _undo_stack: Array = []
+# Pilha de desfazer (Ctrl+Z); snapshots e restauração em HistoricoUndo (Complementos).
+var _undo := HistoricoUndo.new()
 
 # Menu de contexto (clique direito numa célula): lista as disciplinas daquele horário; ao escolher
 # uma, aplica o filtro correspondente. _menu_celula_acoes guarda, por índice de item do popup, a ação
@@ -228,6 +223,9 @@ func _ready() -> void:
 
 	_relatorios = RelatoriosHorario.new()
 	_relatorios.configurar($"%Terminal")
+
+	_undo.configurar(_ger_alocacoes, _restricoes_mgr, $"%PainelDisciplinas", $"%GradeHorarios", \
+		_dados, _recalcular_grade, $"%Terminal")
 
 	_posicionador = PosicionadorAutomatico.new()
 
@@ -555,7 +553,7 @@ func _popular_grade_do_txt(prefixos: Array[String] = []) -> void:
 	var montar_planejamento_do_txt: bool = _dados._planejamento_csv.is_empty()
 
 	# Carregar/preencher a grade a partir do horarios.txt zera o histórico de desfazer.
-	_undo_stack.clear()
+	_undo.limpar()
 	# Limpa a grade e as alocações atuais antes de repopular.
 	for chave_celula in _ger_alocacoes.alocacoes:
 		var partes: PackedStringArray = chave_celula.split("_")
@@ -1303,58 +1301,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_desfazer()
 		get_viewport().set_input_as_handled()
 
-# Empilha um snapshot do estado atual da grade ANTES de uma ação mutadora. Chamar no início de cada
-# ação (drop, mover, remover, posicionar, limpar). Descartável via _descartar_snapshot quando a ação
-# acaba não mudando nada (ex.: clique do meio numa célula só de referência).
+# Wrappers finos sobre HistoricoUndo (mantêm os ~15 pontos de chamada do módulo curtos).
 func _snapshot_undo() -> void:
-	var cards_estado: Dictionary = {}
-	for chave in $"%PainelDisciplinas".cards_disciplinas:
-		var c: CardDisciplina = $"%PainelDisciplinas".cards_disciplinas[chave]
-		cards_estado[chave] = {"ch_alocada": c.ch_alocada, "ch_extra": c.ch_extra, "permite_extra": c.permite_extra}
-	_undo_stack.append({
-		"alocacoes": _ger_alocacoes.alocacoes.duplicate(true),
-		"restricoes": _restricoes_mgr.restricoes.duplicate(true),
-		"cards": cards_estado,
-	})
-	if _undo_stack.size() > _UNDO_MAX:
-		_undo_stack.pop_front()
+	_undo.snapshot()
 
-# Remove o último snapshot (quando a ação que o empilhou não chegou a mutar nada).
 func _descartar_snapshot() -> void:
-	if not _undo_stack.is_empty():
-		_undo_stack.pop_back()
+	_undo.descartar()
 
-# Desfaz a última ação: restaura o snapshot do topo da pilha.
 func _desfazer() -> void:
-	if _undo_stack.is_empty():
-		$"%Terminal".text_edit("Nada para desfazer.", "aviso", true, false)
-		return
-	_restaurar_estado(_undo_stack.pop_back())
-	$"%Terminal".text_edit("Ação desfeita.", "sucesso", true, false)
-
-# Restaura a grade ao estado de um snapshot: limpa a grade atual, reinjeta alocações/restrições e os
-# contadores dos cards, e repinta. Espelha a sequência de _nova_grade, mas com os dados do snapshot.
-func _restaurar_estado(snap: Dictionary) -> void:
-	for chave_celula in _ger_alocacoes.alocacoes.keys():
-		var p: PackedStringArray = str(chave_celula).split("_")
-		if p.size() == 2:
-			_ger_alocacoes.limpar_celula(int(p[0]), int(p[1]))
-	_ger_alocacoes.limpar_alocacoes()
-	for chave_celula in snap["alocacoes"]:
-		_ger_alocacoes.alocacoes[chave_celula] = (snap["alocacoes"][chave_celula] as Array).duplicate(true)
-	_restricoes_mgr.restricoes = (snap["restricoes"] as Dictionary).duplicate(true)
-	var cards: Dictionary = $"%PainelDisciplinas".cards_disciplinas
-	var cards_snap: Dictionary = snap["cards"]
-	for chave in cards:
-		var c: CardDisciplina = cards[chave]
-		var e: Dictionary = cards_snap.get(chave, {"ch_alocada": 0, "ch_extra": 0, "permite_extra": false})
-		# permite_extra/ch_extra antes de ch_alocada: o setter de ch_alocada recalcula o visual do card.
-		c.permite_extra = e["permite_extra"]
-		c.ch_extra = e["ch_extra"]
-		c.ch_alocada = e["ch_alocada"]
-	$"%GradeHorarios".dados = _dados.gerar_matriz_vazia()
-	_ger_alocacoes.reaplicar_todas()
-	_recalcular_grade(false)
+	_undo.desfazer()
 
 # Clique do meio: remove as alocações da célula (anteriormente era o clique direito).
 func _on_grade_celula_clicada_meio(linha: int, coluna: int) -> void:
@@ -2890,7 +2845,7 @@ func _importar_planejamento_json(verbose: bool = true) -> void:
 	# nao deixar alocacoes de referencia orfas na grade (libera tambem os cards de referencia do painel).
 	_remover_dados_referencia()
 	# Carregar um plano novo zera o histórico de desfazer (desfazer através de uma troca de plano seria confuso).
-	_undo_stack.clear()
+	_undo.limpar()
 	# Limpa TODAS as alocacoes proprias da grade antes de aplicar as do JSON. Importar = substituir o
 	# plano, nao somar: sem isso, abrir o planejamento.json sobre uma grade ja preenchida (ex.: reabrir
 	# o mesmo arquivo na sessao, ou apos um "Baixar do servidor") empilharia cada alocacao em duplicata.
