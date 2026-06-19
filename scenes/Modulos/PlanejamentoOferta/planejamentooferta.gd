@@ -1305,7 +1305,8 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 			# Carrega a demanda sem exigir (a sugestao degrada sem hist.csv) e sem limpar o terminal.
 			var tem_demanda: bool = _carregar_dados_discentes(false)
 			_relatorios.sugerir_oferta(_alocacoes, _todos_professores, _calcular_carga_por_prof(), \
-				_condicoes_discentes, tem_demanda, _painel_disciplinas.filtro_curso, _historico_discentes)
+				_condicoes_discentes, tem_demanda, _painel_disciplinas.filtro_curso, _historico_discentes, \
+				_calcular_profs_destacar())
 			_atualizar_status_bar()
 		"verificar_erro_afinidade":
 			_relatorios.verificar_erro_afinidade(_alocacoes, _painel_disciplinas.filtro_curso)

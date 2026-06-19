@@ -329,7 +329,8 @@ func verificar_erro_afinidade(alocacoes: Dictionary, cod_curso: String = "") -> 
 ## Quando [param tem_demanda] e true, anexa as contagens de demanda.
 ## Quando [param cod_curso] nao e vazio, filtra apenas disciplinas das grades do curso.
 func sugerir_oferta(alocacoes: Dictionary, todos_professores: Array[String], carga_por_prof: Dictionary, \
-		condicoes_discentes: Dictionary, tem_demanda: bool, cod_curso: String = "", historico_discentes: Dictionary = {}) -> void:
+		condicoes_discentes: Dictionary, tem_demanda: bool, cod_curso: String = "", historico_discentes: Dictionary = {}, \
+		profs_oficiais_curso: Dictionary = {}) -> void:
 	var ch_min: int = int(_config_oferta.get("ch_minimo", 8))
 	_terminal.titulo("Sugestao de oferta", true)
 	if not cod_curso.is_empty():
@@ -384,12 +385,25 @@ func sugerir_oferta(alocacoes: Dictionary, todos_professores: Array[String], car
 					"semestre": disc.get("semestre", ""),
 				}
 
-	# Conjunto de professores que ja lecionaram ao curso filtrado (vazio = sem restricao).
-	var profs_curso: Dictionary = _afinidade.professores_do_curso(cod_curso)
+	# Base de pertencimento ao curso filtrado. Preferencia: lista oficial do curso
+	# (profs_oficiais_curso, de lista_professores.json) — assim professores do curso que
+	# nao estao no plano importado ainda sao sugeridos como "nao alocados". Fallback para o
+	# historico de turmas (professores_do_curso) quando a lista oficial nao cobre o curso.
+	var profs_curso: Dictionary = profs_oficiais_curso
+	if profs_curso.is_empty():
+		profs_curso = _afinidade.professores_do_curso(cod_curso)
+
+	# Universo de candidatos: professores do plano importado unidos aos da lista oficial do
+	# curso (estes entram com carga 0 = "nao alocado"). Sem isto, quem nao esta no plano some.
+	var universo: Dictionary = {}
+	for nome in todos_professores:
+		universo[nome] = true
+	for nome in profs_oficiais_curso:
+		universo[nome] = true
 
 	# Professores abaixo do minimo (incluindo nao alocados).
 	var profs_abaixo: Array = []
-	for nome in todos_professores:
+	for nome in universo:
 		if not cod_curso.is_empty() and not profs_curso.has(nome):
 			continue
 		var ch: int = int(carga_por_prof.get(nome, 0))
