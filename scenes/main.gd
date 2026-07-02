@@ -313,52 +313,55 @@ func _salvar_campus_local(plano: Dictionary) -> void:
 	file_handling.save_json(GV.dir_exportacoes, "planejamento_campus.json", plano)
 
 func _carregar_arquivos() -> void:
-	# Carregar grades: as proprias do pug + as compartilhadas (subtree com o PPC, em grades_shared/).
-	_carregar_grades_de("arquivos/grades/")
-	_carregar_grades_de("arquivos/grades_shared/")
+	# Dados curriculares: os proprios do pug (arquivos/<tipo>/) + os compartilhados via subtree,
+	# por curso (arquivos/compartilhado/<curso>/<tipo>/). A fonte canonica dos compartilhados sao
+	# repos como alec-data, tambem consumidos pelo PPC (Typst); ver o README de cada curso em
+	# arquivos/compartilhado/<curso>/. Tudo cai nos mesmos globais (chave = nome do arquivo).
+	_carregar_json_de("arquivos/grades/", GV.grades, JsonValidator.validar_grade)
+	_carregar_json_de("arquivos/equivalencias/", GV.equivalencias, JsonValidator.validar_equivalencia)
+	_carregar_json_de("arquivos/cargaexigida/", GV.ch_exigida, JsonValidator.validar_carga_exigida)
+	_carregar_compartilhado()
 	# Deriva a lista de grades de cada curso a partir dos arquivos carregados (fonte unica de
 	# verdade: os proprios arquivos de grade, nomeados <cod_curso>_<versao>.json).
 	_derivar_grades_cursos()
-	# Carregar equivalencias
-	var dir = DirAccess.open(GV.dir_principal + "arquivos/equivalencias/")
-	if dir == null:
-		print_debug("CRITICO: Diretorio arquivos/equivalencias/ nao encontrado!")
-	else:
-		var files: PackedStringArray = dir.get_files()
-		for a in files.size():
-			var nome: String = files[a].trim_suffix(".json")
-			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/equivalencias/", files[a])
-			JsonValidator.validar_equivalencia(dados)
-			GV.equivalencias[nome] = dados
-	# Carregar cargas exigidas
-	dir = DirAccess.open(GV.dir_principal + "arquivos/cargaexigida/")
-	if dir == null:
-		print_debug("CRITICO: Diretorio arquivos/cargaexigida/ nao encontrado!")
-	else:
-		var files: PackedStringArray = dir.get_files()
-		for a in files.size():
-			var nome: String = files[a].trim_suffix(".json")
-			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/cargaexigida/", files[a])
-			JsonValidator.validar_carga_exigida(dados)
-			GV.ch_exigida[nome] = dados
 
-## Carrega todos os [code].json[/code] de uma subpasta de grades em [member GV.grades], chaveado
-## pelo nome do arquivo sem extensao ([code]alec_2023.json[/code] -> [code]"alec_2023"[/code]). [br]
+## Carrega todos os [code].json[/code] de [param subpasta] em [param alvo], chaveado pelo nome do
+## arquivo sem extensao ([code]alec_2023.json[/code] -> [code]"alec_2023"[/code]), validando cada
+## um com [param validador] (ex.: [code]JsonValidator.validar_grade[/code]). [br]
 ## Filtra por [code].json[/code] para ignorar [code]README[/code]/[code]LICENSE[/code] de repos
-## compartilhados via subtree ([code]arquivos/grades_shared/[/code]). Pasta ausente e' apenas um
-## aviso (degradacao graciosa se o subtree nao estiver presente); o pug sempre tem [code]grades/[/code].
-func _carregar_grades_de(subpasta: String) -> void:
+## compartilhados via subtree. Pasta ausente e' degradacao graciosa: emite aviso quando
+## [param avisar_se_ausente] (pastas locais, sempre esperadas) e fica silenciosa quando falso
+## (subpastas opcionais de um curso compartilhado, que pode nao ter todos os tipos).
+func _carregar_json_de(subpasta: String, alvo: Dictionary, validador: Callable, avisar_se_ausente := true) -> void:
 	var dir = DirAccess.open(GV.dir_principal + subpasta)
 	if dir == null:
-		push_warning("Diretorio " + subpasta + " nao encontrado; nenhuma grade carregada dele.")
+		if avisar_se_ausente:
+			push_warning("Diretorio " + subpasta + " nao encontrado; nada carregado dele.")
 		return
 	for arq in dir.get_files():
 		if not arq.ends_with(".json"):
 			continue
 		var nome: String = arq.trim_suffix(".json")
 		var dados: Dictionary = file_handling.load_json(GV.dir_principal + subpasta, arq)
-		JsonValidator.validar_grade(dados)
-		GV.grades[nome] = dados
+		validador.call(dados)
+		alvo[nome] = dados
+
+## Carrega os dados compartilhados via subtree, organizados por curso em
+## [code]arquivos/compartilhado/<curso>/[/code], espelhando as pastas por tipo
+## ([code]grades/[/code], [code]equivalencias/[/code], [code]cargaexigida/[/code]) e mesclando nos
+## mesmos globais dos dados locais. Cada [code]<curso>[/code] vem de um repo canonico (ex.:
+## [code]alec-data[/code]). Raiz/subpastas ausentes sao silenciosas (o subtree pode nao estar
+## presente em todos os clones, e um curso pode nao ter todos os tipos).
+func _carregar_compartilhado() -> void:
+	var raiz := "arquivos/compartilhado/"
+	var dir = DirAccess.open(GV.dir_principal + raiz)
+	if dir == null:
+		return
+	for curso in dir.get_directories():
+		var base := raiz + curso + "/"
+		_carregar_json_de(base + "grades/", GV.grades, JsonValidator.validar_grade, false)
+		_carregar_json_de(base + "equivalencias/", GV.equivalencias, JsonValidator.validar_equivalencia, false)
+		_carregar_json_de(base + "cargaexigida/", GV.ch_exigida, JsonValidator.validar_carga_exigida, false)
 
 # Deriva [code]cursos[cod].grades[/code] a partir dos arquivos em [code]arquivos/grades/[/code]
 # (ja carregados em [member GV.grades]), agrupando pelo prefixo [code]cod_curso[/code] do nome

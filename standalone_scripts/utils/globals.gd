@@ -36,13 +36,16 @@ var configuracao_base: Dictionary
 ## Persistido em [code]config_usuario.json[/code]; vazio se o arquivo nao existir.
 var config_usuario: Dictionary = {}
 
-## Todas as grades curriculares carregadas de [code]/arquivos/grades/[/code].
+## Todas as grades curriculares, carregadas de [code]/arquivos/grades/[/code] (locais) e de
+## [code]/arquivos/compartilhado/<curso>/grades/[/code] (compartilhadas via subtree).
 ## Chave no padrao [code]<cod_curso>_<versao>[/code].
 var grades: Dictionary
-## Todas as equivalencias carregadas de [code]/arquivos/equivalencias/[/code].
-## Chave no padrao [code]<origem>-<destino>[/code].
+## Todas as equivalencias, carregadas de [code]/arquivos/equivalencias/[/code] (locais, inclui
+## as entre cursos) e de [code]/arquivos/compartilhado/<curso>/equivalencias/[/code] (intracurso,
+## via subtree). Chave no padrao [code]<origem>-<destino>[/code].
 var equivalencias: Dictionary
-## Cargas horarias exigidas por nucleo, carregadas de [code]/arquivos/cargaexigida/[/code].
+## Cargas horarias exigidas por nucleo, carregadas de [code]/arquivos/cargaexigida/[/code] e de
+## [code]/arquivos/compartilhado/<curso>/cargaexigida/[/code] (via subtree).
 var ch_exigida: Dictionary
 ## Dicas de funcionalidade do programa, carregadas de [code]arquivos/dicas.json[/code].
 ## Chaves aninhadas por modulo. Usado por [DicasPrograma].
