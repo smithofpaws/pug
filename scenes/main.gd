@@ -313,22 +313,14 @@ func _salvar_campus_local(plano: Dictionary) -> void:
 	file_handling.save_json(GV.dir_exportacoes, "planejamento_campus.json", plano)
 
 func _carregar_arquivos() -> void:
-	# Carregar grades
-	var dir = DirAccess.open(GV.dir_principal + "arquivos/grades/")
-	if dir == null:
-		print_debug("CRITICO: Diretorio arquivos/grades/ nao encontrado!")
-	else:
-		var files: PackedStringArray = dir.get_files()
-		for a in files.size():
-			var nome: String = files[a].trim_suffix(".json")
-			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/grades/", files[a])
-			JsonValidator.validar_grade(dados)
-			GV.grades[nome] = dados
+	# Carregar grades: as proprias do pug + as compartilhadas (subtree com o PPC, em grades_shared/).
+	_carregar_grades_de("arquivos/grades/")
+	_carregar_grades_de("arquivos/grades_shared/")
 	# Deriva a lista de grades de cada curso a partir dos arquivos carregados (fonte unica de
 	# verdade: os proprios arquivos de grade, nomeados <cod_curso>_<versao>.json).
 	_derivar_grades_cursos()
 	# Carregar equivalencias
-	dir = DirAccess.open(GV.dir_principal + "arquivos/equivalencias/")
+	var dir = DirAccess.open(GV.dir_principal + "arquivos/equivalencias/")
 	if dir == null:
 		print_debug("CRITICO: Diretorio arquivos/equivalencias/ nao encontrado!")
 	else:
@@ -349,6 +341,24 @@ func _carregar_arquivos() -> void:
 			var dados: Dictionary = file_handling.load_json(GV.dir_principal + "arquivos/cargaexigida/", files[a])
 			JsonValidator.validar_carga_exigida(dados)
 			GV.ch_exigida[nome] = dados
+
+## Carrega todos os [code].json[/code] de uma subpasta de grades em [member GV.grades], chaveado
+## pelo nome do arquivo sem extensao ([code]alec_2023.json[/code] -> [code]"alec_2023"[/code]). [br]
+## Filtra por [code].json[/code] para ignorar [code]README[/code]/[code]LICENSE[/code] de repos
+## compartilhados via subtree ([code]arquivos/grades_shared/[/code]). Pasta ausente e' apenas um
+## aviso (degradacao graciosa se o subtree nao estiver presente); o pug sempre tem [code]grades/[/code].
+func _carregar_grades_de(subpasta: String) -> void:
+	var dir = DirAccess.open(GV.dir_principal + subpasta)
+	if dir == null:
+		push_warning("Diretorio " + subpasta + " nao encontrado; nenhuma grade carregada dele.")
+		return
+	for arq in dir.get_files():
+		if not arq.ends_with(".json"):
+			continue
+		var nome: String = arq.trim_suffix(".json")
+		var dados: Dictionary = file_handling.load_json(GV.dir_principal + subpasta, arq)
+		JsonValidator.validar_grade(dados)
+		GV.grades[nome] = dados
 
 # Deriva [code]cursos[cod].grades[/code] a partir dos arquivos em [code]arquivos/grades/[/code]
 # (ja carregados em [member GV.grades]), agrupando pelo prefixo [code]cod_curso[/code] do nome
