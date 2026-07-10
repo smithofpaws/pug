@@ -1,6 +1,7 @@
 @echo off
 REM ============================================================
 REM  atualizar_dados_compartilhados.bat  (pug / Godot)
+REM  Fica em arquivos/compartilhado/ (junto dos dados que atualiza).
 REM  Atualiza os dados compartilhados de cada curso em
 REM  arquivos/compartilhado/<curso>/ a partir dos repositorios
 REM  canonicos (ex.: alec-data) via 'git subtree pull --squash'.
@@ -10,7 +11,9 @@ REM  NUNCA edite arquivos/compartilhado/ diretamente (gera conflito
 REM  no proximo pull). Duplo-clique para rodar.
 REM ============================================================
 setlocal EnableDelayedExpansion
-cd /d "%~dp0"
+REM O 'git subtree' precisa rodar na raiz do repo; este .bat esta em
+REM arquivos/compartilhado/, entao subimos dois niveis (..\..).
+cd /d "%~dp0..\.."
 
 set "BRANCH=main"
 
