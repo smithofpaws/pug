@@ -36,7 +36,8 @@
 		"detectar_problema_oferta": "Confere a oferta contra as [b]grades do curso filtrado[/b]: aponta obrigatórias ausentes e disciplinas alocadas em semestre divergente. [b]Requer um curso selecionado[/b]."
 	},
 	"exportadores_tipo": {
-		"lista": "Gera um Markdown com a tabela de [b]pré-requisitos e co-requisitos[/b] de cada disciplina. Requer grade curricular.",
+		"lista": "Gera um [b]PDF[/b] com a tabela de todos os componentes da grade: código, nome, [b]carga horária[/b] e [b]pré-requisitos[/b]. Requer grade curricular.",
+		"lista_cccg": "Igual à [b]Lista de componentes[/b], mas restrita aos [b]componentes complementares (CCCGs)[/b] da grade. Útil para divulgar as CCCGs a serem incorporadas.",
 		"ementa": "Gera um [b]PDF[/b] com a ementa completa de uma disciplina. Requer o arquivo de ementa (.txt estruturado).",
 		"choques": "Relatório Markdown dos [b]choques de horário[/b] entre disciplinas que compartilham alunos. Requer hist.csv e horarios.txt.",
 		"validacao": "Verifica a [b]regularidade do cadastro[/b] dos alunos no GURI (relatório 5104). Requer hist.csv.",

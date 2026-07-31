@@ -434,13 +434,21 @@ As saídas ficam no menu **Arquivo** (descrito acima): **Salvar planejamento.jso
 
 Reúne ferramentas para gerar relatórios e documentos avulsos.
 
-#### Lista de pré-requisitos
+#### Lista de componentes
 
 **Necessário:** grade curricular configurada.
 
-Exporta um arquivo Markdown com uma tabela listando, para cada disciplina, seus pré-requisitos e co-requisitos. Indicado para compartilhar com os alunos antes do período de matrículas.
+Exporta um PDF com uma tabela listando, para cada componente curricular da grade, seu código e nome, a **carga horária** (coluna estreita `CH`, em horas — 15 horas por crédito) e seus pré-requisitos. Indicado para compartilhar com os alunos antes do período de matrículas.
 
-Selecione a versão de grade antes de exportar.
+Selecione a versão de grade antes de exportar. O arquivo é salvo como `<versão da grade>.pdf` (ex.: `alec_2023.pdf`).
+
+#### Lista de componentes complementares
+
+**Necessário:** grade curricular configurada.
+
+Mesma tabela da **Lista de componentes**, restrita aos componentes marcados como complementares (CCCGs) na grade. Útil para divulgar as CCCGs a serem incorporadas ao currículo.
+
+Selecione a versão de grade antes de exportar. O arquivo é salvo como `<versão da grade>_complementares.pdf` (ex.: `alec_2023_complementares.pdf`).
 
 #### Ementa de disciplina
 
@@ -583,7 +591,7 @@ Todas as exportações são salvas na pasta `exportacoes/`, localizada dentro do
 | `.md` (Markdown) | Situação de Alunos, Exportadores, Planejamento de Horário |
 | `.csv` | Planejamento de Oferta, Planejamento de Horário |
 | `.json` | Planejamento de Oferta (salvar para retomar depois) |
-| `.pdf` | Exportadores → Ementa de disciplina |
+| `.pdf` | Exportadores → Ementa de disciplina, Lista de componentes, Lista de componentes complementares |
 
 ---
 
@@ -619,7 +627,7 @@ A seguir, um exemplo de uso completo do programa para preparar um semestre letiv
 ### Etapa 4 — Geração de relatórios
 
 1. Abra **Exportadores**.
-2. Gere a **Lista de pré-requisitos** para divulgar aos alunos antes das matrículas.
+2. Gere a **Lista de componentes** para divulgar aos alunos antes das matrículas.
 3. Gere a **Lista para planos de ensino** para os professores.
 4. Gere o relatório de **Choques de horário** para apoiar a revisão final da grade.
 

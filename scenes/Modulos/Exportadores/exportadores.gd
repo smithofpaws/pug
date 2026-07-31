@@ -3,7 +3,8 @@ extends ReferenceRect
 ## choques de horário, ou o que for necessário. [br]
 ##
 ## Os principais empregos são: [br]
-## - Exportar lista de pré-requisitos das disciplinas para compartilhamento com os discentes; [br]
+## - Exportar lista de componentes curriculares (carga horária e pré-requisitos), da grade inteira
+##   ou só dos complementares (CCCGs), para compartilhamento com os discentes; [br]
 ## - Gerar PDF formatado da ementa de disciplinas a partir de arquivo .txt estruturado; [br]
 ## - Exportar relatório de choques de horário entre disciplinas em Markdown; [br]
 ## - Permitir futuramente a exportação de outros arquivos conforme desejado.
@@ -86,9 +87,9 @@ func _ready() -> void:
 
 	# Popula as opcoes de tipo de exportacao
 	$"%SeletorTipoExportacao".popular("tipo", \
-		["Lista de pré-requisitos", "Ementa de disciplina", "Choques de horário", "Validar cadastro com relatório GURI 5104", "Lista para planos de ensino"], \
-		["lista", "ementa", "choques", "validacao", "planos"])
-	DicasPrograma.vincular_itens($"%SeletorTipoExportacao", ["lista", "ementa", "choques", "validacao", "planos"], ["exportadores_tipo"])
+		["Lista de componentes", "Lista de componentes complementares", "Ementa de disciplina", "Choques de horário", "Validar cadastro com relatório GURI 5104", "Lista para planos de ensino"], \
+		["lista", "lista_cccg", "ementa", "choques", "validacao", "planos"])
+	DicasPrograma.vincular_itens($"%SeletorTipoExportacao", ["lista", "lista_cccg", "ementa", "choques", "validacao", "planos"], ["exportadores_tipo"])
 	$"%SeletorTipoExportacao".atualizar_texto_padrao = true
 	$"%SeletorTipoExportacao".selecionar_item(0)
 	_tipo_exportacao = "lista"
@@ -130,7 +131,7 @@ func _ready() -> void:
 	# Carrega dados para analise de choques
 	_carregar_dados_choques()
 	
-	# Estado inicial: lista de pré-requisitos visivel
+	# Estado inicial: lista de componentes visivel
 	_atualizar_interface_exportacao("lista")
 	
 	$"%Validar5104FileDialog".current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
@@ -186,12 +187,12 @@ func _carregar_dados_choques() -> void:
 
 
 func _atualizar_interface_exportacao(tipo: String) -> void:
-	var is_lista := tipo == "lista"
+	var is_lista := tipo == "lista" or tipo == "lista_cccg"
 	var is_ementa := tipo == "ementa"
 	var is_choques := tipo == "choques"
 	var is_validacao := tipo == "validacao"
 	var is_planos := tipo == "planos"
-	
+
 	$"%SeletorVersaoGrade".visible = is_lista
 	$"%ExportarButton".visible = is_lista or is_choques or is_planos
 	$"%SelecionarEmentaButton".visible = is_ementa
@@ -204,37 +205,55 @@ func _atualizar_interface_exportacao(tipo: String) -> void:
 	$"%SeletorAluno".visible = is_choques
 
 
+## Exporta a lista de componentes curriculares (codigo, nome, carga horaria e pre-requisitos).
+## [param nucleo] vazio lista a grade inteira; "cccg" restringe aos componentes complementares.
 func _exportar_lista_disciplinas(versao_grade: String, nucleo: String = "") -> void:
-	var tabela: Array[Array] = [["*Disciplina*","*Prerequisito*"]]
+	var so_cccg: bool = nucleo == "cccg"
+	var rotulo: String = "Lista de componentes complementares" if so_cccg else "Lista de componentes"
+	var titulo_pdf: String = "Lista de componentes curriculares" + (" complementares" if so_cccg else "")
+	var nome_arquivo: String = versao_grade + ("_complementares" if so_cccg else "")
+
+	var tabela: Array[Array] = [["*Disciplina*","*CH*","*Prerequisito*"]]
 	for codigo in grades_disciplinas_curriculos[versao_grade].keys():
-		if nucleo == "" or (nucleo == "cccg" and GV.grades[versao_grade][codigo].get("nucleo","") == "cccg"):
+		if nucleo == "" or (so_cccg and GV.grades[versao_grade][codigo].get("nucleo","") == "cccg"):
 			var nome: String = GV.grades[versao_grade][codigo].get("nome","nome não encontrado")
+			# str() porque a carga horaria pode vir como numero em grades editadas a mao.
+			var carga: String = str(GV.grades[versao_grade][codigo].get("ch",""))
 			var a: int = 0
 			var prerequisito: String = ""
 			while GV.grades[versao_grade][codigo].has("prerequisito"+str(a)):
 				var cod_prerequisito: String = GV.grades[versao_grade][codigo].get("prerequisito"+str(a),"")
 				prerequisito += cod_prerequisito + ": " + GV.grades[versao_grade].get(cod_prerequisito, {}).get("nome", "nome não encontrado") + " \\ "
 				a+=1
-			tabela.append([codigo + ": " + nome, prerequisito])
-	
-	file_handling.typst_export(diretorio_exportacao, versao_grade + ".typ", tabela, "table", "Lista de pré-requisitos curriculares — Projeto Pedagógico " + versao_grade)
-	
+			tabela.append([codigo + ": " + nome, carga, prerequisito])
+
+	# Sem linhas de dados o PDF sairia com apenas o cabecalho: avisa e nao gera nada.
+	if tabela.size() == 1:
+		$"%Terminal".text_edit("Nenhum componente encontrado em " + versao_grade + \
+			(" com núcleo cccg." if so_cccg else "."), cores_terminal["aviso"], true, true)
+		return
+
+	# Indice 1 = coluna CH, renderizada estreita e centralizada.
+	file_handling.typst_export(diretorio_exportacao, nome_arquivo + ".typ", tabela, "table", \
+		titulo_pdf + " — Projeto Pedagógico " + versao_grade.to_upper(), [1])
+
 	# Exibe no Terminal
 	if not file_handling.typst_disponivel():
 		$"%Terminal".text_edit("ERRO: typst.exe não encontrado em externo/bin/. O arquivo .typ foi gerado mas o PDF não.", cores_terminal["erro"], true, true)
 		return
-	$"%Terminal".titulo("Lista de pré-requisitos — Versão " + versao_grade, true)
+	$"%Terminal".titulo(rotulo + " — Versão " + versao_grade, true)
 	for idx in tabela.size():
 		var reqs: String = ""
-		if tabela[idx].size() > 1 and tabela[idx][1] != "":
-			reqs = tabela[idx][1].replace(" \\ ", " | ")
+		if tabela[idx].size() > 2 and tabela[idx][2] != "":
+			reqs = tabela[idx][2].replace(" \\ ", " | ")
+		var carga: String = tabela[idx][1]
 		if idx == 0:
 			# Cabecalho de colunas da tabela.
-			$"%Terminal".linha(tabela[idx][0] + ("  |  " + reqs if reqs != "" else ""), cores_terminal["alerta"])
+			$"%Terminal".linha(tabela[idx][0] + "  |  " + carga + ("  |  " + reqs if reqs != "" else ""), cores_terminal["alerta"])
 		else:
-			$"%Terminal".item(tabela[idx][0] + (" → " + reqs if reqs != "" else ""))
+			$"%Terminal".item(tabela[idx][0] + (" (" + carga + "h)" if carga != "" else "") + (" → " + reqs if reqs != "" else ""))
 	$"%Terminal".espaco()
-	$"%Terminal".linha("Lista de pré-requisitos exportada: " + versao_grade + ".pdf em exportacoes/", cores_terminal["sucesso"])
+	$"%Terminal".linha(rotulo + " exportada: " + nome_arquivo + ".pdf em exportacoes/", cores_terminal["sucesso"])
 
 
 func _exportar_lista_planos() -> void:
@@ -435,12 +454,15 @@ func _on_seletor_lista_grades_opcao_selecionada(retorno: String, _lista_selecion
 	_grade_validacao = retorno
 
 
-# Dispatcher do botao Exportar: visivel para "lista", "choques" e "planos".
+# Dispatcher do botao Exportar: visivel para "lista", "lista_cccg", "choques" e "planos".
 func _on_exportar_button_up() -> void:
 	match _tipo_exportacao:
 		"lista":
-			$"%Terminal".text_edit("Exportando lista de pré-requisitos " + _versao_grade + "...", cores_terminal["padrao"])
+			$"%Terminal".text_edit("Exportando lista de componentes " + _versao_grade + "...", cores_terminal["padrao"])
 			_exportar_lista_disciplinas(_versao_grade)
+		"lista_cccg":
+			$"%Terminal".text_edit("Exportando lista de componentes complementares " + _versao_grade + "...", cores_terminal["padrao"])
+			_exportar_lista_disciplinas(_versao_grade, "cccg")
 		"choques":
 			_exportar_choques()
 		"planos":

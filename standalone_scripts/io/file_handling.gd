@@ -325,8 +325,10 @@ func configurar_dirdados() -> void:
 ## [param filename] format must be like [code]filename.csv[/code]. [br]
 ## [param data] format will depend on [param format]. [br]
 ## [param format] is a string that can be "text" or "table". [br]
-## [param titulo] optional title for table format. When not empty, adds page setup and centered bold title.
-func typst_export(directory: String, filename: String, data: Array, format: String, titulo: String = "") -> void:
+## [param titulo] optional title for table format. When not empty, adds page setup and centered bold title. [br]
+## [param colunas_estreitas] optional column indexes (table format) rendered with minimal horizontal
+## padding and centered content — for short values like carga horaria. Empty keeps the default padding.
+func typst_export(directory: String, filename: String, data: Array, format: String, titulo: String = "", colunas_estreitas: Array = []) -> void:
 	# Lambda functions for different situations
 	# Table function to export 2D table
 	# [param table_data] must be a 2D Array (e.g. [[a,b],[c,d],...])
@@ -352,12 +354,24 @@ func typst_export(directory: String, filename: String, data: Array, format: Stri
 			column_sizing += "auto"
 			if a < table_data[0].size() - 1:
 				column_sizing += ", "
+		# Colunas estreitas recebem padding horizontal minimo e conteudo centralizado; as demais
+		# mantem o padding padrao. Sem elas, emite os valores fixos de sempre.
+		var inset_typst: String = "10pt"
+		var align_typst: String = "horizon"
+		if not colunas_estreitas.is_empty():
+			var condicao: String = ""
+			for indice in colunas_estreitas:
+				if condicao != "":
+					condicao += " or "
+				condicao += "col == " + str(indice)
+			inset_typst = "(col, _row) => if " + condicao + " { (x: 3pt, y: 10pt) } else { (x: 10pt, y: 10pt) }"
+			align_typst = "(col, _row) => if " + condicao + " { center + horizon } else { left + horizon }"
 		output_table.append_array([
 			"#table(",
 			# Creates the table header, making the number of culumns equal to this amount
 			"  columns: (" + column_sizing + "),",
-			"  inset: 10pt,",
-			"  align: horizon,",
+			"  inset: " + inset_typst + ",",
+			"  align: " + align_typst + ",",
 			"  table.header(",
 		])
 		var line_temp: String = "    "
