@@ -120,6 +120,10 @@ func _criar_grade() -> void:
 				modulo.apenas_central = dados[temp_lin][temp_col]["apenas_central"]
 			if dados[temp_lin][temp_col].has("texto_rodape"):
 				modulo.texto_rodape = dados[temp_lin][temp_col]["texto_rodape"]
+			if dados[temp_lin][temp_col].has("hachurado"):
+				modulo.hachurado = dados[temp_lin][temp_col]["hachurado"]
+			if dados[temp_lin][temp_col].has("hachura_leve"):
+				modulo.hachura_leve = dados[temp_lin][temp_col]["hachura_leve"]
 			$GridContainer.add_child(modulo)
 		else:
 			print_debug("ERRO: Formato de dado inválido para apresentação na grade.")

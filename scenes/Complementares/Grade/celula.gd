@@ -61,6 +61,11 @@ var faixa_alternada: bool : set = _set_faixa_alternada
 ## mover uma disciplina). Não altera o fundo nem as barras.
 var hachurado: bool = false : set = _set_hachurado
 
+## Quando true, a hachura usa a variante discreta ([member HachuraOverlay.leve]), que apenas escurece
+## de leve a célula — para marcações permanentes, como as disciplinas ainda distantes na grade de
+## integralização. Só tem efeito com [member hachurado].
+var hachura_leve: bool = false : set = _set_hachura_leve
+
 # Overlay de hachura, criado em runtime (ver [method _criar_hachura]).
 var _hachura: HachuraOverlay
 
@@ -148,11 +153,14 @@ func _ready() -> void:
 	_criar_barras_borda()
 	_criar_hachura()
 
-# Cria o overlay de hachura logo acima do fundo (Button) e abaixo do texto, oculto por padrão.
+# Cria o overlay de hachura logo acima do fundo (Button) e abaixo do texto. Reflete o estado já
+# definido: a [Grade] atribui as propriedades ANTES do [code]add_child[/code], quando este nó ainda
+# não existe e os setters não têm o que atualizar.
 func _criar_hachura() -> void:
 	_hachura = HachuraOverlay.new()
 	_hachura.name = "Hachura"
-	_hachura.visible = false
+	_hachura.visible = hachurado
+	_hachura.leve = hachura_leve
 	add_child(_hachura)
 	move_child(_hachura, $Button.get_index() + 1)
 
@@ -332,6 +340,11 @@ func _set_hachurado(new_value: bool) -> void:
 	hachurado = new_value
 	if _hachura:
 		_hachura.visible = new_value
+
+func _set_hachura_leve(new_value: bool) -> void:
+	hachura_leve = new_value
+	if _hachura:
+		_hachura.leve = new_value
 
 func _para_cor(valor) -> Color:
 	if valor is Color:

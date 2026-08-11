@@ -310,10 +310,14 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 		cores_grade["ajuste_excluir"] = "ajuste_excluir"
 	$"%Horarios".dados = analise_horarios.determinar_horarios(_horarios_ini, _horarios_txt, disc_cursaveis_grade, \
 	_historico.get(matricula), condicoes_grade, cores_grade, _forma_de_apresentacao, cods_incluir, cods_excluir)
-	# Monta e envia a grade curricular do discente, colorindo conforme a situacao.
+	# Monta e envia a grade curricular do discente, colorindo conforme a situacao. As disciplinas
+	# ainda distantes (nenhuma condicao e nao concluidas) recebem hachura leve, separando "falta so
+	# uma aprovacao" de "falta uma cadeia de aprovacoes".
 	var cursadas: Array[String] = analise_historico.disciplinas_concluidas(matricula, _historico)
+	var vazio_destacar: Array[String] = []
 	$"%GradeCurricular".dados = analise_grades.montar_grade_curricular(grades_disciplinas_curriculos[_grade_ativa], \
-	disc_cursaveis, cursadas, lista_cores, _forma_apresentacao_grade)
+	disc_cursaveis, cursadas, lista_cores, _forma_apresentacao_grade, vazio_destacar, {}, {}, [], [], \
+	Color.TRANSPARENT, _codigos_distantes(matricula, disc_cursaveis, cursadas))
 	# Nova análise zera a seleção de pré-requisitos e remove as linhas de conexão.
 	_codigo_selecionado = ""
 	_codigo_selecionado_direito = ""
@@ -873,6 +877,16 @@ func _on_grade_celula_selecionada_direita(codigo: String) -> void:
 		_codigos_destacar_secundario = analise_grades.obter_bloqueadas_transitivas(codigo, grades_disciplinas_curriculos[_grade_ativa])
 	_atualizar_grade_curricular()
 
+# Códigos que recebem hachura leve na grade: os que ainda estão distantes de serem cursáveis (ver
+# [method AnaliseGrades.disciplinas_distantes]). Monta o conjunto de códigos do histórico que aquela
+# função usa para reconhecer as disciplinas já concluídas sob o código de outra grade.
+func _codigos_distantes(matricula: String, disc_cursaveis: Dictionary, cursadas: Array[String]) -> Array[String]:
+	var codigos_historico: Dictionary = {}
+	for dado in _historico.get(matricula, {}).get("dados", []):
+		codigos_historico[str(dado.get("codigocurriculo", "")).to_lower()] = true
+	return analise_grades.disciplinas_distantes(grades_disciplinas_curriculos[_grade_ativa], \
+		disc_cursaveis, cursadas, equivalencias, _grade_ativa, codigos_historico)
+
 ## Regera apenas a grade curricular (sem reprocessar horários ou percentuais),
 ## aplicando os destaques de pré-requisitos conforme [_codigos_destacar].
 func _atualizar_grade_curricular() -> void:
@@ -886,7 +900,12 @@ func _atualizar_grade_curricular() -> void:
 		lista_cores,
 		_forma_apresentacao_grade,
 		_codigos_destacar,
-		_codigos_destacar_secundario
+		_codigos_destacar_secundario,
+		{},
+		[],
+		[],
+		Color.TRANSPARENT,
+		_codigos_distantes(_matricula_atual, disc_cursaveis, cursadas)
 	)
 	# Monta as linhas de conexão em dominó: cadeia de pré-requisitos (esquerdo) e de dependentes
 	# (direito). Sem seleção, a lista fica vazia e nenhuma linha é desenhada.

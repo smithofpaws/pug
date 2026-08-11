@@ -105,8 +105,11 @@ func codigos_ausentes(grades_disciplinas_curriculos: Dictionary, codigos: Array)
 ## Formato de [param codigos_inseridos] deve ser a lista de códigos (minúsculos) já presentes em outro
 ## painel (ex.: cards no PainelDisciplinas), cujas células recebem contorno [param cor_inseridas]. [br]
 ## Formato de [param cor_inseridas] é a [Color] do contorno das disciplinas já inseridas; quando
-## transparente (padrão) nenhum contorno é aplicado.
-func montar_grade_curricular(grade: Dictionary, disc_cursaveis: Dictionary, cursadas: Array[String], lista_cores: Dictionary, forma_apresentacao: String = "codigo_e_nome", codigos_destacar: Array[String] = [], codigos_destacar_secundario: Dictionary = {}, contagens_por_codigo: Dictionary = {}, situacoes_rodape: Array = [], codigos_inseridos: Array[String] = [], cor_inseridas: Color = Color.TRANSPARENT) -> Array[Array]:
+## transparente (padrão) nenhum contorno é aplicado. [br]
+## Formato de [param codigos_hachurar] deve ser a lista de códigos (minúsculos) cujas células recebem
+## hachura leve — na Situação dos Alunos, as disciplinas ainda distantes de serem cursáveis (saída de
+## [method disciplinas_distantes]). Vazio (padrão) não hachura nada.
+func montar_grade_curricular(grade: Dictionary, disc_cursaveis: Dictionary, cursadas: Array[String], lista_cores: Dictionary, forma_apresentacao: String = "codigo_e_nome", codigos_destacar: Array[String] = [], codigos_destacar_secundario: Dictionary = {}, contagens_por_codigo: Dictionary = {}, situacoes_rodape: Array = [], codigos_inseridos: Array[String] = [], cor_inseridas: Color = Color.TRANSPARENT, codigos_hachurar: Array[String] = []) -> Array[Array]:
 	# Mapeia cada código de disciplina para o nome da cor de sua situação.
 	var cor_por_codigo: Dictionary = {}
 	for condicao in disc_cursaveis.keys():
@@ -196,6 +199,10 @@ func montar_grade_curricular(grade: Dictionary, disc_cursaveis: Dictionary, curs
 		# Contorno nas disciplinas já inseridas em outro painel (ex.: cards do PainelDisciplinas).
 		if cor_inseridas != Color.TRANSPARENT and codigos_inseridos.has(codigo.to_lower()):
 			celula["cor_barra_superior"] = cor_inseridas
+		# Hachura leve nas disciplinas ainda distantes de serem cursáveis.
+		if codigos_hachurar.has(codigo.to_lower()):
+			celula["hachurado"] = true
+			celula["hachura_leve"] = true
 		matriz[linha][coluna] = celula
 	# Preenche a coluna 0 (sempre reservada pela calha) com o número do semestre de cada linha.
 	for l in matriz.size():
@@ -205,6 +212,43 @@ func montar_grade_curricular(grade: Dictionary, disc_cursaveis: Dictionary, curs
 			"faixa_alternada": (l % 2 == 1),
 		}
 	return matriz
+
+## Códigos da [param grade] que estão [b]distantes[/b] para o discente: não se enquadram em nenhuma
+## condição de [param disc_cursaveis] (nem matriculável, nem "se aprovado", nem matriculado) e também
+## não foram concluídos. São as disciplinas que dependem de aprovação em algo que, por sua vez, ainda
+## depende de outra aprovação — duas ou mais etapas à frente. [br]
+## [br]
+## Exemplo: matriculada em Mecânica dos Solos II, o discente cursará Obras de Terra se aprovado
+## ([code]seaprovado[/code]); Fundações, que exige Obras de Terra, não entra em condição alguma e é
+## justamente o que esta função retorna. [br]
+## [br]
+## A conclusão é avaliada [b]com aproveitamento[/b]: uma disciplina cursada sob o código de outra
+## grade conta como concluída aqui, senão apareceria como distante mesmo já tendo sido aprovada
+## (a regra de disciplina dividida vale, via [method alvo_completo]). [br]
+## [param codigos_historico] deve ser [code]{codigo_lower: true}[/code] com TODOS os códigos que o
+## discente tem no histórico, usado por essa regra. [br]
+## Disciplinas sem [code]posicao_grade[/code] (eletivas, CCCGs) são ignoradas, pois não têm célula.
+func disciplinas_distantes(grade: Dictionary, disc_cursaveis: Dictionary, cursadas: Array[String], \
+equivalencias: Dictionary, versao_grade: String, codigos_historico: Dictionary) -> Array[String]:
+	# Tudo que já tem situação definida: qualquer condição do discente ou disciplina concluída.
+	var definidas: Dictionary = {}
+	for condicao in disc_cursaveis.keys():
+		for codigo in disc_cursaveis[condicao]:
+			definidas[str(codigo).to_lower()] = true
+	for codigo in cursadas:
+		var cl: String = str(codigo).to_lower()
+		definidas[cl] = true
+		# Concluída sob o código de outra grade: marca também o alvo equivalente nesta grade.
+		for alvo in para_o_codigo_qual_a_equivalencia(cl, equivalencias, versao_grade):
+			if alvo_completo(alvo, equivalencias, versao_grade, codigos_historico):
+				definidas[str(alvo).to_lower()] = true
+	var distantes: Array[String] = []
+	for codigo in grade.keys():
+		if not grade[codigo].has("posicao_grade"):
+			continue
+		if not definidas.has(str(codigo).to_lower()):
+			distantes.append(str(codigo).to_lower())
+	return distantes
 
 ## Deslocamento de coluna aplicado às disciplinas para liberar a coluna 0 como calha de semestre. [br]
 ## Vale [code]1 - menor_coluna[/code]: assim a menor coluna usada pela grade passa a ser 1, qualquer que

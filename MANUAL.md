@@ -145,6 +145,8 @@ Escolha o aluno pelo menu suspenso ao lado. A interface é atualizada imediatame
 
 Exibe a estrutura completa do currículo, organizada por semestres. Cada célula representa uma disciplina e recebe uma cor conforme a situação do aluno nela (cursada, disponível para matrícula, bloqueada por pré-requisitos, etc.).
 
+**Disciplinas distantes (célula hachurada):** as disciplinas que o aluno ainda não pode alcançar no próximo passo aparecem com uma hachura leve, deixando a célula um pouco mais escura. São aquelas que dependem de aprovação em algo que, por sua vez, ainda depende de outra aprovação. Exemplo: um aluno matriculado em *Mecânica dos Solos II* cursará *Obras de Terra* se for aprovado — essa aparece normalmente; já *Fundações e Estruturas de Contenção*, que exige *Obras de Terra*, está duas etapas à frente e aparece hachurada. A hachura separa, portanto, "falta uma aprovação" de "falta uma cadeia de aprovações". Disciplinas já concluídas sob o código de outra grade (aproveitamento) não são hachuradas.
+
 - **Clique esquerdo** em uma disciplina: destaca todos os seus pré-requisitos (diretos e transitivos), com linhas de conexão entre elas.
 - **Clique direito** em uma disciplina: destaca todas as disciplinas que dependem dela, ou seja, que ficam bloqueadas enquanto ela não for cursada.
 
