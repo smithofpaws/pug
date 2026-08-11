@@ -7,11 +7,14 @@
 ### Alta prioridade
 
 - [ ] **calculo_carga_horaria.gd:13** -- Revisar se a forma de calculo de percentagem do curso esta correta. Validar contra regras de negocio da universidade.
+- [x] **calculo da reprovação por nota e por falta** uma discente, por exemplo, tem 5 RN apesar de ter reprovado apenas uma vez. — Causa: o `hist.csv` exportado do GURI repete a mesma linha várias vezes (fan-out da consulta; no arquivo de 10/08/2026 são 17.799 linhas para 6.214 reais). `FileHandling.ler_dados` agora descarta, dentro de cada matrícula, linhas idênticas em todas as colunas lidas — reprovações da mesma disciplina em **semestres diferentes** continuam contando. Corrige junto o CR (`calculadorcr.gd` somava nota×CH por linha) e as contagens de Situação de Disciplinas.
+- [ ] **indicador de matriculável na grade** as disciplinas matriculáveis e não matriculáveis tem a mesma cor de fonte na grade.
 
 ## A IMPLEMENTAR
 
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
-- [ ] Adicionar ao SituaçãoAlunos o modo "Ajuste de Matrícula". Permite importar uma planilha csv ou direto a planilha resposta do google com atualização.
+- [ ] Adicionar ao SituaçãoAlunos o modo "Ajuste de Matrícula". Permite importar uma planilha csv ou direto a planilha resposta do google com atualização
+- [ ] Nos exportadores de disciplinas falta indicar quais são corequisitos (os corequisitos aparecem apenas como pre)
 
 ## Divergências de CH entre grades `alec_2010` e `alec_2023`
 

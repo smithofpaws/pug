@@ -201,10 +201,12 @@ func carregar_planejamento(diretorio: String, arquivo: String, prefixos_semestre
 ## { [br]
 ## "2410102767": { [br]
 ## "nomedoaluno": "aaron krignl trindade", [br]
-## "dados": [sequencia linha a linha do arquivo hist.csv ou email.csv contendo as chaves encontradas em 
+## "dados": [sequencia linha a linha do arquivo hist.csv ou email.csv contendo as chaves encontradas em
 ## histfile e mailfile do arquivo [code]base_config.json[/code]] [br]
 ## } [br]
 ## } [br]
+## Linhas repetidas dentro de uma mesma matrícula (idênticas em todas as colunas lidas) são
+## descartadas — ver comentário no corpo da função.
 func ler_dados(diretorio: String, arquivo: String, regras_leitura: Dictionary, ignorar_verificacao: bool = false, grades: Dictionary = {}) -> Dictionary:
 	var dados: Dictionary = {}
 	print_debug("Lendo arquivo ", arquivo, " ...")
@@ -215,6 +217,13 @@ func ler_dados(diretorio: String, arquivo: String, regras_leitura: Dictionary, i
 	var linecount: int = 0
 	var matricula: String = ""
 	var _delimitador: String = ";"
+	# Linhas já vistas da matrícula corrente, para descartar repetições. A exportação do GURI repete a
+	# mesma linha várias vezes (a consulta faz fan-out); mantidas, elas multiplicariam as contagens de
+	# reprovação e os pesos do CR. A chave é a própria linha reduzida às colunas lidas, unidas pelo
+	# delimitador (que não ocorre dentro de um campo), então só o que é idêntico para o programa é
+	# descartado — reprovações da mesma disciplina em semestres diferentes continuam contando.
+	var vistos: Dictionary = {}
+	var repetidas: int = 0
 	while not f.eof_reached():
 		var line: Array[String] = general_functions.split(f.get_line().to_lower(), _delimitador)
 		if linecount == 0:
@@ -226,13 +235,22 @@ func ler_dados(diretorio: String, arquivo: String, regras_leitura: Dictionary, i
 					dados[matricula] = {}
 					dados[matricula]["nomedoaluno"] = line[int(regras_leitura.get("nomedoaluno", 0))]
 					dados[matricula]["dados"] = []
+					vistos.clear()
 				var temp_dados: Dictionary
+				var chave_linha: String = ""
 				for key in regras_leitura.keys():
 					if key != "matricula" and key != "nomedoaluno": # Já extraídos acima como chaves estruturais; não duplicar nas linhas de dados.
 						temp_dados[key] = line[int(regras_leitura[key])]
-				dados[matricula]["dados"].append(temp_dados)
+						chave_linha += line[int(regras_leitura[key])] + _delimitador
+				if vistos.has(chave_linha):
+					repetidas += 1
+				else:
+					vistos[chave_linha] = true
+					dados[matricula]["dados"].append(temp_dados)
 		linecount += 1
 	print_debug("Arquivo ", arquivo, " lido.")
+	if repetidas > 0:
+		print_debug("Foram descartadas ", repetidas, " linhas repetidas de ", arquivo, ".")
 	if not ignorar_verificacao: analise_historico.revisar_historico(dados, grades)
 	return dados
 
