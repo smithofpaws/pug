@@ -184,6 +184,25 @@ atualização morta, sem erro visível. Conteúdo: os 4 executáveis (`Auxiliar.
 ali é permanente e cacheável mesmo se a release for apagada. Por isso o script monta `arquivos/` e
 `externo/bin/` a partir de `git ls-files` e **aborta** se encontrar arquivo proibido no ZIP pronto.
 
+#### O segundo lugar por onde um arquivo vaza: o PCK
+
+O layout do ZIP não é a única superfície. `export_presets.cfg` usa
+`export_filter="all_resources"`, e isso embute no **PCK, dentro de cada `.exe`**, todo arquivo solto
+na raiz do projeto — gitignorado ou não. Foi assim que o `config_usuario.json`, com **usuário e
+token do Kinto**, entrou nos quatro binários da **1.0.0 publicada**: `git status` limpo, ZIP
+conferido, credencial vazando mesmo assim. *(Token revogado; a release segue contaminada — apagá-la
+não desfaz downloads.)*
+
+- O `exclude_filter` dos três presets exclui `config_usuario.json`. **Todo arquivo gitignorado que
+  passe a morar na raiz do projeto precisa entrar nesse filtro.**
+- `dados/` e `exportacoes/` não dependem disso: o `.gdignore` já faz o Godot ignorar a pasta inteira.
+- O `publicar_release.ps1` confere o PCK em `Conferir-Pck`, lendo as linhas `Storing File: res://…`
+  do **log da exportação**. Não adianta procurar no `.exe`: o caminho `res://` não aparece como texto
+  no binário (só o conteúdo do arquivo aparece), e procurar pelo nome solto acusa qualquer menção no
+  código — o `main.gd` lê `"config_usuario.json"` pelo nome. Se o log não tiver nenhuma linha
+  `Storing File:`, a guarda **aborta**: formato mudado significa guarda cega, e aprovar em silêncio
+  traria o ponto cego de volta.
+
 ### Como a troca acontece
 
 O executável em uso fica travado pelo Windows, então o programa não pode se sobrescrever. O
