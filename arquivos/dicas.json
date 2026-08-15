@@ -14,6 +14,10 @@
 	"choque": {
 		"limiar_presenca": "Percentual mínimo de [b]presença simultânea[/b] entre duas disciplinas para considerá-las [b]conflitantes[/b] (choque de horário).\n\nQuanto maior o valor, mais flexível — exige mais sobreposição de horários para sinalizar choque.\nValores comuns:\n  75% = pelo menos 3/4 dos horários coincidem\n  50% = metade dos horários coincidem"
 	},
+	"atualizacao": {
+		"verificar_agora": "Procura no [b]GitHub[/b] se existe uma versão mais nova do programa.\n\nSe houver, o pacote é [b]baixado, conferido[/b] (soma de verificação) e instalado por cima desta pasta — o programa fecha e reabre sozinho na versão nova.\n\nSeus dados são preservados: [b]config_usuario.json[/b], a pasta [b]dados/[/b], a pasta [b]exportacoes/[/b] e quaisquer grades que você tenha acrescentado em [b]arquivos/[/b] não são apagados.",
+		"verificar_ao_iniciar": "Quando marcado, o programa consulta o [b]GitHub[/b] ao abrir e avisa apenas se houver uma versão nova.\n\nA consulta é [b]silenciosa[/b]: sem internet, ou se já estiver em dia, nada aparece. Desmarque para verificar somente pelo botão [b]Verificar atualizações[/b]."
+	},
 	"geral": {
 		"ppc_principal": "[b]Projeto Pedagógico de Curso[/b] padrão do programa.\n\nAo definir um PPC principal, os filtros de curso dos módulos [b]Planejamento de Oferta[/b] e [b]Planejamento de Horário[/b] são pré-selecionados automaticamente ao abri-los.\n\nOs módulos [b]Situação de Disciplinas[/b] e [b]Exportadores[/b] também herdam a seleção de grade do PPC."
 	},

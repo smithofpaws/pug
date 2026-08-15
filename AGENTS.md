@@ -31,7 +31,8 @@ rodar comandos; reforçar o hábito de **commitar cedo e por tema** (um commit =
 clara em português). Lembrar que commit local já é ponto de retorno; o push leva ao GitHub (backup
 e sincroniza os 3 PCs).
 
-- **Remoto:** `origin` = `https://github.com/smithofpaws/pug.git` (privado). Autenticação por
+- **Remoto:** `origin` = `https://github.com/smithofpaws/pug.git` (**público** — é de lá que o
+  atualizador automático baixa as releases; ver "Distribuição e atualização"). Autenticação por
   **HTTPS + Git Credential Manager** (no 1º push/pull de cada máquina abre o navegador para login;
   depois fica salvo). Existe chave SSH local não vinculada à conta — por isso usa-se HTTPS.
 - **Rotina recomendada:** ao **começar** numa máquina → `git pull` (traz o que as outras
@@ -107,12 +108,70 @@ PC", e é controlada:
 
 #### Diálogos
 - **Sim/não:** `Dialogos.confirmar(pai, título, texto, ao_confirmar, texto_ok := "Sim", texto_cancelar := "Cancelar")`. NÃO instanciar `ConfirmationDialog` ad-hoc.
+- **Aviso (botão único):** `Dialogos.avisar(pai, título, texto, texto_ok := "OK", largura_max := 420)`. Para relatar um desfecho onde não há decisão a tomar (erro de rede, "já está na versão mais recente"). NÃO usar `confirmar` para isso — o par confirmar/cancelar sugere uma escolha que não existe.
 - **Lista + múltiplas ações** (aviso/escolha que mostra uma lista potencialmente longa, ex.: muitas disciplinas): `Dialogos.escolha_lista(pai, título, cabeçalho, itens, rodapé, acoes, texto_cancelar := "Cancelar")`. A lista entra num `ScrollContainer` (rola em vez de esticar a janela); `acoes` é um Array de `{ "texto", "ao_acionar": Callable }` — a 1ª vira o botão OK, as demais viram botões extras.
 - **Customizado** (checkboxes, formulários, layout próprio): usar `AcceptDialog`/`ConfirmationDialog` diretamente. Ex.: `seletor_cursos.gd`, `seletor_disciplinas_grade.gd`, `planejamentooferta.gd`.
 - **Sempre limitar à tela.** Todo diálogo/popup construído em runtime deve chamar `Dialogos.limitar_a_tela(janela)` logo após `popup_centered()` — impede que a janela ultrapasse a área visível (encolhe, re-centraliza e reduz o `min_size` se preciso, pois o Godot ignora `size` abaixo do `min_size`). Para conteúdo que cresce com os dados, combine com um `ScrollContainer` (`SIZE_EXPAND_FILL` + `custom_minimum_size`) para rolar em vez de esticar. `Dialogos.confirmar`/`escolha_lista` já fazem isso internamente; aplique manualmente nos demais (seletores, `FileDialog`, etc.). Exceções: tooltips (`DicaFlutuante`) e popups que já usam `popup_centered_ratio` (ex.: `editor_celula.gd`).
 
 ## Exportação
 Sempre que requisitado para exportar o projeto, exporte-o na área de trabalho em um arquivo zipado, pronto para uso ao ser descompactado (portátil), isto é, com todos arquivos necessarios. A lógica de nomeacão do arquivo é "PUG_WIN_X64.zip". Arquivos temporários gerados na exportação devem ser removidos. Por enquanto exporte os executáveis com e sem debug e com e sem console, para o usuário decidir qual usar.
+
+**Não montar o pacote à mão** — use `ferramentas/publicar_release.ps1 -Versao X.Y.Z` (sem `-Publicar`
+ele só prepara e deixa o ZIP na Área de Trabalho). O script faz exatamente o que esta seção pede e
+ainda garante o contrato do ZIP descrito abaixo, do qual o atualizador automático depende.
+
+## Distribuição e atualização
+
+O programa se atualiza sozinho a partir das **releases do GitHub** (`smithofpaws/pug`, público).
+Cliente: `standalone_scripts/io/atualizador.gd` (`class_name Atualizador`), disparado pelo `main.gd`
+— a rede e o I/O ficam no main, a `JanelaConfiguracoes` só emite o sinal `verificar_atualizacoes`.
+
+- **Versão do programa:** `project.godot` → `application/config/version` (ex.: `"1.0.0"`), espelhada
+  em `export_presets.cfg` (`application/file_version`/`product_version`, com 4 componentes:
+  `1.0.0.0`). Fica **embutida no binário** — por isso não vai para o `base_config.json`, que é solto,
+  substituído pela própria atualização e ainda sobreposto pelo `config_usuario.json`. Comparação
+  **numérica por componente** (como texto, `1.10.0` ficaria abaixo de `1.9.0`).
+- **Configuração:** `base_config.json:atualizacao` = `{ repositorio, asset, verificar_ao_iniciar }`.
+- **Estado local:** `user://atualizacao.json` (versão dispensada). Vai para `user://` — e **não** para
+  o `config_usuario.json` — porque cada um dos 3 PCs pode estar numa versão diferente, e o
+  `config_usuario.json` é sincronizado entre eles (mesmo motivo de `user://admin_kinto.json`).
+
+### Contrato do ZIP (a parte frágil)
+
+`file_handling.configurar_diretoriobase()` faz `GV.dir_principal = OS.get_executable_path()` sem o
+nome do arquivo: no build, `arquivos/`, `base_config.json`, `dados/` e `externo/bin/` são lidos do
+**disco, ao lado do .exe** — não do PCK.
+
+**A raiz do ZIP é a raiz da instalação — sem pasta de topo.** Um ZIP com pasta de topo produz uma
+atualização morta, sem erro visível. Conteúdo: os 4 executáveis (`Auxiliar.exe`,
+`Auxiliar.console.exe`, `Auxiliar_debug.exe`, `Auxiliar_debug.console.exe`), `base_config.json`,
+`MANUAL.md`, `arquivos/` e `externo/bin/`.
+
+**Nunca entram no pacote** (regra geral: *nada gitignorado entra*): `config_usuario.json`, `dados/`,
+`exportacoes/`, `.backup/` e — atenção — **`arquivos/limesurvey/survey_tokens.lst`**, que fica
+*dentro* de uma pasta incluída. São tokens vinculados a alunos, e a release é pública: um vazamento
+ali é permanente e cacheável mesmo se a release for apagada. Por isso o script monta `arquivos/` e
+`externo/bin/` a partir de `git ls-files` e **aborta** se encontrar arquivo proibido no ZIP pronto.
+
+### Como a troca acontece
+
+O executável em uso fica travado pelo Windows, então o programa não pode se sobrescrever. O
+`Atualizador` baixa para `user://atualizacao/`, confere o **SHA-256** publicado junto (asset
+`PUG_WIN_X64.zip.sha256`), extrai para um *staging* e só então grava e dispara
+`aplicar_atualizacao.ps1` (`OS.create_process` — não `OS.execute`, que é bloqueante) e encerra o
+programa. O script espera o **PID real**, copia para `.backup/` **apenas o executável em uso**
+(descartando o backup da atualização anterior — cada `.exe` passa de 100 MB e a pasta é replicada pelo
+OneDrive; guardar os quatro custaria ~430 MB por atualização), roda
+`robocopy /E` **sem `/PURGE`** (cópia **aditiva** — grades acrescentadas localmente, `config_usuario.json`,
+`dados/` e `exportacoes/` sobrevivem) e relança `OS.get_executable_path()`, de modo que a variante que
+o usuário abriu é a que volta. Log em `user://atualizacao/log.txt`.
+
+*Consequência aceita da cópia aditiva:* um arquivo **removido** entre versões permanece na instalação.
+É o lado certo do trade-off (proteger as grades locais), mas não é um bug a caçar depois.
+
+Nenhum caminho é interpolado no corpo do `.ps1` — todos entram como parâmetros nomeados, e o corpo é
+**ASCII puro** (o PowerShell 5.1 lê `.ps1` sem BOM na codepage ANSI). Caminhos vindos de `user://`
+passam por `ProjectSettings.globalize_path()` antes de ir ao PowerShell.
 
 ## Registro INPI
 

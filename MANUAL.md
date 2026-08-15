@@ -557,7 +557,29 @@ A janela de configurações é acessada pelo ícone na barra de navegação. As 
 
 Parâmetros específicos de cada módulo, como pesos do posicionador automático, limites de carga horária e configurações de oferta. Consulte as descrições de cada campo na própria janela.
 
-### 5.3 Restaurar padrões
+### 5.3 Atualização do programa
+
+Na aba **Geral** ficam a versão instalada e os controles de atualização. O PUG se atualiza sozinho a partir das versões publicadas no GitHub.
+
+- **Verificar atualizações ao iniciar o programa** — quando marcado, o programa consulta o GitHub ao abrir e **só avisa se houver versão nova**. A consulta é silenciosa: sem internet, ou já estando em dia, nada aparece. Desmarque para verificar apenas quando quiser.
+- **Verificar atualizações** — faz a consulta na hora e relata o resultado, mesmo que não haja novidade.
+
+Havendo versão nova, o programa mostra as novidades e três opções: **Baixar e instalar**, **Pular esta versão** (não avisa mais sobre ela ao iniciar) e **Agora não** (volta a avisar na próxima abertura).
+
+Ao escolher instalar, o pacote é baixado e sua integridade é conferida por uma soma de verificação. Só depois de o pacote estar **inteiro e conferido** é que a instalação é oferecida — nada é substituído antes disso. Confirmando, o programa **fecha, troca os arquivos e reabre sozinho** na versão nova, na mesma variante do executável que você estava usando.
+
+**O que é preservado na atualização:** suas configurações (`config_usuario.json`), a pasta `dados/`, a pasta `exportacoes/` e quaisquer grades ou arquivos que você tenha acrescentado em `arquivos/`. A cópia é somente aditiva — nada seu é apagado. O executável que você estava usando é guardado em `.backup/` antes da troca, para o caso de precisar voltar (só o da última atualização é mantido, já que cada um passa de 100 MB).
+
+O pacote tem cerca de **150 MB**, porque inclui as quatro variantes do executável (com e sem depuração, com e sem console).
+
+> **Observações**
+> - A atualização automática só funciona no programa **exportado** (não pelo editor Godot).
+> - Se o PUG estiver instalado dentro de uma pasta do **OneDrive**, a troca pode falhar por arquivos travados pela sincronização. O ideal é instalar fora do OneDrive.
+> - Instalado em `Arquivos de Programas`, a troca exige permissão de administrador. Prefira uma pasta do seu usuário.
+> - O Windows pode exibir um aviso do SmartScreen na primeira execução do executável novo, por ele não ser assinado digitalmente.
+> - Se algo der errado, o relatório da última tentativa fica em `%APPDATA%\Godot\app_userdata\Pacote de Utilidades para Graduação\atualizacao\log.txt`.
+
+### 5.4 Restaurar padrões
 
 Retorna todas as configurações para os valores padrão definidos no arquivo `base_config.json`.
 

@@ -25,6 +25,8 @@ var file_handling := FileHandling.new()
 var analise_historico := AnaliseHistorico.new()
 ## Sobreposicao de progresso, exibida durante o calculo das condicoes discentes.
 var _overlay_progresso: OverlayProgresso
+## Cliente de atualizacao do programa (releases do GitHub). Ver [Atualizador].
+var _atualizador: Atualizador
 ## Modulos que consomem o cache de dados discentes (disparam [method _garantir_dados_discentes]).
 const _MODULOS_COM_DADOS_DISCENTES: Array[String] = ["situacao_alunos", "situacao_disciplinas", \
 	"matricula_irregular", "exportadores", "planejamento_horario", "planejamento_oferta"]
@@ -60,13 +62,23 @@ func _ready() -> void:
 	# Aplica escala, tamanho da janela e tema a partir da configuração efetiva.
 	_aplicar_interface_completa()
 	get_window().size_changed.connect(_on_janela_redimensionada)
+	# Atualizacao do programa: o main concentra a rede e o I/O (AGENTS.md); a JanelaConfiguracoes so
+	# pede. Criado antes dela para que a versao instalada ja apareca na aba Geral.
+	var cfg_atualizacao: Dictionary = GV.configuracao_base.get("atualizacao", {})
+	_atualizador = Atualizador.new()
+	add_child(_atualizador)
+	_atualizador.configurar(str(cfg_atualizacao.get("repositorio", "")), \
+		str(cfg_atualizacao.get("asset", "")))
+	_atualizador.progresso.connect(_on_progresso_atualizacao)
 	# Configura a janela de configurações (parâmetros de módulos + interface)
 	var janela_config := $BarraPrincipal/JanelaConfiguracoes
 	janela_config.configurar(GV.configuracao_base, _descobrir_temas(),
-		GV.configuracao_base.get("interface", {}).get("tema", "nord"))
+		GV.configuracao_base.get("interface", {}).get("tema", "nord"),
+		_atualizador.versao_instalada())
 	janela_config.parametro_alterado.connect(_on_config_parametro_alterado)
 	janela_config.restauracao_solicitada.connect(_on_restaurar_padroes)
 	janela_config.abrir_admin_servidor.connect(_abrir_painel_admin)
+	janela_config.verificar_atualizacoes.connect(_verificar_atualizacao_programa.bind(false))
 	# Configura os diretórios de dados
 	file_handling.configurar_dirdados()
 	# Envia dados necessários aos nós
@@ -77,6 +89,11 @@ func _ready() -> void:
 	_overlay_progresso = OverlayProgresso.new()
 	add_child(_overlay_progresso)
 	_on_barra_principal_modulo_selecionado("principal")
+	# Checagem silenciosa de versao nova: nao interrompe a abertura e so aparece se houver novidade
+	# (mesmo espirito de _verificar_atualizacao_servidor no Planejamento de Horario, que trata do
+	# planejamento no Kinto — coisa diferente desta).
+	if bool(cfg_atualizacao.get("verificar_ao_iniciar", true)):
+		_verificar_atualizacao_programa.call_deferred(true)
 
 ## Aplica escala (DPI × multiplicador manual), tamanho da janela, oversampling de fonte e tema
 ## visual a partir de [member GV.configuracao_base]. Reutilizado no startup e ao restaurar padrões.
@@ -148,7 +165,8 @@ func _restaurar_padroes_confirmado() -> void:
 	_aplicar_fonte_grades()
 	var janela_config := $BarraPrincipal/JanelaConfiguracoes
 	janela_config.configurar(GV.configuracao_base, _descobrir_temas(),
-		GV.configuracao_base.get("interface", {}).get("tema", "nord"))
+		GV.configuracao_base.get("interface", {}).get("tema", "nord"),
+		_atualizador.versao_instalada())
 
 func _aplicar_cor_fundo() -> void:
 	var tema: Theme = get_window().theme
@@ -311,6 +329,135 @@ func _apagar_segredo_admin() -> void:
 # do servidor > campus (que ai sim substitui o planejamento.json, de forma explicita).
 func _salvar_campus_local(plano: Dictionary) -> void:
 	file_handling.save_json(GV.dir_exportacoes, "planejamento_campus.json", plano)
+
+
+# Estado local do atualizador (versao dispensada pelo usuario, data da ultima consulta). Fica em
+# user:// (mapeia para %APPDATA%, FORA do OneDrive) e NAO no config_usuario.json: cada um dos 3 PCs
+# pode estar numa versao diferente, e o config_usuario.json e sincronizado entre eles.
+const _ARQ_ESTADO_ATUALIZACAO := "user://atualizacao.json"
+
+
+## Procura uma versao nova do programa no GitHub. Em [param silencioso] (a checagem ao iniciar), nada
+## e mostrado quando nao ha novidade, falta rede ou a versao ja foi dispensada — so aparece se houver
+## o que avisar. Pelo botao em Configuracoes, todo desfecho e relatado.
+func _verificar_atualizacao_programa(silencioso: bool) -> void:
+	# OS.has_feature("template") = GeneralFunctions.is_exported(): rodando pelo editor nao ha
+	# executavel a substituir, entao o fluxo inteiro nao se aplica.
+	if not OS.has_feature("template"):
+		if not silencioso:
+			Dialogos.avisar(self, "Atualização", "A atualização automática só funciona no programa " + \
+				"exportado — rodando pelo editor não há executável a substituir.")
+		return
+	if not _atualizador.esta_configurado():
+		if not silencioso:
+			Dialogos.avisar(self, "Atualização", "A atualização automática não está configurada " + \
+				"(base_config.json › atualizacao).")
+		return
+
+	if not silencioso:
+		_overlay_progresso.mostrar("Procurando atualizações…")
+	var info: Dictionary = await _atualizador.verificar()
+	if not silencioso:
+		_overlay_progresso.ocultar()
+	if info["ok"]:
+		_gravar_estado_atualizacao("ultima_verificacao", Time.get_datetime_string_from_system())
+
+	if not info["ok"]:
+		if not silencioso:
+			Dialogos.avisar(self, "Atualização", str(info["erro"]))
+		return
+	if not info["ha_atualizacao"]:
+		if not silencioso:
+			Dialogos.avisar(self, "Atualização", \
+				"O programa já está na versão mais recente (%s)." % info["versao_instalada"])
+		return
+	# Na checagem ao iniciar, respeita a versao que o usuario mandou pular; pelo botao, sempre oferece.
+	if silencioso and str(_ler_estado_atualizacao().get("versao_ignorada", "")) == str(info["versao"]):
+		return
+	_oferecer_atualizacao(info)
+
+
+# Mostra as novidades da versao nova (corpo da release, uma linha por item) e deixa o usuario decidir.
+func _oferecer_atualizacao(info: Dictionary) -> void:
+	var linhas: Array = []
+	for linha: String in str(info.get("notas", "")).split("\n"):
+		var texto: String = linha.strip_edges()
+		if not texto.is_empty():
+			linhas.append(texto)
+	if linhas.is_empty():
+		linhas.append("(esta versão não traz notas de atualização)")
+	Dialogos.escolha_lista(self, "Nova versão disponível", \
+		"Versão %s disponível (você tem a %s). Novidades:" % [info["versao"], info["versao_instalada"]], \
+		linhas, \
+		"São cerca de %.1f MB. O programa fecha e reabre sozinho ao final da instalação." \
+			% (float(info.get("tamanho", 0)) / 1048576.0), \
+		[
+			{ "texto": "Baixar e instalar", "ao_acionar": _baixar_atualizacao.bind(info) },
+			{ "texto": "Pular esta versão", "ao_acionar": _ignorar_versao.bind(str(info["versao"])) },
+		], \
+		"Agora não")
+
+
+func _ignorar_versao(versao: String) -> void:
+	_gravar_estado_atualizacao("versao_ignorada", versao)
+
+
+# Baixa, confere e extrai o pacote numa area temporaria. Nada e substituido aqui: so depois do
+# pacote inteiro conferido e que a troca e oferecida (uma copia pela metade brica a instalacao).
+func _baixar_atualizacao(info: Dictionary) -> void:
+	_overlay_progresso.mostrar("Baixando a atualização…")
+	var resultado: Dictionary = await _atualizador.baixar_e_preparar(info)
+	_overlay_progresso.ocultar()
+	if not resultado["ok"]:
+		Dialogos.avisar(self, "Atualização", str(resultado["erro"]))
+		return
+	Dialogos.confirmar(self, "Instalar a atualização", \
+		("A versão %s foi baixada e conferida.\n\nO programa será fechado, os arquivos " + \
+		"substituídos e o programa reaberto automaticamente. Suas configurações, a pasta dados/, " + \
+		"as exportações e as grades que você tenha acrescentado são preservadas.\n\nInstalar agora?") \
+			% info["versao"], \
+		_aplicar_atualizacao.bind(str(info["versao"]), str(resultado["staging"])), \
+		"Instalar e reiniciar", "Agora não", 460)
+
+
+# Dispara o script auxiliar e encerra o programa: o executavel em uso fica travado pelo Windows, e a
+# troca so pode acontecer depois que este processo morrer.
+func _aplicar_atualizacao(versao: String, staging: String) -> void:
+	var resultado: Dictionary = _atualizador.aplicar(staging, GV.dir_principal, versao)
+	if not resultado["ok"]:
+		Dialogos.avisar(self, "Atualização", str(resultado["erro"]) + \
+			"\n\nDetalhes em: " + _atualizador.caminho_log())
+		return
+	get_tree().quit()
+
+
+func _on_progresso_atualizacao(fracao: float, texto: String) -> void:
+	_overlay_progresso.definir_progresso(fracao, texto)
+
+
+func _ler_estado_atualizacao() -> Dictionary:
+	if not FileAccess.file_exists(_ARQ_ESTADO_ATUALIZACAO):
+		return {}
+	var f := FileAccess.open(_ARQ_ESTADO_ATUALIZACAO, FileAccess.READ)
+	if f == null:
+		return {}
+	var txt: String = f.get_as_text()
+	f.close()
+	var d: Variant = JSON.parse_string(txt)
+	return d if d is Dictionary else {}
+
+
+# Grava uma chave preservando as demais: o arquivo guarda mais de um dado (versao dispensada, data da
+# ultima consulta) e uma gravacao inteira apagaria o que nao veio nesta chamada.
+func _gravar_estado_atualizacao(chave: String, valor: Variant) -> void:
+	var estado: Dictionary = _ler_estado_atualizacao()
+	estado[chave] = valor
+	var f := FileAccess.open(_ARQ_ESTADO_ATUALIZACAO, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(estado))
+	f.close()
+
 
 func _carregar_arquivos() -> void:
 	# Dados curriculares: os proprios do pug (arquivos/<tipo>/) + os compartilhados via subtree,

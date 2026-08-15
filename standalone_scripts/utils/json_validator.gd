@@ -31,6 +31,7 @@ static func validar_carga_exigida(data: Dictionary) -> bool:
 static func _schema_base_config() -> Dictionary:
 	return {
 		"diretorios": {"dados": STR},
+		"?atualizacao": {"repositorio": STR, "asset": STR, "?verificar_ao_iniciar": BOOL},
 		"interface": {"escala": FLT, "?escala_min": FLT, "?escala_max": FLT, "?escala_passo": FLT, "?tamanho_fonte": FLT, "?tamanho_fonte_min": FLT, "?tamanho_fonte_max": FLT, "?tamanho_fonte_passo": FLT, "?tamanho_fonte_grade_offset": FLT, "?tamanho_fonte_grade_min": FLT, "?tamanho_fonte_grade_max": FLT, "?tema": STR, "?transparencia_fundo": FLT, "?tamanho_janela": {"largura": INT, "altura": INT}},
 		"modulos": {
 			"*": {

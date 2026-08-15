@@ -3,6 +3,11 @@
 		"dados": "dados",
 		"exportacoes": "exportacoes"
 	},
+	"atualizacao": {
+		"repositorio": "smithofpaws/pug",
+		"asset": "PUG_WIN_X64.zip",
+		"verificar_ao_iniciar": true
+	},
 	"interface": {
 		"escala": 1.0,
 		"escala_min": 0.5,

@@ -17,7 +17,16 @@ signal restauracao_solicitada
 ## (que faz I/O de rede) é instanciado pelo [code]main.gd[/code]; esta janela só dispara o pedido.
 signal abrir_admin_servidor
 
+## Emitido quando o usuário pede para procurar uma nova versão do programa. O download e a troca
+## ficam a cargo do [code]main.gd[/code] (via [Atualizador]); esta janela só dispara o pedido.
+signal verificar_atualizacoes
+
 var _carregando: bool = false
+
+# Nós do bloco de atualização (aba Geral), construídos em _ready e populados em configurar.
+var _label_versao: Label
+var _check_atualizacao: CheckBox
+var _bt_verificar: Button
 
 var _escala_atual: float = 1.0
 var _escala_min: float = 0.5
@@ -65,6 +74,43 @@ func _ready() -> void:
 	bt_admin.text = "Administração do servidor…"
 	$TabContainer/Geral.add_child(bt_admin)
 	bt_admin.pressed.connect(func() -> void: emit_signal("abrir_admin_servidor"))
+	_montar_bloco_atualizacao()
+
+
+# Bloco "Atualização do programa" (aba Geral): versão instalada, botão de verificação manual e a
+# opção de checar ao iniciar. Construído em código, como o botão de administração acima — a rede e a
+# troca de arquivos ficam inteiramente no main.gd (via Atualizador); aqui só a apresentação.
+func _montar_bloco_atualizacao() -> void:
+	var aba: VBoxContainer = $TabContainer/Geral
+	aba.add_child(HSeparator.new())
+
+	var linha := HBoxContainer.new()
+	linha.add_theme_constant_override("separation", 10)
+	aba.add_child(linha)
+
+	_label_versao = Label.new()
+	_label_versao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_label_versao.text = "Versão instalada: —"
+	linha.add_child(_label_versao)
+
+	_bt_verificar = Button.new()
+	_bt_verificar.text = "Verificar atualizações"
+	linha.add_child(_bt_verificar)
+	_bt_verificar.pressed.connect(func() -> void: emit_signal("verificar_atualizacoes"))
+
+	_check_atualizacao = CheckBox.new()
+	_check_atualizacao.text = "Verificar atualizações ao iniciar o programa"
+	aba.add_child(_check_atualizacao)
+	_check_atualizacao.toggled.connect(_on_verificar_ao_iniciar_toggled)
+	# As dicas NAO sao vinculadas aqui: DicasPrograma.vincular lê GV.dicas no momento do vínculo e
+	# desiste em silêncio se estiver vazio. Como o _ready() dos filhos roda antes do main._ready()
+	# carregar as dicas, o vínculo tem de ficar em configurar() — junto com todos os outros.
+
+
+func _on_verificar_ao_iniciar_toggled(pressionado: bool) -> void:
+	if _carregando:
+		return
+	emit_signal("parametro_alterado", ["atualizacao", "verificar_ao_iniciar"], pressionado)
 
 
 func _on_custom_action(acao: StringName) -> void:
@@ -139,11 +185,18 @@ func _criar_seta(tamanho: int, cor: Color, direita: bool) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 
-func configurar(cfg: Dictionary, temas_internos: Array[String] = [], tema_atual: String = "") -> void:
+func configurar(cfg: Dictionary, temas_internos: Array[String] = [], tema_atual: String = "", \
+		versao_programa: String = "") -> void:
 	_carregando = true
 
 	_popular_ppc(cfg)
 	_popular_interface(cfg, temas_internos, tema_atual)
+
+	# A versão é injetada pelo main.gd (vem de application/config/version, não de arquivo).
+	if not versao_programa.is_empty():
+		_label_versao.text = "Versão instalada: %s" % versao_programa
+	var atualizacao: Dictionary = cfg.get("atualizacao", {})
+	_check_atualizacao.button_pressed = bool(atualizacao.get("verificar_ao_iniciar", true))
 
 	var oferta: Dictionary = cfg.get("planejamento_oferta", {})
 	$TabContainer/PlanejamentoOferta/JanelaAfinidade/SpinBox.value = int(oferta.get("janela_afinidade", 12))
@@ -192,6 +245,8 @@ func configurar(cfg: Dictionary, temas_internos: Array[String] = [], tema_atual:
 	DicasPrograma.vincular($TabContainer/LimitesChoque/TrancamentoConsecutivo/SpinBox, ["trancamento","limite_consecutivo"])
 	DicasPrograma.vincular($TabContainer/LimitesChoque/LimiarChoque/SpinBox, ["choque","limiar_presenca"])
 	DicasPrograma.vincular($TabContainer/Geral/PPCPrincipal/OptionButton, ["geral","ppc_principal"])
+	DicasPrograma.vincular(_bt_verificar, ["atualizacao","verificar_agora"])
+	DicasPrograma.vincular(_check_atualizacao, ["atualizacao","verificar_ao_iniciar"])
 	DicasPrograma.vincular($TabContainer/Posicionamento/PesoPreferencia/SpinBox, ["posicionamento","preferencia"])
 	DicasPrograma.vincular($TabContainer/Posicionamento/ExpoentePreferencia/SpinBox, ["posicionamento","preferencia_expoente"])
 	DicasPrograma.vincular($TabContainer/Posicionamento/PesoForaPeriodo/SpinBox, ["posicionamento","fora_periodo"])

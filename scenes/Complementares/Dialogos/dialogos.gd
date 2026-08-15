@@ -79,6 +79,31 @@ static func _centrar_botoes(dialogo: ConfirmationDialog) -> void:
 	hbox.set_offset(SIDE_TOP, texto_bottom + margem)
 	hbox.set_offset(SIDE_BOTTOM, texto_bottom + margem + hbox.size.y)
 
+## Exibe um aviso de [b]botão único[/b] (sem escolha), para relatar um desfecho ao usuário — um erro
+## de rede, um "já está na versão mais recente". Complementa [method confirmar], que sempre oferece o
+## par confirmar/cancelar e portanto sugere uma decisão onde não há nenhuma. [br]
+## [param largura_max] (> 0) fixa a largura e ativa a quebra automática, como em [method confirmar].
+## O nó é liberado da memória ao fechar por qualquer caminho.
+## [codeblock]
+## Dialogos.avisar(self, "Atualização", "O programa já está na versão mais recente.")
+## [/codeblock]
+static func avisar(pai: Node, titulo: String, texto: String, texto_ok: String = "OK", \
+		largura_max: int = 420) -> void:
+	var dialogo := AcceptDialog.new()
+	dialogo.title = titulo
+	dialogo.dialog_text = texto
+	if largura_max > 0:
+		var label := dialogo.get_label()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size = Vector2(largura_max, 0)
+	dialogo.get_ok_button().text = texto_ok
+	dialogo.visibility_changed.connect(func():
+		if not dialogo.visible:
+			dialogo.queue_free())
+	pai.add_child(dialogo)
+	dialogo.popup_centered()
+	limitar_a_tela(dialogo)
+
 ## Exibe um diálogo com um [param cabecalho], uma lista [b]rolável[/b] de [param itens] (que não estica
 ## a janela) e um [param rodape] opcional, oferecendo uma ou mais [param acoes] (botões). Para
 ## avisos/escolhas que mostram uma lista potencialmente longa (ex.: muitas disciplinas), garantindo
