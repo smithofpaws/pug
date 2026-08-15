@@ -164,12 +164,17 @@ Filtros permitem exibir apenas disciplinas em condições específicas (matricul
 
 #### Relatório no terminal
 
+O checkbox **Modo Detalhado**, no topo, controla o nível de detalhe do relatório: marcado (padrão), o terminal traz também as seções analíticas — **Previsão de formatura** e **Índice de aprovação**; desmarcado, o relatório fica restrito à situação de matrícula do aluno. A exportação em Markdown traz sempre o relatório completo, independentemente do checkbox.
+
 O terminal apresenta um relatório completo do aluno:
 
 - Versão do currículo e matrícula.
 - Carga horária vencida por categoria (obrigatória, complementar, etc.).
 - **Previsão de formatura** — período letivo mínimo em que o aluno pode se formar, calculado pela maior cadeia de pré-requisitos obrigatórios ainda pendente (o *caminho crítico*). Como cada disciplina dessa cadeia só pode ser cursada depois da anterior, ela define o prazo mínimo mesmo quando, "na teoria", faltariam poucos semestres. O relatório mostra o período previsto, o número mínimo de semestres (contando o atual) e a sequência de disciplinas que determina o prazo. O período de partida é o das matrículas em curso do aluno; eletivas/CCCG não entram nessa conta.
+- **Índice de aprovação** — desempenho semestre a semestre, do mais antigo ao mais recente. Cada linha traz duas medidas de aprovação do mesmo semestre, ex.: `2023/1: 71% (5 de 7) | 67% da CH (240 de 360h)`. A primeira conta **disciplinas**; a segunda, a **carga horária** aprovada — é a medida do regulamento de estágio, apresentada como aprovação (o regulamento fala em reprovação, que é o complemento) para ler no mesmo sentido da primeira. Entram na conta apenas as disciplinas com resultado lançado (aprovação ou reprovação): matrículas em aberto, dispensas, trancamentos e aproveitamentos ficam de fora. Períodos letivos especiais (verão/inverno) não são listados, e o semestre em curso só aparece depois que as notas são lançadas.
+  - **Cor da linha (critério de estágio):** verde quando o aluno aprovou **ao menos 40% da carga horária** em que estava matriculado naquele semestre — ou seja, não reprovou (por nota e por frequência somadas) em mais de 60% dela; vermelho quando reprovou acima disso. É a exigência do regulamento de estágio — quem cumpre o critério no semestre regular imediatamente anterior pode solicitar estágio no seguinte. Como a cor acompanha a carga horária e não o número de disciplinas, as duas medidas da linha não andam juntas: reprovar só em disciplinas pesadas pinta a linha de vermelho mesmo com um percentual de aprovação razoável. O limite é configurável em `base_config.json:estagio.limite_reprovacao`.
 - Disciplinas cursadas fora da grade atual.
+- **Previsão de matrículas** — reúne o aviso sobre reprovações e as listas por condição de matrícula descritas a seguir.
 - Histórico de reprovações (por nota e por frequência).
 - Lista de disciplinas organizadas por condição de matrícula:
   - **Matriculado agora** — disciplinas em que está cursando neste semestre.

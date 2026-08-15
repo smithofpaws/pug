@@ -55,7 +55,9 @@ var dicas: Dictionary = {}
 ## recalcule o pipeline caro (ler hist.csv -> reprovacoes -> simplificar -> condicoes_discentes).
 ## Preenchido por [code]main.gd:_garantir_dados_discentes[/code] e consumido pelos modulos que
 ## fazem analise de historico/aproveitamento. Conteudo: [br]
-## [code]{ historico, lista_alunos, condicoes_discentes, reprovacoes }[/code].
+## [code]{ historico, lista_alunos, condicoes_discentes, reprovacoes, indice_aprovacao }[/code]. [br]
+## [code]reprovacoes[/code] e [code]indice_aprovacao[/code] sao extraidos do historico COMPLETO, antes
+## da simplificacao que descarta as reprovacoes.
 var dados_discentes: Dictionary = {}
 ## Assinatura que valida o cache [member dados_discentes] (timestamp de modificacao do hist.csv).
 ## Quando o hist.csv muda, a assinatura difere e o cache e recomputado.

@@ -444,6 +444,10 @@ func _garantir_dados_discentes() -> bool:
 	var lista_situacoes: Dictionary = analise_historico.listar_situacao(historico, \
 		["reprovado com nota", "Reprovado por Frequência"])
 	var reprovacoes: Dictionary = analise_historico.processar_reprovacoes(lista_situacoes)
+	# Indice de aprovacao por semestre: tambem depende do historico completo (as reprovacoes sao o
+	# denominador do percentual), entao e calculado aqui, antes da simplificacao.
+	var indice_aprovacao: Dictionary = analise_historico.indice_aprovacao_todos(historico, \
+		float(GV.configuracao_base.get("estagio", {}).get("limite_reprovacao", 0.6)))
 	# Mantem apenas aprovadas/dispensadas/matriculadas (mesma regra adotada por todos os modulos).
 	analise_historico.simplificar_historico(historico, "situacao", ["aprovado", "dispensado", "matr"])
 	var lista_alunos: Array[Array] = analise_historico.criar_lista_alunos(historico)
@@ -465,6 +469,7 @@ func _garantir_dados_discentes() -> bool:
 		"lista_alunos": lista_alunos,
 		"condicoes_discentes": condicoes_discentes,
 		"reprovacoes": reprovacoes,
+		"indice_aprovacao": indice_aprovacao,
 		"avisos_leitura": avisos_leitura,
 	}
 	GV.dados_discentes_assinatura = assinatura

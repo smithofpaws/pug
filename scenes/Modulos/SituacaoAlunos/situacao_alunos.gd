@@ -14,6 +14,10 @@ signal override_config(caminho: Array, valor: Variant)
 ## - Apresentar a grade curricular indicando visualmente quais disciplinas foram cursadas e quais
 ## podem ser cursadas.
 
+# Seções do relatório que só aparecem no terminal com o "Modo Detalhado" marcado: são analíticas
+# (leitura do histórico como um todo) e atrapalham quem só quer conferir a situação de matrícula.
+const SECOES_DETALHADAS: Array[String] = ["previsao_formatura", "indice_aprovacao"]
+
 # Classes instanciadas.
 var file_handling := FileHandling.new()
 var analise_historico := AnaliseHistorico.new()
@@ -123,6 +127,11 @@ var _curso_filtro: String = ""
 # É uma array contendo as informações de reprovação de todas matrículas.
 var _analisado_reprov: Dictionary
 
+# Índice de aprovação por semestre de cada matrícula, pré-computado pelo main sobre o histórico
+# completo (o histórico deste módulo é o simplificado, sem as reprovações que formam o denominador).
+# Formato: { "<matricula>": [ {ano, semestre, periodo, aprovadas, cursadas, percentual} ] }.
+var _indice_aprovacao: Dictionary = {}
+
 # Carga horária exigida para a grade do discente atualmente selecionado (já ajustada por TCC/estágio).
 var _ch_exigida: Dictionary = {}
 
@@ -167,6 +176,7 @@ func _ready() -> void:
 	if not GV.dados_discentes.is_empty():
 		_historico = GV.dados_discentes["historico"]
 		_analisado_reprov = GV.dados_discentes["reprovacoes"]
+		_indice_aprovacao = GV.dados_discentes.get("indice_aprovacao", {})
 		_lista_alunos_todos = GV.dados_discentes["lista_alunos"]
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
 		# Exibe avisos de validação do cabeçalho, se houver.
@@ -205,6 +215,13 @@ func _ready() -> void:
 		grade_horarios.celula_clicada.connect(_on_horarios_celula_clicada)
 	# Realce inicial dos botoes OnOff conforme a visibilidade dos paineis.
 	TogglePaineis.sincronizar_botoes(_mapa_toggles())
+
+	# Modo Detalhado: alterna as seções analíticas do relatório (ver SECOES_DETALHADAS). Alternar só
+	# reimprime o terminal (ver _reimprimir_relatorio) — grade, horários e realces ficam como estão.
+	$"%ModoDetalhado".toggled.connect(_on_modo_detalhado_alternado)
+	DicaFlutuante.vincular($"%ModoDetalhado", "Mostra no terminal as seções analíticas do relatório " \
+		+ "(previsão de formatura e índice de aprovação).\nDesmarcado, o relatório fica restrito à " \
+		+ "situação de matrícula do discente.")
 
 	# Modo Ajuste: prepara o cliente da planilha, o ícone de destaque e os gestos do botão. NÃO inicia
 	# sozinho ao abrir o módulo (mesmo com URL já configurada) — só sob demanda do usuário, pois na
@@ -329,6 +346,22 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 		_imprimir_analise(matricula, disc_cursaveis, disc_semgrade, ch_vencida, \
 		creditos_disciplinas, _analisado_reprov.get(matricula, {}))
 
+# Reimprime o relatório do discente atual recalculando só o que a impressão consome. Não passa por
+# [method _analisar_matricula] de propósito: a análise completa remonta a grade curricular e a de
+# horários, zerando a seleção de pré-requisitos e os realces que o usuário acabou de montar.
+func _reimprimir_relatorio() -> void:
+	if _matricula_atual.is_empty() or not grades_disciplinas_curriculos.has(_grade_ativa):
+		return
+	var ch_data: Dictionary = analise_historico.ch_vencida(_matricula_atual, \
+		grades_disciplinas_curriculos[_grade_ativa], _historico)
+	var disc_semgrade: Array[Array] = analise_historico.revisar_historico(_historico, \
+		grades_disciplinas_curriculos, _matricula_atual, false)
+	var disc_cursaveis: Dictionary = _condicoes_discentes.get(_matricula_atual, {})
+	var creditos_disciplinas: Dictionary = analise_historico.creditos_disciplinas(_matricula_atual, \
+		_historico, disc_cursaveis, grades_disciplinas_curriculos)
+	_imprimir_analise(_matricula_atual, disc_cursaveis, disc_semgrade, ch_data["ch"], \
+		creditos_disciplinas, _analisado_reprov.get(_matricula_atual, {}))
+
 # Organiza os dados da análise em seções estruturadas. Retorna um Array de Dictionary.
 # Cada dicionário possui a chave "tipo" indicando o tipo de seção (versao, ch, sem_grade, condicao, etc).
 # Esta é a única fonte de verdade dos dados exibidos. As funções de saída consomem este Array.
@@ -400,6 +433,13 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 		"integralizado": offset_form < 0,
 	})
 
+	# Índice de aprovação: percentual de aprovações por semestre cursado (só períodos regulares com
+	# resultado lançado; ver [method AnaliseReprovacoes.indice_aprovacao]).
+	secoes.append({
+		"tipo": "indice_aprovacao",
+		"itens": _indice_aprovacao.get(matricula, []),
+	})
+
 	# Disciplinas sem grade - separadas por matriculadas (situacao "matr*") e nao matriculadas
 	var sem_grade_matriculadas: Array[Array] = []
 	var sem_grade_nao_matriculadas: Array[Array] = []
@@ -462,6 +502,10 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 		matriculada_outra_grade.append([cod, nome_outra])
 	if matriculada_outra_grade.size() > 0:
 		secoes.append({"tipo": "matriculada_outra_grade", "itens": matriculada_outra_grade})
+
+	# Título que agrupa o aviso de reprovações e todas as seções de condição que vêm a seguir (elas são
+	# subseções deste bloco, e não da previsão de formatura).
+	secoes.append({"tipo": "previsao_matriculas"})
 
 	# Aviso sobre reprovações
 	secoes.append({"tipo": "aviso_reprovacoes"})
@@ -549,6 +593,11 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> Array[Diction
 	return secoes
 
 
+# Fração da carga horária do semestre que, se reprovada, impede a solicitação de estágio. Usada só
+# nos rodapés (o cálculo em si vem pronto na chave "apto_estagio", computada pelo main).
+func _limite_reprovacao_estagio() -> float:
+	return float(GV.configuracao_base.get("estagio", {}).get("limite_reprovacao", 0.6))
+
 # Organiza e imprime os dados no terminal.
 func _imprimir_analise(matricula: String, disc_cursaveis: Dictionary, disc_semgrade: Array, ch_vencida: Dictionary, \
 creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
@@ -559,7 +608,12 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 	# "matriculado_agora*". Fallback após o laço cobre discentes sem essa seção (no-op se não houver
 	# ajuste — _imprimir_ajuste retorna cedo).
 	var ajuste_impresso: bool = false
+	var detalhado: bool = $"%ModoDetalhado".button_pressed
 	for secao in secoes:
+		# Modo Detalhado desmarcado: seções analíticas ficam fora do terminal (a exportação, por ser um
+		# relatório completo, continua trazendo todas).
+		if not detalhado and secao["tipo"] in SECOES_DETALHADAS:
+			continue
 		if not ajuste_impresso and secao["tipo"] == "condicao" \
 		and str(secao["nome"]).begins_with("matriculado_agora"):
 			_imprimir_ajuste(matricula)
@@ -600,6 +654,26 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 					if nomes_cadeia.size() > 0:
 						$"%Terminal".item("Caminho crítico: " + " → ".join(nomes_cadeia))
 				$"%Terminal".espaco()
+			"indice_aprovacao":
+				$"%Terminal".secao("Índice de aprovação")
+				if secao["itens"].size() == 0:
+					$"%Terminal".item("Nenhum semestre com resultado lançado.")
+				for periodo_indice in secao["itens"]:
+					# Verde/vermelho: critério de estágio do semestre (ver AnaliseReprovacoes.indice_aprovacao).
+					var token_indice: String = cores_terminal["sucesso"] if periodo_indice["apto_estagio"] \
+						else cores_terminal["erro"]
+					$"%Terminal".item(periodo_indice["periodo"] + ": " \
+						+ str(int(round(periodo_indice["percentual"]))) + "% (" \
+						+ str(periodo_indice["aprovadas"]) + " de " \
+						+ str(periodo_indice["cursadas"]) + ") | " \
+						+ str(int(round(periodo_indice["percentual_ch_aprovada"]))) + "% da CH (" \
+						+ str(int(round(periodo_indice["ch_aprovada"]))) + " de " \
+						+ str(int(round(periodo_indice["ch_cursada"]))) + "h)", 0, token_indice)
+				$"%Terminal".linha("Os percentuais consideram as disciplinas com resultado lançado (aprovação ou reprovação); matrículas em aberto, dispensas e trancamentos ficam de fora.")
+				$"%Terminal".linha("O percentual de CH e a cor seguem o critério de estágio: verde enquanto o discente aprova ao menos " \
+					+ str(int(round((1.0 - _limite_reprovacao_estagio()) * 100.0))) + "% da carga horária matriculada no semestre (o regulamento exige não reprovar, por nota e por frequência, em mais de " \
+					+ str(int(round(_limite_reprovacao_estagio() * 100.0))) + "% dela).")
+				$"%Terminal".espaco()
 			"sem_grade_matriculadas":
 				$"%Terminal".secao("Disciplinas sem grade (matriculadas atualmente)")
 				for item in secao["itens"]:
@@ -615,11 +689,13 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 				for item in secao["itens"]:
 					$"%Terminal".item(item[0] + ": " + item[1], 0, cores_terminal["alerta"])
 				$"%Terminal".espaco()
+			"previsao_matriculas":
+				$"%Terminal".secao("Previsão de matrículas")
 			"aviso_reprovacoes":
 				$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (somando disciplinas equivalentes de outras grades).")
 				$"%Terminal".espaco()
 			"condicao":
-				$"%Terminal".secao(secao["nome"].replacen("_", " ").capitalize())
+				$"%Terminal".subsecao(secao["nome"].replacen("_", " ").capitalize())
 				for disc in secao["itens"]:
 					var linha: String = disc["codigo"] + ": " + disc["nome_disc"] + " (" + \
 						disc["creditos"] + " Créditos) " + disc["reprovacoes"]
@@ -641,7 +717,7 @@ creditos_disciplinas: Dictionary, analisado_reprov: Dictionary) -> void:
 					$"%Terminal".item(linha, 0, lista_cores[secao["nome"]])
 				$"%Terminal".espaco()
 			"condicao_cccg":
-				$"%Terminal".secao(secao["nome"].replacen("_", " ").capitalize() + " (CCCGs)")
+				$"%Terminal".subsecao(secao["nome"].replacen("_", " ").capitalize() + " (CCCGs)")
 				for disc in secao["itens"]:
 					$"%Terminal".item(disc["codigo"] + ": " + disc["nome_disc"] + " (" + \
 						disc["creditos"] + " Créditos)", 0, lista_cores[secao["nome"]])
@@ -692,6 +768,26 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 						nomes_cadeia.append(disc["nome"])
 					if nomes_cadeia.size() > 0:
 						md.append("- Caminho critico: " + " -> ".join(nomes_cadeia))
+			"indice_aprovacao":
+				md.append("### Indice de aprovacao")
+				if secao["itens"].size() == 0:
+					md.append("- *Nenhum semestre com resultado lancado.*")
+				for periodo_indice in secao["itens"]:
+					# O Markdown nao tem a cor do terminal: o criterio de estagio vira texto.
+					var estagio_md: String = " — cumpre o criterio de estagio" if periodo_indice["apto_estagio"] \
+						else " — NAO cumpre o criterio de estagio"
+					md.append("- " + periodo_indice["periodo"] + ": " \
+						+ str(int(round(periodo_indice["percentual"]))) + "% (" \
+						+ str(periodo_indice["aprovadas"]) + " de " \
+						+ str(periodo_indice["cursadas"]) + ") | " \
+						+ str(int(round(periodo_indice["percentual_ch_aprovada"]))) + "% da CH (" \
+						+ str(int(round(periodo_indice["ch_aprovada"]))) + " de " \
+						+ str(int(round(periodo_indice["ch_cursada"]))) + "h)" + estagio_md)
+				md.append("*Os percentuais consideram as disciplinas com resultado lancado (aprovacao ou reprovacao); matriculas em aberto, dispensas e trancamentos ficam de fora.*")
+				md.append("*Criterio de estagio: cumpre quem aprova ao menos " \
+					+ str(int(round((1.0 - _limite_reprovacao_estagio()) * 100.0))) \
+					+ "% da carga horaria matriculada no semestre (o regulamento exige nao reprovar em mais de " \
+					+ str(int(round(_limite_reprovacao_estagio() * 100.0))) + "% dela).*")
 			"sem_grade_matriculadas":
 				md.append("### Disciplinas sem grade (matriculadas)")
 				for item in secao["itens"]:
@@ -704,10 +800,12 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 				md.append("### Matriculada em outra grade (aproveitamento incompleto)")
 				for item in secao["itens"]:
 					md.append("- " + item[0] + ": " + item[1])
+			"previsao_matriculas":
+				md.append("### Previsao de matriculas")
 			"aviso_reprovacoes":
 				md.append("*Valores entre parenteses indicam reprovacoes por nota e por faltas (somando disciplinas equivalentes de outras grades).*")
 			"condicao":
-				md.append("### " + secao["nome"].replacen("_", " ").capitalize())
+				md.append("#### " + secao["nome"].replacen("_", " ").capitalize())
 				for disc in secao["itens"]:
 					var linha_md: String = "- " + disc["codigo"] + ": " + disc["nome_disc"] + " (" + \
 						disc["creditos"] + " Creditos)" + disc["reprovacoes"]
@@ -726,7 +824,7 @@ ch_vencida: Dictionary, creditos_disciplinas: Dictionary, analisado_reprov: Dict
 							+ str(max_pct) + "% presenca maxima)"
 					md.append(linha_md)
 			"condicao_cccg":
-				md.append("### " + secao["nome"].replacen("_", " ").capitalize() + " (CCCGs)")
+				md.append("#### " + secao["nome"].replacen("_", " ").capitalize() + " (CCCGs)")
 				for disc in secao["itens"]:
 					md.append("- " + disc["codigo"] + ": " + disc["nome_disc"] + " (" + \
 						disc["creditos"] + " Creditos)")
@@ -829,6 +927,11 @@ func _on_on_off_horarios_button_up() -> void:
 
 func _on_on_off_grade_button_up() -> void:
 	_toggle($"%GradeCurricular")
+
+# Reimprime o relatório com ou sem as seções analíticas (ver SECOES_DETALHADAS).
+func _on_modo_detalhado_alternado(_ativo: bool) -> void:
+	if _pronto:
+		_reimprimir_relatorio()
 
 func _on_seletor_lista_alunos_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
 	_matricula_atual = retorno
@@ -1236,7 +1339,8 @@ func _imprimir_ajuste(matricula: String) -> void:
 	if registro.is_empty():
 		return
 	var disc_cursaveis: Dictionary = _condicoes_discentes.get(matricula, {})
-	$"%Terminal".secao("Ajuste de matrícula — deseja INCLUIR")
+	# Subseções: o ajuste é impresso dentro do bloco "Previsão de matrículas" (ver _imprimir_analise).
+	$"%Terminal".subsecao("Ajuste de matrícula — deseja INCLUIR")
 	if registro["incluir"].is_empty() and registro["incluir_problemas"].is_empty():
 		$"%Terminal".item("(nenhuma)")
 	for codigo in registro["incluir"]:
@@ -1245,7 +1349,7 @@ func _imprimir_ajuste(matricula: String) -> void:
 	for prob in registro["incluir_problemas"]:
 		$"%Terminal".item(str(prob) + " — código inválido/ausente", 0, cores_terminal["erro"], PaletaSemantica.FUNDO_AJUSTE_INCLUIR)
 	$"%Terminal".espaco()
-	$"%Terminal".secao("Ajuste de matrícula — deseja EXCLUIR")
+	$"%Terminal".subsecao("Ajuste de matrícula — deseja EXCLUIR")
 	if registro["excluir"].is_empty() and registro["excluir_problemas"].is_empty():
 		$"%Terminal".item("(nenhuma)")
 	for codigo in registro["excluir"]:

@@ -63,6 +63,17 @@ size_flags_horizontal = 3
 [node name="VSeparator7" type="VSeparator" parent="Topo/HBoxContainer" unique_id=1018505392]
 layout_mode = 2
 
+[node name="ModoDetalhado" type="CheckBox" parent="Topo/HBoxContainer" unique_id=411000003]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+button_pressed = true
+text = "Modo Detalhado"
+
+[node name="VSeparator8" type="VSeparator" parent="Topo/HBoxContainer" unique_id=411000004]
+layout_mode = 2
+
 [node name="ModoAjuste" type="Button" parent="Topo/HBoxContainer" unique_id=967597774]
 custom_minimum_size = Vector2(30, 30)
 layout_mode = 2

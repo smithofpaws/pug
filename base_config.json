@@ -171,6 +171,9 @@
 	"choque": {
 		"limiar_presenca": 0.75
 	},
+	"estagio": {
+		"limite_reprovacao": 0.6
+	},
 	"formatos_arquivos": {
 		"horarios.txt": "*.txt ; Arquivos de horario",
 		"horarios.ini": "*.ini ; Arquivos INI",

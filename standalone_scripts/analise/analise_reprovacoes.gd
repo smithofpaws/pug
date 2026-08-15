@@ -81,6 +81,105 @@ func analise_reprovacoes(lista_situacoes: Dictionary) -> Dictionary:
 					_analisado_reprov[matr][situacao][cod_disc] = _analisado_reprov[matr][situacao][cod_disc] + 1
 	return _analisado_reprov
 
+## Calcula o índice de aprovação semestre a semestre de uma [param matricula]: o percentual de
+## disciplinas aprovadas dentre as cursadas em cada período letivo. [br]
+## Só entram na conta as disciplinas com resultado ("aprovado*" ou "reprovado*"): matrículas em aberto,
+## dispensas, trancamentos e aproveitamentos não são disciplinas efetivamente cursadas e avaliadas. [br]
+## Períodos letivos especiais (verão/inverno) não têm número de semestre e são ignorados. [br]
+## Retorna uma Array ordenada do período mais antigo ao mais recente, no formato: [br]
+## [ { [br]
+## "ano": 2023, [br]
+## "semestre": 1, [br]
+## "periodo": "2023/1", [br]
+## "aprovadas": 5, [br]
+## "cursadas": 7, [br]
+## "percentual": 71.43, [br]
+## "ch_cursada": 405.0, [br]
+## "ch_reprovada": 120.0, [br]
+## "ch_aprovada": 285.0, [br]
+## "percentual_ch_aprovada": 70.37, [br]
+## "apto_estagio": true [br]
+## } ] [br]
+## [param limite_reprovacao_estagio] (de [code]base_config.json:estagio.limite_reprovacao[/code]) rege
+## [code]apto_estagio[/code]: o regulamento exige, para
+## solicitar estágio, "não ter reprovado por frequência e por nota em mais de 60% da carga horária dos
+## componentes curriculares em que estava matriculado no semestre regular imediatamente anterior".
+## O critério é por CARGA HORÁRIA, então não acompanha o percentual de aprovação da mesma linha
+## (que conta disciplinas): reprovar só nas disciplinas pesadas pesa mais aqui. [br]
+## [code]Atenção:[/code] exige o histórico COMPLETO, antes de
+## [method AnaliseCurricular.simplificar_historico] — a simplificação descarta as reprovações, que são
+## justamente o denominador deste cálculo.
+func indice_aprovacao(matricula: String, historico: Dictionary, \
+limite_reprovacao_estagio: float = 0.6) -> Array[Dictionary]:
+	# Cada disciplina conta uma única vez por período: a exportação do GURI repete a mesma matrícula em
+	# linhas que diferem em colunas como turma e docente, e a deduplicação da leitura (que compara a
+	# linha inteira) não as descarta. Na divergência entre as repetições, a aprovação prevalece.
+	var periodos: Dictionary = {}
+	for dado in historico.get(matricula, {}).get("dados", []):
+		var situacao: String = str(dado.get("situacao", "")).to_lower()
+		var aprovada: bool = situacao.begins_with("aprovado")
+		if not aprovada and not situacao.begins_with("reprovado"):
+			continue
+		var ano: int = int(dado.get("ano", ""))
+		var semestre: int = int(dado.get("semestre", ""))
+		if ano <= 0 or semestre < 1 or semestre > 2:
+			continue
+		var chave: String = "%d/%d" % [ano, semestre]
+		if not periodos.has(chave):
+			periodos[chave] = {"ano": ano, "semestre": semestre, "disciplinas": {}}
+		var codigo: String = str(dado.get("codigocurriculo", "")).to_lower()
+		var disciplinas_periodo: Dictionary = periodos[chave]["disciplinas"]
+		disciplinas_periodo[codigo] = {
+			"aprovada": aprovada or disciplinas_periodo.get(codigo, {}).get("aprovada", false),
+			"ch": float(dado.get("cargahoraria", "0")),
+		}
+	var chaves: Array = periodos.keys()
+	chaves.sort_custom(func(a: String, b: String) -> bool:
+		if periodos[a]["ano"] != periodos[b]["ano"]:
+			return periodos[a]["ano"] < periodos[b]["ano"]
+		return periodos[a]["semestre"] < periodos[b]["semestre"])
+	var indice: Array[Dictionary] = []
+	for chave in chaves:
+		var disciplinas: Dictionary = periodos[chave]["disciplinas"]
+		var aprovadas: int = 0
+		var ch_cursada: float = 0.0
+		var ch_reprovada: float = 0.0
+		for cod in disciplinas.keys():
+			ch_cursada += disciplinas[cod]["ch"]
+			if disciplinas[cod]["aprovada"]:
+				aprovadas += 1
+			else:
+				ch_reprovada += disciplinas[cod]["ch"]
+		var cursadas: int = disciplinas.size()
+		indice.append({
+			"ano": periodos[chave]["ano"],
+			"semestre": periodos[chave]["semestre"],
+			"periodo": chave,
+			"aprovadas": aprovadas,
+			"cursadas": cursadas,
+			"percentual": float(aprovadas) / float(cursadas) * 100.0,
+			"ch_cursada": ch_cursada,
+			"ch_reprovada": ch_reprovada,
+			# Apresentada como APROVAÇÃO, para ler no mesmo sentido do percentual de disciplinas — o
+			# regulamento fala em reprovação, que é o complemento (não reprovar em mais de 60% da carga
+			# horária equivale a aprovar em pelo menos 40% dela).
+			"ch_aprovada": ch_cursada - ch_reprovada,
+			"percentual_ch_aprovada": ((ch_cursada - ch_reprovada) / ch_cursada * 100.0) \
+				if ch_cursada > 0.0 else 0.0,
+			# Comparação sem divisão: cobre o caso de CH ausente no histórico (ambas zeradas = apto).
+			"apto_estagio": ch_reprovada <= limite_reprovacao_estagio * ch_cursada,
+		})
+	return indice
+
+## Calcula o índice de aprovação de todas as matrículas do [param historico] de uma só vez, para que o
+## [code]main.gd[/code] compute uma única vez (antes da simplificação) o que os módulos consomem. [br]
+## Retorna [code]{ "<matricula>": <saída de [method indice_aprovacao]> }[/code].
+func indice_aprovacao_todos(historico: Dictionary, limite_reprovacao_estagio: float = 0.6) -> Dictionary:
+	var indices: Dictionary = {}
+	for matricula in historico.keys():
+		indices[matricula] = indice_aprovacao(matricula, historico, limite_reprovacao_estagio)
+	return indices
+
 ## Aprova todos discentes em todas disciplinas em situação de matrícula. [br]
 ## [code]Atenção:[/code] Esta função altera o [param historico] original (mutação in-place).
 func aprovar_matriculados(historico: Dictionary) -> void:

@@ -239,6 +239,13 @@ func listar_situacao(historico: Dictionary, situacao: Array[String]) -> Dictiona
 func processar_reprovacoes(lista_situacoes: Dictionary) -> Dictionary:
 	return analise_reprovacoes.analise_reprovacoes(lista_situacoes)
 
+## Calcula o índice de aprovação semestre a semestre de cada matrícula do [param historico]
+## (percentual de disciplinas aprovadas dentre as cursadas em cada período). [br]
+## Exige o histórico COMPLETO, antes de [method simplificar_historico] — ver
+## [method AnaliseReprovacoes.indice_aprovacao].
+func indice_aprovacao_todos(historico: Dictionary, limite_reprovacao_estagio: float = 0.6) -> Dictionary:
+	return analise_reprovacoes.indice_aprovacao_todos(historico, limite_reprovacao_estagio)
+
 ## Aprova todos discentes em todas disciplinas em situação de matrícula. [br]
 ## [code]Atenção:[/code] Esta função altera o [param historico] original (mutação in-place).
 func aprovar_matriculados(historico: Dictionary) -> void:
