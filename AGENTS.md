@@ -190,8 +190,8 @@ O layout do ZIP não é a única superfície. `export_presets.cfg` usa
 `export_filter="all_resources"`, e isso embute no **PCK, dentro de cada `.exe`**, todo arquivo solto
 na raiz do projeto — gitignorado ou não. Foi assim que o `config_usuario.json`, com **usuário e
 token do Kinto**, entrou nos quatro binários da **1.0.0 publicada**: `git status` limpo, ZIP
-conferido, credencial vazando mesmo assim. *(Token revogado; a release segue contaminada — apagá-la
-não desfaz downloads.)*
+conferido, credencial vazando mesmo assim. *(Aquele token tem de ser revogado no servidor — apagar
+a release não desfaz os downloads já feitos.)*
 
 - O `exclude_filter` dos três presets exclui `config_usuario.json`. **Todo arquivo gitignorado que
   passe a morar na raiz do projeto precisa entrar nesse filtro.**
