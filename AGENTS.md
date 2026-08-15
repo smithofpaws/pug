@@ -16,9 +16,29 @@ Instruções para o assistente ao trabalhar neste projeto.
 - **Chave de equivalência** `<origem>-<destino>` onde cada lado é uma chave de grade. Ex: `alec_2010-alec_2023.json` (intracurso entre projetos pedagógicos diferentes), `alec_2023-alea_2020.json` (entre cursos). O sufixo `0000` permanece como placeholder para "disciplinas sem grade".
 - **Disciplina dividida (várias fontes → mesmo alvo)** Quando, num mesmo arquivo de equivalência, **várias** disciplinas-fonte mapeiam para o **mesmo** código-alvo (ex.: `alec_2023-alec_2010.json` com `al0391: al0162` e `al0399: al0162`, "Saneamento I + II" → "Saneamento"), entende-se que a grade nova **dividiu** uma disciplina antiga. A lógica (`AnaliseGrades.alvo_completo`) só concede o aproveitamento do alvo quando o aluno cursou **TODAS** as fontes do grupo — não exige formato especial no JSON, basta listar as fontes apontando para o mesmo alvo.
 - **Separação de pastas:**
-  - `arquivos/`: arquivos próprios do programa (grades, cargas, equivalências). Devem seguir rigorosamente as convenções;
+  - `arquivos/`: arquivos próprios do programa (grades, cargas, equivalências, dicas, templates). Devem seguir rigorosamente as convenções;
   - `dados/`: dados externos importados pelo usuário (hist.csv, planejamento.csv, horarios.txt). Têm lógica própria de origem e são convertidos na leitura — não misturar os formatos destes arquivos com as convenções de `arquivos/`.
   - `exportacoes/`: saídas geradas pelo programa. Pasta na raiz do projeto, configurável em `base_config.json:diretorios.exportacoes`.
+
+### Repositórios de dados por curso
+
+Cada curso tem um repositório **privado** com seus dados canônicos — hoje só
+`smithofpaws/alec-data` (Engenharia Civil); amanhã um `alem-data` e assim por diante. Eles também
+alimentam outros consumidores (o `ppc2023`, em Typst, lê a mesma grade).
+
+- **Quem é dono de quê sai do nome do arquivo.** Um repositório de curso manda **apenas** nos
+  arquivos com o seu prefixo (`alec_*` → alec-data). Arquivos de outros cursos e as equivalências
+  **entre** cursos (`alcc_0000-alec_2023.json`) não pertencem a repositório nenhum: ficam versionados
+  no pug. Um repositório de curso nunca deve conter arquivo de outro.
+- **Sincronização:** `ferramentas/sincronizar_dados_curso.ps1` (ou o `.bat` de duplo clique). Ele
+  clona cada repositório com `gh` (são privados; o `gh` já autenticado evita token no projeto) e
+  copia **arquivo a arquivo**, filtrando pelo prefixo. **Sentido único:** edite no repositório
+  canônico e sincronize; as cópias em `arquivos/` são sobrescritas.
+- **Nada de `git subtree`.** Era o mecanismo antigo (`arquivos/compartilhado/<curso>/`, removido).
+  Ele mapeia um repositório para uma pasta e traz a árvore inteira, o que (a) impede dois cursos de
+  dividirem a mesma pasta e (b) **committa tudo no consumidor** — foi assim que o `README.md` do
+  alec-data virou conteúdo público do pug, e seria assim que dados de docentes voltariam a vazar.
+  Consumidor público só recebe cópia seletiva de arquivos.
 
 ## Controle de versão (git) e múltiplos computadores
 
@@ -59,12 +79,13 @@ O repositório guarda **código**, não dados pessoais. Já gitignorados, **nunc
   Contêm dados de alunos/professores. Exceção versionada: `dados/.gdignore` (marcador do Godot).
 - `exportacoes/` — saídas geradas (regeneráveis; o programa recria a pasta).
 - `arquivos/limesurvey/survey_tokens.lst` — tokens de participantes.
-- `arquivos/oferta/historico_professores.json` e `arquivos/lista_professores.json` — **dados nominais
-  de docentes** (disciplina, ano, semestre, dia e horário de cada aula). Moram em `arquivos/` porque é
-  de lá que o programa os lê, mas **não** são dados do programa: cada instalação monta os seus (ver
-  `arquivos/oferta/prompt_extracao_json.md`). O programa funciona sem eles — `main.gd` checa a
-  existência antes de ler; o Planejamento de Oferta apenas deixa de sugerir professores e de calcular
-  afinidade.
+- `arquivos/oferta/` — **dados nominais de docentes** (`historico_professores.json`,
+  `lista_professores.json` e o prompt que os gera). A pasta inteira é gitignorada, com exceção do
+  marcador `.gdignore`. Ela **não é montada à mão**: vem do repositório privado do curso, pelo
+  `ferramentas/sincronizar_dados_curso.ps1`. Um clone novo do pug simplesmente não a tem — e o
+  programa funciona assim mesmo (`main.gd` checa a existência antes de ler; o Planejamento de Oferta
+  apenas deixa de sugerir professores e de calcular afinidade). **Depois de clonar o pug numa
+  máquina, rode a sincronização**, senão o módulo abre mudo.
 
 `arquivos/` (grades, cargas, equivalências) **é** versionado. Antes de qualquer `push`/commit,
 conferir `git status` para garantir que nenhum CSV de `dados/` ou token entrou.

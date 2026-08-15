@@ -178,7 +178,8 @@ try {
 
     # Vazamento so aparece DEPOIS de publicado, e uma release publica e permanente mesmo se apagada.
     # Por isso a checagem e automatica, e nao conferencia a olho.
-    $proibidos = @("survey_tokens", "config_usuario.json", "dados/", "exportacoes/", ".backup")
+    $proibidos = @("survey_tokens", "config_usuario.json", "dados/", "exportacoes/", ".backup",
+                   "historico_professores", "lista_professores", "arquivos/oferta/")
     foreach ($p in $proibidos) {
         $achados = @($nomes | Where-Object { $_ -like "*$p*" })
         if ($achados.Count -gt 0) {

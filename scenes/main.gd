@@ -460,14 +460,13 @@ func _gravar_estado_atualizacao(chave: String, valor: Variant) -> void:
 
 
 func _carregar_arquivos() -> void:
-	# Dados curriculares: os proprios do pug (arquivos/<tipo>/) + os compartilhados via subtree,
-	# por curso (arquivos/compartilhado/<curso>/<tipo>/). A fonte canonica dos compartilhados sao
-	# repos como alec-data, tambem consumidos pelo PPC (Typst); ver o README de cada curso em
-	# arquivos/compartilhado/<curso>/. Tudo cai nos mesmos globais (chave = nome do arquivo).
+	# Dados curriculares, todos em arquivos/<tipo>/ — nao importa se sao proprios do pug ou vieram de
+	# um repo canonico de curso (alec-data e afins, tambem consumidos pelo PPC em Typst). A origem de
+	# cada arquivo e dedutivel do nome (<cod_curso>_<versao>) e quem os traz e
+	# ferramentas/sincronizar_dados_curso.ps1; o loader nao precisa saber de onde vieram.
 	_carregar_json_de("arquivos/grades/", GV.grades, JsonValidator.validar_grade)
 	_carregar_json_de("arquivos/equivalencias/", GV.equivalencias, JsonValidator.validar_equivalencia)
 	_carregar_json_de("arquivos/cargaexigida/", GV.ch_exigida, JsonValidator.validar_carga_exigida)
-	_carregar_compartilhado()
 	# Deriva a lista de grades de cada curso a partir dos arquivos carregados (fonte unica de
 	# verdade: os proprios arquivos de grade, nomeados <cod_curso>_<versao>.json).
 	_derivar_grades_cursos()
@@ -475,10 +474,9 @@ func _carregar_arquivos() -> void:
 ## Carrega todos os [code].json[/code] de [param subpasta] em [param alvo], chaveado pelo nome do
 ## arquivo sem extensao ([code]alec_2023.json[/code] -> [code]"alec_2023"[/code]), validando cada
 ## um com [param validador] (ex.: [code]JsonValidator.validar_grade[/code]). [br]
-## Filtra por [code].json[/code] para ignorar [code]README[/code]/[code]LICENSE[/code] de repos
-## compartilhados via subtree. Pasta ausente e' degradacao graciosa: emite aviso quando
-## [param avisar_se_ausente] (pastas locais, sempre esperadas) e fica silenciosa quando falso
-## (subpastas opcionais de um curso compartilhado, que pode nao ter todos os tipos).
+## Filtra por [code].json[/code] para ignorar qualquer outro arquivo que caia na pasta. Pasta
+## ausente e' degradacao graciosa: emite aviso quando [param avisar_se_ausente] (pastas sempre
+## esperadas) e fica silenciosa quando falso.
 func _carregar_json_de(subpasta: String, alvo: Dictionary, validador: Callable, avisar_se_ausente := true) -> void:
 	var dir = DirAccess.open(GV.dir_principal + subpasta)
 	if dir == null:
@@ -492,23 +490,6 @@ func _carregar_json_de(subpasta: String, alvo: Dictionary, validador: Callable, 
 		var dados: Dictionary = file_handling.load_json(GV.dir_principal + subpasta, arq)
 		validador.call(dados)
 		alvo[nome] = dados
-
-## Carrega os dados compartilhados via subtree, organizados por curso em
-## [code]arquivos/compartilhado/<curso>/[/code], espelhando as pastas por tipo
-## ([code]grades/[/code], [code]equivalencias/[/code], [code]cargaexigida/[/code]) e mesclando nos
-## mesmos globais dos dados locais. Cada [code]<curso>[/code] vem de um repo canonico (ex.:
-## [code]alec-data[/code]). Raiz/subpastas ausentes sao silenciosas (o subtree pode nao estar
-## presente em todos os clones, e um curso pode nao ter todos os tipos).
-func _carregar_compartilhado() -> void:
-	var raiz := "arquivos/compartilhado/"
-	var dir = DirAccess.open(GV.dir_principal + raiz)
-	if dir == null:
-		return
-	for curso in dir.get_directories():
-		var base := raiz + curso + "/"
-		_carregar_json_de(base + "grades/", GV.grades, JsonValidator.validar_grade, false)
-		_carregar_json_de(base + "equivalencias/", GV.equivalencias, JsonValidator.validar_equivalencia, false)
-		_carregar_json_de(base + "cargaexigida/", GV.ch_exigida, JsonValidator.validar_carga_exigida, false)
 
 # Deriva [code]cursos[cod].grades[/code] a partir dos arquivos em [code]arquivos/grades/[/code]
 # (ja carregados em [member GV.grades]), agrupando pelo prefixo [code]cod_curso[/code] do nome
@@ -779,14 +760,15 @@ func _on_barra_principal_modulo_selecionado(modulo_selecionado) -> void:
 			modulo.config_oferta = GV.configuracao_base["planejamento_oferta"]
 			modulo.config_interface = GV.configuracao_base["interface"]
 			modulo.diretorio_exportacao = GV.dir_exportacoes
-			# Leitura concentrada no main: os JSONs de oferta sao injetados (os guards de
-			# existencia reproduzem o comportamento antigo, que checava o arquivo antes de ler).
+			# Leitura concentrada no main: os JSONs de oferta sao injetados. Os guards de existencia
+			# NAO sao opcionais aqui — arquivos/oferta/ e' gitignorada e vem do repo privado do curso
+			# (ferramentas/sincronizar_dados_curso.ps1), entao um clone novo simplesmente nao a tem.
+			# Sem os arquivos o modulo abre igual, so sem afinidade e sem sugestao de professores.
 			var dir_oferta: String = GV.dir_principal + "arquivos/oferta/"
-			var dir_arquivos: String = GV.dir_principal + "arquivos/"
 			modulo.historico_professores = file_handling.load_json(dir_oferta, "historico_professores.json") \
 				if FileAccess.file_exists(dir_oferta + "historico_professores.json") else {}
-			modulo.lista_professores = file_handling.load_json(dir_arquivos, "lista_professores.json") \
-				if FileAccess.file_exists(dir_arquivos + "lista_professores.json") else {}
+			modulo.lista_professores = file_handling.load_json(dir_oferta, "lista_professores.json") \
+				if FileAccess.file_exists(dir_oferta + "lista_professores.json") else {}
 			$Modulo.add_child(modulo)
 
 func _on_config_parametro_alterado(caminho: Array, valor: Variant) -> void:

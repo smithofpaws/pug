@@ -36,16 +36,16 @@ var configuracao_base: Dictionary
 ## Persistido em [code]config_usuario.json[/code]; vazio se o arquivo nao existir.
 var config_usuario: Dictionary = {}
 
-## Todas as grades curriculares, carregadas de [code]/arquivos/grades/[/code] (locais) e de
-## [code]/arquivos/compartilhado/<curso>/grades/[/code] (compartilhadas via subtree).
-## Chave no padrao [code]<cod_curso>_<versao>[/code].
+## Todas as grades curriculares, carregadas de [code]/arquivos/grades/[/code]. Chave no padrao
+## [code]<cod_curso>_<versao>[/code], que tambem indica a origem: arquivos [code]alec_*[/code] vem do
+## repo canonico do curso (sincronizados por [code]ferramentas/sincronizar_dados_curso.ps1[/code]);
+## os demais sao proprios do pug.
 var grades: Dictionary
-## Todas as equivalencias, carregadas de [code]/arquivos/equivalencias/[/code] (locais, inclui
-## as entre cursos) e de [code]/arquivos/compartilhado/<curso>/equivalencias/[/code] (intracurso,
-## via subtree). Chave no padrao [code]<origem>-<destino>[/code].
+## Todas as equivalencias, carregadas de [code]/arquivos/equivalencias/[/code]. Chave no padrao
+## [code]<origem>-<destino>[/code]. As intracurso vem do repo canonico daquele curso; as entre
+## cursos sao proprias do pug (pertencem a dois cursos e nao cabem no repo de nenhum).
 var equivalencias: Dictionary
-## Cargas horarias exigidas por nucleo, carregadas de [code]/arquivos/cargaexigida/[/code] e de
-## [code]/arquivos/compartilhado/<curso>/cargaexigida/[/code] (via subtree).
+## Cargas horarias exigidas por nucleo, carregadas de [code]/arquivos/cargaexigida/[/code].
 var ch_exigida: Dictionary
 ## Dicas de funcionalidade do programa, carregadas de [code]arquivos/dicas.json[/code].
 ## Chaves aninhadas por modulo. Usado por [DicasPrograma].

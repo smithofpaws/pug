@@ -23,14 +23,14 @@ config_usuario.json
 # Tokens de participantes do LimeSurvey (gerados; vinculam-se a alunos).
 arquivos/limesurvey/survey_tokens.lst
 
-# Dados nominais de docentes. Ficam em arquivos/ por conveniencia (o programa os le de la), mas sao
-# DADOS PESSOAIS e o repositorio e publico — cada instalacao monta os seus. O programa funciona sem
-# eles (main.gd checa a existencia antes de ler); o modulo Planejamento de Oferta apenas deixa de
-# sugerir professores e de calcular afinidade.
-#   historico_professores.json: 95 docentes com disciplina, ano, semestre, dia e horario de cada aula
-#   lista_professores.json:     docentes do curso, nome a nome
-arquivos/oferta/historico_professores.json
-arquivos/lista_professores.json
+# arquivos/oferta/: DADOS PESSOAIS de docentes (historico_professores.json, lista_professores.json)
+# e o prompt que os gera. O repositorio e publico; esta pasta vem inteira do alec-data (privado),
+# trazida por ferramentas/sincronizar_dados_curso.ps1, e NUNCA e commitada aqui.
+# O programa funciona sem ela (main.gd checa a existencia antes de ler); o Planejamento de Oferta
+# apenas deixa de sugerir professores e de calcular afinidade.
+# Mantemos a pasta e o marcador .gdignore versionados, como em dados/.
+/arquivos/oferta/*
+!/arquivos/oferta/.gdignore
 
 # ============================================================================
 # Saidas geradas pelo programa (regeneraveis — o programa recria a pasta)
