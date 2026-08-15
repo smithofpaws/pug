@@ -111,6 +111,9 @@ PC", e é controlada:
 - **Customizado** (checkboxes, formulários, layout próprio): usar `AcceptDialog`/`ConfirmationDialog` diretamente. Ex.: `seletor_cursos.gd`, `seletor_disciplinas_grade.gd`, `planejamentooferta.gd`.
 - **Sempre limitar à tela.** Todo diálogo/popup construído em runtime deve chamar `Dialogos.limitar_a_tela(janela)` logo após `popup_centered()` — impede que a janela ultrapasse a área visível (encolhe, re-centraliza e reduz o `min_size` se preciso, pois o Godot ignora `size` abaixo do `min_size`). Para conteúdo que cresce com os dados, combine com um `ScrollContainer` (`SIZE_EXPAND_FILL` + `custom_minimum_size`) para rolar em vez de esticar. `Dialogos.confirmar`/`escolha_lista` já fazem isso internamente; aplique manualmente nos demais (seletores, `FileDialog`, etc.). Exceções: tooltips (`DicaFlutuante`) e popups que já usam `popup_centered_ratio` (ex.: `editor_celula.gd`).
 
+## Exportação
+Sempre que requisitado para exportar o projeto, exporte-o na área de trabalho em um arquivo zipado, pronto para uso ao ser descompactado (portátil), isto é, com todos arquivos necessarios. A lógica de nomeacão do arquivo é "PUG_WIN_X64.zip". Arquivos temporários gerados na exportação devem ser removidos. Por enquanto exporte os executáveis com e sem debug e com e sem console, para o usuário decidir qual usar.
+
 ## Registro INPI
 
 - **GRU:** 29409192354476831 (Serviço 730 - Registro de Software)
