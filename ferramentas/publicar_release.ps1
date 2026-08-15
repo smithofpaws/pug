@@ -224,8 +224,16 @@ try {
     # ---------------------------------------------------------------- publicacao
     Passo "Commitando a versao e criando a tag"
     & $Git -C $Raiz add project.godot export_presets.cfg
-    & $Git -C $Raiz commit -m "Versao $Versao"
-    if ($LASTEXITCODE -ne 0) { throw "Falha ao commitar a versao." }
+    # A versao pedida pode ja estar commitada (ex.: a primeira release, cuja versao entrou junto com
+    # o codigo). Nesse caso nao ha o que commitar, e um "git commit" vazio falharia sem motivo.
+    $pendente = & $Git -C $Raiz diff --cached --name-only
+    if ($pendente) {
+        & $Git -C $Raiz commit -m "Versao $Versao"
+        if ($LASTEXITCODE -ne 0) { throw "Falha ao commitar a versao." }
+    }
+    else {
+        Write-Host "   a versao ja estava commitada; nada a commitar."
+    }
     # Tag ANOTADA: o --follow-tags do push so envia tags anotadas.
     & $Git -C $Raiz tag -a $Tag -m "PUG $Versao"
     if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a tag $Tag." }
