@@ -108,7 +108,7 @@ func parse(csv: String) -> Dictionary:
 
 
 ## Extrai os códigos de disciplina candidatos de uma [param entrada] de texto livre (ex.:
-## [code]"AL0400 - Fundacoes - T20 - Diego"[/code] → [code]["al0400"][/code]). Normaliza para
+## [code]"AL0400 - Fundacoes - T20 - Maria"[/code] → [code]["al0400"][/code]). Normaliza para
 ## minúsculas e sem espaço. Pode retornar 0, 1 ou mais candidatos; a validação contra a grade fica
 ## no módulo.
 func extrair_codigos(entrada: String) -> Array[String]:

@@ -190,7 +190,7 @@ func detectar_choques(horarios_txt_condicao: Dictionary, regras: Array[Array] = 
 ## { [br]
 ## "matriculado_agora": { [br]
 ## { "linha": "23", "professor": "Maria da Silva Souza", "sala": "A1-304 (Sala de Aula)", ... } [br]
-## { "linha": "18", "professor": "Joao Pereira Lima", "sala": "A1-303 (Sala de Aula)" ... } [br]
+## { "linha": "18", "professor": "João Pereira Lima", "sala": "A1-303 (Sala de Aula)" ... } [br]
 ## } [br]
 ## }
 func extrair_horarios_txt(horarios_txt: Array, matriculada_com_turma: Dictionary, disc_cursaveis: Dictionary) -> Dictionary:

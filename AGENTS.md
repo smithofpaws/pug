@@ -188,7 +188,10 @@ passam por `ProjectSettings.globalize_path()` antes de ir ao PowerShell.
 - **GRU:** 29409192354476831 (Serviço 730 - Registro de Software)
 - **Hash SHA-512:** `6407F5D4C317E1DC6ABFA20A780D2192411FC50FE6F708BD16B2E8A3082697EEF798E9997B74EE8E32F9F1F0FCECC83BCD2DE2A4B70B613C50AC35DF652D2A76`
 - **Arquivo fonte:** `PUG_Fonte_Registro_INPI.zip`
-- **Titular:** Diego Arthur Hartmann (CPF: [removido])
+- **Titular:** Diego Arthur Hartmann
+
+> O CPF do titular e demais dados do processo **não ficam aqui** — o repositório é público. Guarde-os
+> fora do git (ex.: junto ao comprovante da GRU).
 
 ## Troubleshooting GDScript
 

@@ -88,7 +88,7 @@ func carregar_horarios_txt(diretorio: String, arquivo: String, posicoes_horarios
 		var split_arr: PackedStringArray = line.split(",")
 		var line_arr: Array[String] = []
 		# Aqui, para a linha em análise, é necessário verificar se existem aspas no texto. Um exemplo 
-		# dessa situação é tanto nomes de professores "Diego Arthur Hartmann" que possuem aspas devido
+		# dessa situação é tanto nomes de professores "Maria da Silva Souza" que possuem aspas devido
 		# aos espaços no texto, quanto ao nome de disciplinas "Mecânica dos Solos". Estas aspas devem
 		# ser removidos.
 		# Um caso específico é textos entre aspas que contenham vírgulas. Um exemplo é 

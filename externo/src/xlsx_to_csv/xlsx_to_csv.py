@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+# Ajuste estes caminhos para as pastas da sua maquina antes de rodar.
 input_directory = './Respostas/'
 output_directory = './out/'
 
