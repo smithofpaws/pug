@@ -54,6 +54,38 @@ function Passo($mensagem) {
     Write-Host ">> $mensagem" -ForegroundColor Cyan
 }
 
+# Confere o que o Godot embutiu no PCK, lendo o log da exportacao ($log) da variante $variante.
+#
+# A conferencia do ZIP, no fim do script, olha o LAYOUT do pacote e nao enxerga o interior dos
+# executaveis. Mas export_filter="all_resources" leva para dentro do PCK todo arquivo solto na raiz
+# do projeto, gitignorado ou nao: foi assim que o config_usuario.json — com usuario e token do Kinto
+# — entrou nos binarios da 1.0.0, publicada. O exclude_filter dos presets fecha o buraco; esta
+# guarda existe para que a regressao apareca aqui, e nao numa release publica.
+#
+# Le o LOG, e nao o .exe: no binario pronto o caminho "res://..." nao aparece como texto (so o
+# conteudo do arquivo aparece), e procurar pelo nome solto acusa qualquer mencao no codigo — o
+# main.gd le "config_usuario.json" pelo nome, entao o falso positivo seria garantido. O log traz uma
+# linha "Storing File: res://<caminho>" por arquivo empacotado, que e exatamente a pergunta certa.
+function Conferir-Pck($log, $variante) {
+    $proibidos = @("res://config_usuario.json", "res://arquivos/limesurvey/survey_tokens.lst")
+    $linhas = @(Select-String -Path $log -SimpleMatch "Storing File: res://" -ErrorAction SilentlyContinue)
+    # Nenhuma linha significa que o formato do log mudou e a guarda deixou de enxergar o PCK.
+    # Silenciosamente aprovar seria pior que falhar: o ponto cego voltaria sem aviso nenhum.
+    if ($linhas.Count -eq 0) {
+        throw ("Nao consegui conferir o conteudo do PCK ($variante): o log da exportacao nao tem " +
+               "nenhuma linha 'Storing File:'. Confira o formato do log do Godot antes de publicar.")
+    }
+    foreach ($proibido in $proibidos) {
+        foreach ($linha in $linhas) {
+            if ($linha.Line.Contains("Storing File: " + $proibido)) {
+                throw ("'" + $proibido + "' foi embutido no PCK ($variante). Confira o " +
+                       "exclude_filter em export_presets.cfg. NAO publique este build.")
+            }
+        }
+    }
+    Write-Host ("   PCK conferido: " + $linhas.Count + " arquivos, nenhum proibido.")
+}
+
 try {
     # ---------------------------------------------------------------- pre-condicoes
     if ($Versao -notmatch '^\d+\.\d+\.\d+$') {
@@ -103,34 +135,24 @@ try {
 
     # Duas passadas em pastas separadas: release e debug produzem os MESMOS nomes de arquivo e
     # colidiriam na mesma pasta. O console wrapper sai junto de cada uma (export_console_wrapper=2).
+    # A saida de cada exportacao e guardada: e nela que o Godot lista, linha a linha, TUDO que entrou
+    # no PCK ("Storing File: res://..."). E a unica leitura confiavel do conteudo do pacote embutido
+    # — no binario pronto o caminho nao aparece como texto, so o conteudo do arquivo. Ver
+    # Conferir-Pck logo abaixo.
+    $logRelease = Join-Path $Temp "export_release.log"
+    $logDebug   = Join-Path $Temp "export_debug.log"
+
     Passo "Exportando (release)"
-    & $Godot --headless --path $Raiz --export-release "PUG" (Join-Path $dirRelease "Auxiliar.exe")
+    & $Godot --headless --path $Raiz --export-release "PUG" (Join-Path $dirRelease "Auxiliar.exe") |
+        Tee-Object -FilePath $logRelease
     if ($LASTEXITCODE -ne 0) { throw "A exportacao release falhou (codigo $LASTEXITCODE)." }
+    Conferir-Pck $logRelease "release"
 
     Passo "Exportando (debug)"
-    & $Godot --headless --path $Raiz --export-debug "PUG" (Join-Path $dirDebug "Auxiliar.exe")
+    & $Godot --headless --path $Raiz --export-debug "PUG" (Join-Path $dirDebug "Auxiliar.exe") |
+        Tee-Object -FilePath $logDebug
     if ($LASTEXITCODE -ne 0) { throw "A exportacao debug falhou (codigo $LASTEXITCODE)." }
-
-    # ---------------------------------------------------------------- guarda do PCK
-    # A conferencia do ZIP mais abaixo olha o LAYOUT do pacote, e nao enxerga o que o Godot embutiu
-    # DENTRO de cada executavel. Com export_filter="all_resources", qualquer arquivo solto na raiz do
-    # projeto vai parar no PCK — foi assim que o config_usuario.json (com usuario e token do Kinto)
-    # entrou nos binarios da 1.0.0, publicada. O exclude_filter dos presets fecha isso; esta guarda
-    # existe para que a regressao apareca ANTES da publicacao, e nao numa release publica.
-    # Procura o NOME do arquivo, nunca o segredo: o script nao deve ler credencial nenhuma.
-    Passo "Conferindo os executaveis (nada gitignorado dentro do PCK)"
-    $proibidosNoPck = @("config_usuario.json", "survey_tokens.lst")
-    foreach ($exe in (Get-ChildItem -Path $dirRelease, $dirDebug -Filter *.exe -File)) {
-        $conteudo = [System.Text.Encoding]::GetEncoding(28591).GetString(
-            [System.IO.File]::ReadAllBytes($exe.FullName))
-        foreach ($proibido in $proibidosNoPck) {
-            if ($conteudo.Contains($proibido)) {
-                throw ("'" + $proibido + "' foi embutido no PCK de " + $exe.Name + ". " +
-                       "Confira o exclude_filter em export_presets.cfg. NAO publique este build.")
-            }
-        }
-    }
-    Write-Host "   nenhum arquivo proibido embutido nos executaveis."
+    Conferir-Pck $logDebug "debug"
 
     # ---------------------------------------------------------------- montagem do pacote
     Passo "Montando o pacote"
