@@ -336,7 +336,7 @@ Tabela com horários (linhas) × dias da semana (colunas). Cada célula pode con
 - **Ctrl+Z:** desfaz a última ação na grade (alocar, mover, remover, posicionar automaticamente, limpar preenchimento/restrições, marcar/remover restrição). O histórico é **multi-nível** (Ctrl+Z repetido volta várias ações), fica **em memória** durante a sessão e é **zerado ao carregar outro plano** (abrir/baixar/importar horarios.txt).
 - Clique em um **card** na lista de disciplinas (à esquerda) para destacar, com **fundo verde claro**, apenas as células daquela disciplina na grade.
 
-Os filtros do painel (curso, semestre e professor) afetam a grade: numa célula com disciplinas sobrepostas, as que **não** passam por um filtro ativo aparecem **esmaecidas** (ou são **ocultadas**, conforme a Visualização). Por exemplo, com o **filtro de professor** em Diego Arthur Hartmann, a disciplina dele fica em branco e as demais no mesmo horário ficam esmaecidas; compartilhadas de curso casam pelo prefixo (`EC04;EM04` conta como `EC`).
+Os filtros do painel (curso, semestre e professor) afetam a grade: numa célula com disciplinas sobrepostas, as que **não** passam por um filtro ativo aparecem **esmaecidas** (ou são **ocultadas**, conforme a Visualização). Por exemplo, com o **filtro de professor** em Maria da Silva Souza, a disciplina dela fica em branco e as demais no mesmo horário ficam esmaecidas; compartilhadas de curso casam pelo prefixo (`EC04;EM04` conta como `EC`).
 
 O botão **Visualização**, no grupo **Filtros**, controla, para cada filtro, se as disciplinas que não passam são **ocultadas** (caixa marcada) ou apenas **esmaecidas** (caixa desmarcada):
 

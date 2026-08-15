@@ -17,7 +17,7 @@ O arquivo possui delimitador `;` e as seguintes colunas de interesse:
 
 **Regras de Processamento:**
 1. **Filtro:** Considere apenas as linhas onde a coluna `docente` corresponda ao "Professor Alvo" (ignorando diferenças de maiúsculas/minúsculas e acentos).
-2. **Formatação da Chave Raiz:** O nome do professor deve ser convertido para `snake_case` sem acentos (ex: "Diego Arthur Hartmann" se torna "diego_arthur_hartmann"). Esta será a chave principal do JSON.
+2. **Formatação da Chave Raiz:** O nome do professor deve ser convertido para `snake_case` sem acentos (ex: "Maria da Silva Souza" se torna "maria_da_silva_souza"). Esta será a chave principal do JSON.
 3. **Agrupamento:** 
    - O primeiro nível interno deve ser o código da disciplina (`cod_disciplina`), todo em letras minúsculas.
    - O segundo nível deve ser o `ano`.

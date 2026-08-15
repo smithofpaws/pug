@@ -59,9 +59,19 @@ O repositório guarda **código**, não dados pessoais. Já gitignorados, **nunc
   Contêm dados de alunos/professores. Exceção versionada: `dados/.gdignore` (marcador do Godot).
 - `exportacoes/` — saídas geradas (regeneráveis; o programa recria a pasta).
 - `arquivos/limesurvey/survey_tokens.lst` — tokens de participantes.
+- `arquivos/oferta/historico_professores.json` e `arquivos/lista_professores.json` — **dados nominais
+  de docentes** (disciplina, ano, semestre, dia e horário de cada aula). Moram em `arquivos/` porque é
+  de lá que o programa os lê, mas **não** são dados do programa: cada instalação monta os seus (ver
+  `arquivos/oferta/prompt_extracao_json.md`). O programa funciona sem eles — `main.gd` checa a
+  existência antes de ler; o Planejamento de Oferta apenas deixa de sugerir professores e de calcular
+  afinidade.
 
 `arquivos/` (grades, cargas, equivalências) **é** versionado. Antes de qualquer `push`/commit,
 conferir `git status` para garantir que nenhum CSV de `dados/` ou token entrou.
+
+**Nada de nome real de pessoa em arquivo versionado** — nem em exemplo de documentação. O repositório
+é público e o `MANUAL.md` vai dentro do pacote distribuído. Use nomes fictícios (`Maria da Silva
+Souza`) nos exemplos do manual, das dicas e dos prompts.
 
 #### Exceção controlada: sincronização de planejamento (servidor Kinto)
 
