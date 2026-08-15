@@ -133,6 +133,11 @@ try {
     # nada gitignorado escapa para um pacote publico — em especial
     # arquivos/limesurvey/survey_tokens.lst, que sao tokens vinculados a alunos (LGPD).
     $rastreados = & $Git -C $Raiz ls-files arquivos externo/bin
+    # arquivos/oferta/ fica de fora do pacote: os dados de docentes vem da sincronizacao com o repo
+    # privado do curso, em cada maquina, e o unico arquivo versionado ali (.gdignore) so serve ao
+    # editor do Godot. Sem esta exclusao, a guarda de arquivo proibido abaixo barraria o proprio
+    # .gdignore e a publicacao nunca passaria.
+    $rastreados = $rastreados | Where-Object { -not $_.StartsWith("arquivos/oferta/") }
     foreach ($rel in $rastreados) {
         $origem  = Join-Path $Raiz $rel
         $destino = Join-Path $staging $rel
