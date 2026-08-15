@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Pacote de Utilidades para Graduação"
-config/version="1.0.0"
+config/version="1.0.1"
 config/tags=PackedStringArray("project")
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
