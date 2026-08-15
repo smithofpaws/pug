@@ -85,6 +85,9 @@ func _ready() -> void:
 	var chaves: Array[String] = []
 	chaves.assign(GV.configuracao_base["modulos"].keys())
 	$BarraPrincipal.lista = chaves
+	# Versao do executavel para o cabecalho do manual gerado (botao Ajuda), injetada como os demais
+	# dados: quem le ProjectSettings/arquivos e o main, a barra so apresenta.
+	$BarraPrincipal.versao_programa = _atualizador.versao_instalada()
 	# Sobreposicao de progresso (acima de tudo) para os calculos demorados.
 	_overlay_progresso = OverlayProgresso.new()
 	add_child(_overlay_progresso)

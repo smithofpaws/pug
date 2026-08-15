@@ -559,7 +559,7 @@ Parâmetros específicos de cada módulo, como pesos do posicionador automático
 
 ### 5.3 Atualização do programa
 
-Na aba **Geral** ficam a versão instalada e os controles de atualização. O PUG se atualiza sozinho a partir das versões publicadas no GitHub.
+Na aba **Geral** ficam a versão instalada (**Versão instalada: X.Y.Z**) e os controles de atualização. A mesma versão aparece logo abaixo do título deste manual, sempre que ele é aberto pelo botão **Ajuda** — é a versão do executável em uso. O PUG se atualiza sozinho a partir das versões publicadas no GitHub.
 
 - **Verificar atualizações ao iniciar o programa** — quando marcado, o programa consulta o GitHub ao abrir e **só avisa se houver versão nova**. A consulta é silenciosa: sem internet, ou já estando em dia, nada aparece. Desmarque para verificar apenas quando quiser.
 - **Verificar atualizações** — faz a consulta na hora e relata o resultado, mesmo que não haja novidade.

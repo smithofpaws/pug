@@ -8,6 +8,11 @@ signal mensagem_texto
 
 var lista: Array[String] : set = _lista_changed
 
+## Versão do executável, injetada pelo [code]main.gd[/code] (vem de
+## [code]application/config/version[/code], não de arquivo). Só é lida ao gerar o manual — o
+## [code]_ready()[/code] dos filhos roda antes do [code]main._ready()[/code], então aqui ainda estaria vazia.
+var versao_programa: String = ""
+
 # Ids canonicos na MESMA ordem dos itens do seletor (inclui desabilitados), para reverter_seletor_para().
 var _ids_modulos: Array[String] = []
 
@@ -87,10 +92,13 @@ func _on_botao_ajuda_button_up() -> void:
 	if arquivo == null:
 		emit_signal("mensagem_texto", "Não foi possível abrir o manual (MANUAL.md não encontrado).")
 		return
-	var md: String = arquivo.get_as_text()
+	var md: String = _com_versao(arquivo.get_as_text())
 	arquivo.close()
 
-	var html: String = MarkdownHtml.documento(md, "Manual do Usuário — PUG", _css_tema())
+	var titulo: String = "Manual do Usuário — PUG"
+	if not versao_programa.is_empty():
+		titulo += " %s" % versao_programa
+	var html: String = MarkdownHtml.documento(md, titulo, _css_tema())
 	var saida := FileAccess.open("user://manual.html", FileAccess.WRITE)
 	if saida == null:
 		emit_signal("mensagem_texto", "Não foi possível gerar o manual em HTML.")
@@ -102,6 +110,23 @@ func _on_botao_ajuda_button_up() -> void:
 		OS.shell_open(ProjectSettings.globalize_path("user://manual.html"))
 	else:
 		emit_signal("mensagem_texto", ProjectSettings.globalize_path("user://manual.html"))
+
+
+# Acrescenta a versão do executável logo abaixo do título do manual. A versão NÃO fica escrita no
+# MANUAL.md: ela é intrinseca ao binario (application/config/version, espelhada no
+# export_presets.cfg pelo publicar_release.ps1), e uma terceira copia dentro do texto envelheceria
+# em silêncio. Como o HTML é regerado a cada clique em Ajuda, a injeção em runtime nunca desatualiza.
+func _com_versao(md: String) -> String:
+	if versao_programa.is_empty():
+		return md
+	var linha_versao: String = "*Versão %s*" % versao_programa
+	var linhas: PackedStringArray = md.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+	# Abaixo do H1 quando ele existe; senão no topo, para nunca perder a informação.
+	if linhas.size() > 0 and linhas[0].begins_with("# "):
+		linhas.insert(1, "")
+		linhas.insert(2, linha_versao)
+		return "\n".join(linhas)
+	return linha_versao + "\n\n" + md
 
 
 # Monta a folha de estilo do manual a partir das cores do tema vigente (via PaletaSemantica), para
