@@ -111,6 +111,27 @@ try {
     & $Godot --headless --path $Raiz --export-debug "PUG" (Join-Path $dirDebug "Auxiliar.exe")
     if ($LASTEXITCODE -ne 0) { throw "A exportacao debug falhou (codigo $LASTEXITCODE)." }
 
+    # ---------------------------------------------------------------- guarda do PCK
+    # A conferencia do ZIP mais abaixo olha o LAYOUT do pacote, e nao enxerga o que o Godot embutiu
+    # DENTRO de cada executavel. Com export_filter="all_resources", qualquer arquivo solto na raiz do
+    # projeto vai parar no PCK — foi assim que o config_usuario.json (com usuario e token do Kinto)
+    # entrou nos binarios da 1.0.0, publicada. O exclude_filter dos presets fecha isso; esta guarda
+    # existe para que a regressao apareca ANTES da publicacao, e nao numa release publica.
+    # Procura o NOME do arquivo, nunca o segredo: o script nao deve ler credencial nenhuma.
+    Passo "Conferindo os executaveis (nada gitignorado dentro do PCK)"
+    $proibidosNoPck = @("config_usuario.json", "survey_tokens.lst")
+    foreach ($exe in (Get-ChildItem -Path $dirRelease, $dirDebug -Filter *.exe -File)) {
+        $conteudo = [System.Text.Encoding]::GetEncoding(28591).GetString(
+            [System.IO.File]::ReadAllBytes($exe.FullName))
+        foreach ($proibido in $proibidosNoPck) {
+            if ($conteudo.Contains($proibido)) {
+                throw ("'" + $proibido + "' foi embutido no PCK de " + $exe.Name + ". " +
+                       "Confira o exclude_filter em export_presets.cfg. NAO publique este build.")
+            }
+        }
+    }
+    Write-Host "   nenhum arquivo proibido embutido nos executaveis."
+
     # ---------------------------------------------------------------- montagem do pacote
     Passo "Montando o pacote"
     $variantes = @(
