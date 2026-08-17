@@ -13,10 +13,15 @@ set "AQUI=%~dp0"
 echo ==========================================================
 echo   PUG - Publicacao de release
 echo ==========================================================
-echo.
 
+REM O proprio script mostra a versao atual, a ultima tag publicada e as sugestoes de numeracao
+REM (-Info nao exporta nada). A leitura fica no PowerShell, e nao aqui, para nao repetir em duas
+REM linguagens a mesma logica de descobrir a versao.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%AQUI%publicar_release.ps1" -Info
+
+echo.
 set "VERSAO="
-set /p VERSAO="Numero da versao (formato X.Y.Z, ex.: 1.0.0): "
+set /p VERSAO="Numero da NOVA versao (formato X.Y.Z): "
 if "%VERSAO%"=="" (
     echo.
     echo Nenhuma versao informada. Cancelado.
@@ -24,21 +29,30 @@ if "%VERSAO%"=="" (
 )
 
 echo.
+echo   A = x64 e ARM64 ^(padrao^)
+echo   X = so x64 ^(use se os modelos de exportacao ARM64 nao estiverem instalados^)
+echo.
+choice /C AX /M "Arquiteturas"
+
+set "EXTRA="
+if errorlevel 2 set "EXTRA=-SemArm"
+
+echo.
 echo   S = publica no GitHub ^(cria a tag e envia a release^)
-echo   N = so prepara o pacote na Area de Trabalho, sem tocar no GitHub
+echo   N = so prepara os pacotes na Area de Trabalho, sem tocar no GitHub
 echo.
 choice /C SN /M "O que fazer"
 
 if errorlevel 2 (
     echo.
-    echo Preparando o pacote ^(nada sera enviado ao GitHub^)...
+    echo Preparando os pacotes ^(nada sera enviado ao GitHub^)...
     echo.
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%AQUI%publicar_release.ps1" -Versao %VERSAO%
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%AQUI%publicar_release.ps1" -Versao %VERSAO% %EXTRA%
 ) else (
     echo.
     echo Publicando a versao %VERSAO% no GitHub...
     echo.
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%AQUI%publicar_release.ps1" -Versao %VERSAO% -Publicar
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%AQUI%publicar_release.ps1" -Versao %VERSAO% %EXTRA% -Publicar
 )
 
 :fim

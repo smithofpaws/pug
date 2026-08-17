@@ -572,6 +572,8 @@ Ao escolher instalar, o pacote é baixado e sua integridade é conferida por uma
 
 O pacote tem cerca de **150 MB**, porque inclui as quatro variantes do executável (com e sem depuração, com e sem console).
 
+**Duas versões, uma por tipo de processador.** Cada versão publicada traz `PUG_WIN_X64.zip` (para os PCs Windows comuns, com processador Intel ou AMD) e `PUG_WIN_ARM64.zip` (para os PCs Windows com processador ARM, como os Snapdragon X). Na dúvida, use o **X64**: ele funciona em ambos, só que num PC ARM roda em modo de compatibilidade, mais lento. A atualização automática **mantém o tipo que você instalou** — quem baixou o pacote ARM64 continua recebendo pacotes ARM64. Para trocar de um para o outro, baixe o ZIP desejado manualmente e descompacte por cima da instalação.
+
 > **Observações**
 > - A atualização automática só funciona no programa **exportado** (não pelo editor Godot).
 > - Se o PUG estiver instalado dentro de uma pasta do **OneDrive**, a troca pode falhar por arquivos travados pela sincronização. O ideal é instalar fora do OneDrive.

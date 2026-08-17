@@ -145,11 +145,29 @@ PC", e é controlada:
 - **Sempre limitar à tela.** Todo diálogo/popup construído em runtime deve chamar `Dialogos.limitar_a_tela(janela)` logo após `popup_centered()` — impede que a janela ultrapasse a área visível (encolhe, re-centraliza e reduz o `min_size` se preciso, pois o Godot ignora `size` abaixo do `min_size`). Para conteúdo que cresce com os dados, combine com um `ScrollContainer` (`SIZE_EXPAND_FILL` + `custom_minimum_size`) para rolar em vez de esticar. `Dialogos.confirmar`/`escolha_lista` já fazem isso internamente; aplique manualmente nos demais (seletores, `FileDialog`, etc.). Exceções: tooltips (`DicaFlutuante`) e popups que já usam `popup_centered_ratio` (ex.: `editor_celula.gd`).
 
 ## Exportação
-Sempre que requisitado para exportar o projeto, exporte-o na área de trabalho em um arquivo zipado, pronto para uso ao ser descompactado (portátil), isto é, com todos arquivos necessarios. A lógica de nomeacão do arquivo é "PUG_WIN_X64.zip". Arquivos temporários gerados na exportação devem ser removidos. Por enquanto exporte os executáveis com e sem debug e com e sem console, para o usuário decidir qual usar.
+Sempre que requisitado para exportar o projeto, exporte-o na área de trabalho em um arquivo zipado, pronto para uso ao ser descompactado (portátil), isto é, com todos arquivos necessarios. A lógica de nomeacão do arquivo é "PUG_WIN_\<ARQUITETURA\>.zip" — hoje `PUG_WIN_X64.zip` e `PUG_WIN_ARM64.zip`. Arquivos temporários gerados na exportação devem ser removidos. Por enquanto exporte os executáveis com e sem debug e com e sem console, para o usuário decidir qual usar.
 
 **Não montar o pacote à mão** — use `ferramentas/publicar_release.ps1 -Versao X.Y.Z` (sem `-Publicar`
-ele só prepara e deixa o ZIP na Área de Trabalho). O script faz exatamente o que esta seção pede e
-ainda garante o contrato do ZIP descrito abaixo, do qual o atualizador automático depende.
+ele só prepara e deixa os ZIPs na Área de Trabalho). O script faz exatamente o que esta seção pede e
+ainda garante o contrato do ZIP descrito abaixo, do qual o atualizador automático depende. O `.bat`
+de duplo clique começa mostrando a versão em `project.godot`, a última tag publicada e sugestões de
+numeração (`-Info`), para a próxima versão ser escolhida com as duas informações à vista.
+
+### Arquiteturas (x64 e ARM64)
+
+Cada arquitetura tem seu **preset** em `export_presets.cfg` — `PUG` (`x86_64`) e `PUG_ARM64`
+(`arm64`), idênticos exceto por `binary_format/architecture` — e gera **seu próprio ZIP**. O ARM64
+existe para os PCs Windows com processador ARM (Snapdragon X e afins), que hoje rodam o pacote x64
+pela emulação Prism, mais lenta.
+
+- **Modelos de exportação:** o ARM64 exige `windows_release_arm64.exe` e `windows_debug_arm64.exe`
+  (mais os `_console`) em `%APPDATA%\Godot\export_templates\<versão>\`. Eles vêm no pacote oficial de
+  modelos — se a pasta não os tiver, instale pelo editor (Editor › Gerenciar modelos de exportação).
+  O script **confere antes de exportar** e aborta com a instrução; `-SemArm` publica só o x64.
+- **Cada pacote se atualiza dentro da própria arquitetura.** O `base_config.json` que entra no ZIP
+  ARM tem `atualizacao.asset` reescrito para `PUG_WIN_ARM64.zip` (a única diferença entre os dois
+  pacotes fora os binários). Sem isso, o primeiro update num PC ARM baixaria o pacote x64 e trocaria,
+  em silêncio, binários nativos por emulados.
 
 ## Distribuição e atualização
 
@@ -162,7 +180,9 @@ Cliente: `standalone_scripts/io/atualizador.gd` (`class_name Atualizador`), disp
   `1.0.0.0`). Fica **embutida no binário** — por isso não vai para o `base_config.json`, que é solto,
   substituído pela própria atualização e ainda sobreposto pelo `config_usuario.json`. Comparação
   **numérica por componente** (como texto, `1.10.0` ficaria abaixo de `1.9.0`).
-- **Configuração:** `base_config.json:atualizacao` = `{ repositorio, asset, verificar_ao_iniciar }`.
+- **Configuração:** `base_config.json:atualizacao` = `{ repositorio, asset, verificar_ao_iniciar }`. O
+  `asset` é o nome exato do arquivo na release e **depende da arquitetura** — o versionado traz
+  `PUG_WIN_X64.zip`, e o empacotador reescreve a chave no pacote ARM64 (ver "Arquiteturas").
 - **Estado local:** `user://atualizacao.json` (versão dispensada). Vai para `user://` — e **não** para
   o `config_usuario.json` — porque cada um dos 3 PCs pode estar numa versão diferente, e o
   `config_usuario.json` é sincronizado entre eles (mesmo motivo de `user://admin_kinto.json`).
@@ -174,9 +194,11 @@ nome do arquivo: no build, `arquivos/`, `base_config.json`, `dados/` e `externo/
 **disco, ao lado do .exe** — não do PCK.
 
 **A raiz do ZIP é a raiz da instalação — sem pasta de topo.** Um ZIP com pasta de topo produz uma
-atualização morta, sem erro visível. Conteúdo: os 4 executáveis (`Auxiliar.exe`,
-`Auxiliar.console.exe`, `Auxiliar_debug.exe`, `Auxiliar_debug.console.exe`), `base_config.json`,
-`MANUAL.md`, `arquivos/` e `externo/bin/`.
+atualização morta, sem erro visível. Conteúdo (o mesmo em cada pacote de arquitetura): os 4
+executáveis (`Auxiliar.exe`, `Auxiliar.console.exe`, `Auxiliar_debug.exe`,
+`Auxiliar_debug.console.exe`), `base_config.json`, `MANUAL.md`, `arquivos/` e `externo/bin/`. Os
+nomes dos executáveis **não** mudam com a arquitetura: quem distingue os pacotes é o nome do ZIP, e o
+aplicador relança `OS.get_executable_path()`, que precisa continuar existindo depois da troca.
 
 **Nunca entram no pacote** (regra geral: *nada gitignorado entra*): `config_usuario.json`, `dados/`,
 `exportacoes/`, `.backup/` e — atenção — **`arquivos/limesurvey/survey_tokens.lst`**, que fica
@@ -193,10 +215,13 @@ token do Kinto**, entrou nos quatro binários da **1.0.0 publicada**: `git statu
 conferido, credencial vazando mesmo assim. *(Aquele token tem de ser revogado no servidor — apagar
 a release não desfaz os downloads já feitos.)*
 
-- O `exclude_filter` dos três presets exclui `config_usuario.json`. **Todo arquivo gitignorado que
-  passe a morar na raiz do projeto precisa entrar nesse filtro.**
+- O `exclude_filter` de **todos** os presets (hoje quatro: `PUG`, `PUG_ARM64`, Android e Linux)
+  exclui `config_usuario.json`. **Todo arquivo gitignorado que passe a morar na raiz do projeto
+  precisa entrar nesse filtro** — e **em todos os presets**, pois um preset novo (foi o caso do
+  `PUG_ARM64`) nasce com o filtro que você copiar para ele.
 - `dados/` e `exportacoes/` não dependem disso: o `.gdignore` já faz o Godot ignorar a pasta inteira.
-- O `publicar_release.ps1` confere o PCK em `Conferir-Pck`, lendo as linhas `Storing File: res://…`
+- O `publicar_release.ps1` confere o PCK **de cada exportação** (release e debug, de cada
+  arquitetura) em `Conferir-Pck`, lendo as linhas `Storing File: res://…`
   do **log da exportação**. Não adianta procurar no `.exe`: o caminho `res://` não aparece como texto
   no binário (só o conteúdo do arquivo aparece), e procurar pelo nome solto acusa qualquer menção no
   código — o `main.gd` lê `"config_usuario.json"` pelo nome. Se o log não tiver nenhuma linha
@@ -207,7 +232,7 @@ a release não desfaz os downloads já feitos.)*
 
 O executável em uso fica travado pelo Windows, então o programa não pode se sobrescrever. O
 `Atualizador` baixa para `user://atualizacao/`, confere o **SHA-256** publicado junto (asset
-`PUG_WIN_X64.zip.sha256`), extrai para um *staging* e só então grava e dispara
+`<nome do pacote>.sha256`, ex.: `PUG_WIN_X64.zip.sha256`), extrai para um *staging* e só então grava e dispara
 `aplicar_atualizacao.ps1` (`OS.create_process` — não `OS.execute`, que é bloqueante) e encerra o
 programa. O script espera o **PID real**, copia para `.backup/` **apenas o executável em uso**
 (descartando o backup da atualização anterior — cada `.exe` passa de 100 MB e a pasta é replicada pelo

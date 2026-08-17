@@ -2,8 +2,10 @@ class_name Atualizador extends Node
 ## Atualizacao do programa a partir das [i]releases[/i] do repositorio no GitHub.
 ##
 ## Consulta a release mais recente, compara com a versao instalada
-## ([code]application/config/version[/code] em [code]project.godot[/code]), baixa o pacote
-## [code]PUG_WIN_X64.zip[/code], confere a integridade pelo SHA-256 publicado junto e extrai tudo
+## ([code]application/config/version[/code] em [code]project.godot[/code]), baixa o pacote nomeado em
+## [code]base_config.json:atualizacao.asset[/code] — que depende da arquitetura desta instalacao
+## ([code]PUG_WIN_X64.zip[/code] ou [code]PUG_WIN_ARM64.zip[/code]), pois cada pacote traz o seu
+## proprio [code]base_config.json[/code] —, confere a integridade pelo SHA-256 publicado junto e extrai tudo
 ## numa area de trabalho em [code]user://[/code]. So depois de o pacote estar inteiro e conferido e
 ## que a troca acontece — uma copia pela metade deixaria a instalacao inutilizada. [br]
 ## [br]
