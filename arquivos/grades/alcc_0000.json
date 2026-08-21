@@ -10,5 +10,11 @@
 		"semestre": "1",
 		"ch": "60",
 		"nucleo": "basico"
+	},
+	"al0503": {
+		"nome": "Metodologia Científica",
+		"semestre": "1",
+		"ch": "60",
+		"nucleo": "cccg"
 	}
 }
