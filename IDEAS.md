@@ -2,6 +2,16 @@
 
 # GERAL
 
+- No módulo situação alunos, a ordem de prioridade de apresentação das disciplinas na grade de horários deve ser: as que o aluno pediu matrícula (quando estiver no modo ajuste), seguidas das matriculadas, seguida das matriculáveis, seguida das matriculáveis com aproveitamento, seguida pelas demais;
+- Adicionar no PUG também o ranking, para saber se a pessoa está no horário correto;
+- No módulo situação alunos, no modo de ajuste de matrícula, se o mesmo aluno preencheu a planilha múltiplas vezez, terá múltiplas linhas. O código só pega a ultima.
+- Atualizar no json 2023 que parece que inst eletrica predial nao tem arquitetura;
+- Adicionar um check online para bloquear o software de funcionar se eu quiser;
+- No módulo situação alunos, no modo de ajuste de matrícula, notei que para alguns alunos apareceu a seguinte situação que deve ser revisada:
+  - AL0394: Administração — matriculável
+  - T40;60;80 — código inválido/ausente
+  - Fladimir Fernandes dos Santos; — código inválido/ausente
+
 ## BUGs
 
 ### Alta prioridade
