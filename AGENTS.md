@@ -272,6 +272,43 @@ passam por `ProjectSettings.globalize_path()` antes de ir ao PowerShell.
   - **Regra:** sinais de nós criados em runtime que precisam devolver um valor a um `await` devem escrever num **membro** (acessado via `self`, propaga normalmente) ou usar sinal dedicado / `Callable.bind`, nunca numa local capturada.
   - Verificável em segundos via headless: `extends SceneTree` + lambda escrevendo numa local vs. num membro, e comparar.
 
+## Pipeline de desenvolvimento (cards)
+
+O trabalho é organizado em **cards**, não em listas de TODOs: ver `Cards/README.md`
+para a convenção e o índice. O `IDEAS.md` continua como backlog solto por módulo;
+uma ideia vira card pela entrevista da skill `godot-session-setup`.
+
+- **Ponto de entrada de toda sessão:** a skill
+  `.claude/skills/godot-session-setup/SKILL.md`. Ela lê o handoff
+  (`.claude/handoff/latest.md`), entrevista o dev até a feature virar um card com
+  ACs falsificáveis, migra ideias do `IDEAS.md` e roda a fila de cards `ready`.
+  **O card vem antes do código** — mesmo quando o pedido chega como "implementa X".
+- **Execução de um card:** `.claude/workflows/godot-feature-pipeline.js`
+  (`args: {cardId}`), que encadeia as skills `godot-feature-design` (spec),
+  `godot-gdscript-dev` (TDD), `godot-code-review` (findings com `blocking`) e
+  `godot-smoke-test` (PNG por AC + diff de log). Só aceita card `ready`.
+- **Portões:** `python .tools/guardrails.py` (gdlint + regras do projeto),
+  `python .tools/run_tests.py` (suíte GUT em `test/`) e o parser do Godot
+  (`--headless --path . --editor --quit`). O pre-commit do Lefthook
+  (`lefthook.yml`) roda os dois primeiros; os hooks do Claude Code
+  (`.claude/settings.json` + `.tools/claude_hooks.py`) rodam o guardrails a cada
+  edição de `.gd` e bloqueiam escrita em caminhos protegidos (`dados/`,
+  `arquivos/oferta/`, `exportacoes/`...).
+- **Baseline (catraca):** o código anterior aos guardrails carrega violações
+  históricas congeladas em `.tools/guardrails_baseline.json` por arquivo+regra.
+  O portão só reprova violação **nova**; limpar um arquivo e rodar
+  `--update-baseline` aperta a catraca. Nunca afrouxá-la para passar um card.
+- **Handoff:** `.claude/handoff/latest.md` registra onde a sessão parou (o
+  anterior vai para `archive/`). É estado versionado, não documentação — regras
+  no `README.md` da pasta.
+- **LGPD no pipeline:** `Cards/` é versionado e público — nenhum dado pessoal
+  real em card, spec, teste, fixture (`test/fixtures/`) ou PNG de smoke.
+  Smoke test só com `dados/` vazio ou fixtures fictícias. `Cards/` tem
+  `.gdignore` (fora do import e do PCK); `addons/gut/*` e `test/*` estão no
+  `exclude_filter` de todos os presets de export.
+- **Setup por clone:** `python -m pip install --user "gdtoolkit==4.*"` e
+  `lefthook install` (ver `Cards/README.md`).
+
 ## Manual
 
 - **Atualização** Sempre atualize o manual quando uma nova função for adicionada ou removida.

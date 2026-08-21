@@ -1,4 +1,10 @@
-# TODO
+# IDEAS
+
+Backlog de ideias e pendências, organizado por módulo. Nada aqui tem critério de
+aceite acordado nem prazo — quando um item amadurecer a ponto de virar trabalho,
+ele sobe para um card em `Cards/` pela entrevista da skill `godot-session-setup`
+(ou pelo modo migração, que o transcreve como card `todo` sem entrevista).
+Apagar uma linha não exige justificativa.
 
 # GERAL
 
