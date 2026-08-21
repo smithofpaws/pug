@@ -45,6 +45,9 @@ func _log(texto: String, token: String = "padrao", nl: bool = true, limpar: bool
 ## [param cod_curso] filtra apenas grades do curso selecionado; [param filtro_semestre]
 ## filta apenas o semestre especifico (formato prefixado, ex.: "EC04").
 func determinar_demanda(condicoes_discentes: Dictionary, cod_curso: String = "", filtro_semestre: Array = [], edicao_semestre: String = "", codigos_na_oferta: Array[String] = [], historico_discentes: Dictionary = {}) -> void:
+	# Recupera matrículas feitas sob código de outra grade (condicoes_discentes só guarda o
+	# código-alvo equivalente); sem histórico, o índice vazio degrada para a contagem antiga.
+	var matriculas_reais: Dictionary = _analise_historico.indice_matriculas_reais(historico_discentes)
 	_terminal.titulo("Determinacao de demanda", true)
 	if not cod_curso.is_empty():
 		_terminal.linha("Filtro curso: %s" % _cursos.get(cod_curso, {}).get("nome", cod_curso), "aviso")
@@ -75,7 +78,8 @@ func determinar_demanda(condicoes_discentes: Dictionary, cod_curso: String = "",
 			var nome_exibicao: String = "%s - %s" % [str(codigo).to_upper(), str(grade[codigo].get("nome", codigo))]
 			if not badge.is_empty():
 				nome_exibicao += " (%s)" % badge
-			var disc_cond: Dictionary = _analise_historico.discentes_disciplina(codigo, condicoes_discentes, _condicoes)
+			var disc_cond: Dictionary = _analise_historico.discentes_disciplina(codigo, \
+				condicoes_discentes, _condicoes, matriculas_reais)
 			var contagens: Dictionary = {}
 			var total_matriculaveis: int = 0
 			for cond in _condicoes:

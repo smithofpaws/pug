@@ -54,6 +54,10 @@ var _historico: Dictionary
 # Contem as disciplinas que todos alunos se enquadram dentro de [param condicoes].
 var _condicoes_discentes: Dictionary
 
+# Índice codigo_real -> matrículas com situação "matr*" no histórico (recupera matrículas sob
+# código de outra grade, que _condicoes_discentes só guarda pelo código-alvo equivalente).
+var _matriculas_reais: Dictionary = {}
+
 # Contem os dados do arquivo ini, organizados em forma de um dicionário.
 var _horarios_ini: Dictionary
 
@@ -106,6 +110,7 @@ func _ready() -> void:
 		_analisado_reprov = GV.dados_discentes["reprovacoes"]
 		_lista_alunos = GV.dados_discentes["lista_alunos"]
 		_condicoes_discentes = GV.dados_discentes["condicoes_discentes"]
+		_matriculas_reais = analise_historico.indice_matriculas_reais(_historico)
 	else:
 		$"%Terminal".linha("Dados discentes indisponíveis (hist.csv ausente ou módulo aberto " + \
 			"fora do fluxo principal).")
@@ -288,7 +293,8 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 
 #region Controle principal do tipo de análise: Combinada
 func _analise_combinada(cod_disc1: String, cod_disc2: String) -> void:
-	var discentes_ambas = analise_historico.comparar_discentes_disciplina(cod_disc1, cod_disc2, _condicoes_discentes, condicoes)
+	var discentes_ambas = analise_historico.comparar_discentes_disciplina(cod_disc1, cod_disc2, \
+		_condicoes_discentes, condicoes, _matriculas_reais)
 	$"%Terminal".titulo("Discentes em ambas disciplinas", true)
 	$"%Terminal".linha("Disciplina 1 → Disciplina 2")
 	$"%Terminal".espaco()
@@ -309,26 +315,13 @@ func _rodar_análise() -> void:
 	elif _retorno == "comparacao":
 		_analise_combinada(_lista_disciplinas[_linha_selecionada1][0], _lista_disciplinas[_linha_selecionada2][0])
 
-# Prepara uma lista de discentes nas [param condicoes] para a disciplina de código [param cod_disc]. 
-# Retorna um dicionário contendo uma chave para cada [param condicao] e em cada chave uma matriz de matrículas.
+# Prepara uma lista de discentes nas [param condicoes] para a disciplina de código [param cod_disc].
+# Retorna um dicionário contendo uma chave para cada [param condicao] e em cada chave uma matriz de
+# matrículas. Delega à função canônica com o índice de matrículas reais, para incluir também quem
+# está matriculado sob código de outra grade (rotulado matriculado_agora_aproveitamento).
 func _disc_disciplina(cod_disc: String) -> Dictionary:
-	# Lista de matrículas de discentes em cada condição na disciplina de código [param cod_disc].
-	var discentes_disc_condicoes: Dictionary = {}
-	# Prepara o dicionário [param discentes_disc_condicoes].
-	for a in condicoes.size():
-		discentes_disc_condicoes[condicoes[a]] = []
-	# Iteração principal, aluno a aluno.
-	for a in _lista_alunos.size():
-		var matricula = _lista_alunos[a][0]
-		# Obtém, para a matrícula em questão, as disciplinas que se enquadram nas [param condicoes].
-		var disc_cursaveis: Dictionary
-		disc_cursaveis = _condicoes_discentes.get(matricula, {})
-		# Busca se o aluno atual tem a disciplina atual em alguma condição.
-		for condicao in disc_cursaveis.keys():
-			if disc_cursaveis[condicao].has(cod_disc):
-				# Adiciona aluno atual a lista.
-				discentes_disc_condicoes[condicao].append(matricula)
-	return discentes_disc_condicoes
+	return analise_historico.discentes_disciplina(cod_disc, _condicoes_discentes, condicoes, \
+		_matriculas_reais)
 #endregion
 
 #region Sinais

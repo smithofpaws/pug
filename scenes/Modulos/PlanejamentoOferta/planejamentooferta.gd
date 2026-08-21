@@ -1608,8 +1608,12 @@ func _contagens_demanda(grade: Dictionary, situacoes_rodape: Array, filtro_curso
 		base_condicoes = analise_historico.condicoes_discentes(lista_alunos_curso, _historico_discentes, \
 			condicoes, grades_disciplinas_curriculos, equivalencias, _grade_oferta_ativa)
 	var contagens: Dictionary = {}
+	# Índice de matrículas reais: recupera matrículas feitas sob código de outra grade, que
+	# base_condicoes só guarda pelo código-alvo equivalente (mesma correção do choque de alunos).
+	var matriculas_reais: Dictionary = analise_historico.indice_matriculas_reais(_historico_discentes)
 	for codigo in grade.keys():
-		var disc_cond: Dictionary = analise_historico.discentes_disciplina(codigo, base_condicoes, condicoes)
+		var disc_cond: Dictionary = analise_historico.discentes_disciplina(codigo, base_condicoes, \
+			condicoes, matriculas_reais)
 		var counts: Dictionary = {}
 		for sit in situacoes_rodape:
 			# Cada base engloba alunos com e sem aproveitamento (a variante "_aproveitamento" usa codigos
