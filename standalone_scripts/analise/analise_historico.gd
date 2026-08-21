@@ -82,16 +82,23 @@ func condicoes_discentes(lista_alunos: Array[Array], historico: Dictionary, cond
 
 ## Verifica, para uma disciplina, a lista de discentes que tem [param condição] com a mesma. [br]
 ## Formato de [param cod_disciplina] é só o código por extenso (e.g. "al0001"). [br]
-## Formato de [param condicoes_discentes] segue o formato de saída de [method AnaliseHistorico.condicoes_discentes].
-func discentes_disciplina(cod_disciplina: String, condicoes_discentes: Dictionary, condicoes: Array) -> Dictionary:
-	return analise_curricular.discentes_disciplina(cod_disciplina, condicoes_discentes, condicoes)
+## Formato de [param condicoes_discentes] segue o formato de saída de [method AnaliseHistorico.condicoes_discentes]. [br]
+## [param matriculas_reais] (opcional): ver [method AnaliseCurricular.discentes_disciplina].
+func discentes_disciplina(cod_disciplina: String, condicoes_discentes: Dictionary, condicoes: Array, matriculas_reais: Dictionary = {}) -> Dictionary:
+	return analise_curricular.discentes_disciplina(cod_disciplina, condicoes_discentes, condicoes, matriculas_reais)
 
 ## Verifica que discentes encontram-se matriculados em ambas disciplinas informadas. [br]
 ## Formato de [param cod_disciplina1] é só o código por extenso (e.g. "al0001"). [br]
 ## Formato de [param cod_disciplina2] é só o código por extenso (e.g. "al0363"). [br]
-## Formato de [param condicoes_discentes] segue o formato de saída de [method AnaliseHistorico.condicoes_discentes].
-func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: String, condicoes_discentes: Dictionary, condicoes: Array) -> Dictionary:
-	return analise_curricular.comparar_discentes_disciplina(cod_disciplina1, cod_disciplina2, condicoes_discentes, condicoes)
+## Formato de [param condicoes_discentes] segue o formato de saída de [method AnaliseHistorico.condicoes_discentes]. [br]
+## [param matriculas_reais] (opcional): ver [method AnaliseCurricular.discentes_disciplina].
+func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: String, condicoes_discentes: Dictionary, condicoes: Array, matriculas_reais: Dictionary = {}) -> Dictionary:
+	return analise_curricular.comparar_discentes_disciplina(cod_disciplina1, cod_disciplina2, condicoes_discentes, condicoes, matriculas_reais)
+
+## Índice das matrículas atuais por código REAL do histórico: [code]{cod_lower: [matricula, ...]}[/code].
+## Ver [method AnaliseCurricular.indice_matriculas_reais].
+func indice_matriculas_reais(historico: Dictionary) -> Dictionary:
+	return analise_curricular.indice_matriculas_reais(historico)
 
 ## Esta função detecta a chave da grade curricular da matrícula desejada no formato
 ## [code]<cod_curso>_<versao>[/code]. [br]

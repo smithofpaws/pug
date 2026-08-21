@@ -1,8 +1,10 @@
 class_name ChoquesAlunos extends RefCounted
 ## Análise e relato dos choques de horário entre ALUNOS no Planejamento de Horário. [br]
 ## Conta e imprime, para pares de disciplinas co-alocadas, quantos discentes estão em ambas
-## (nas condições de matrícula selecionadas). A política de indicadores (quando contar/relatar/
-## detalhar) fica no módulo; esta classe só computa e imprime no terminal injetado.
+## (nas condições de matrícula selecionadas). Considera também matrículas reais sob código de
+## outra grade (que a análise curricular reescreve para o código-alvo), via índice construído
+## do histórico. A política de indicadores (quando contar/relatar/detalhar) fica no módulo;
+## esta classe só computa e imprime no terminal injetado.
 
 var _ger_alocacoes: GerenciadorAlocacoes
 var _analise_historico: AnaliseHistorico
@@ -13,6 +15,9 @@ var _terminal: Node
 var _condicoes_discentes: Dictionary = {}
 var _condicoes_selecionadas: Array[String] = []
 var _historico: Dictionary = {}
+# Índice codigo_real -> matrículas com situação "matr*" no histórico (recupera matrículas sob
+# código de outra grade, que condicoes_discentes só guarda pelo código-alvo equivalente).
+var _matriculas_reais: Dictionary = {}
 
 ## Configura as referências do módulo-pai.
 func configurar(ger_alocacoes: GerenciadorAlocacoes, analise_historico: AnaliseHistorico, \
@@ -28,6 +33,14 @@ func definir_dados(condicoes_discentes: Dictionary, condicoes_selecionadas: Arra
 	_condicoes_discentes = condicoes_discentes
 	_condicoes_selecionadas = condicoes_selecionadas
 	_historico = historico
+	if _analise_historico:
+		_matriculas_reais = _analise_historico.indice_matriculas_reais(historico)
+
+## Índice codigo_real -> matrículas construído em [method definir_dados]. Exposto para o módulo
+## passar o mesmo índice ao posicionador automático (_peso_choque_alunos), mantendo peso e relato
+## consistentes.
+func matriculas_reais() -> Dictionary:
+	return _matriculas_reais
 
 ## Soma, sobre TODA a grade, quantos discentes estão em ambas as disciplinas de cada par de códigos
 ## distintos co-alocados (nas condições selecionadas). Silencioso — alimenta apenas a barra de status.
@@ -50,7 +63,7 @@ func contar() -> int:
 	for k in pares:
 		var partes: PackedStringArray = str(k).split("|")
 		var discentes: Dictionary = _analise_historico.comparar_discentes_disciplina(\
-			partes[0], partes[1], _condicoes_discentes, _condicoes_selecionadas)
+			partes[0], partes[1], _condicoes_discentes, _condicoes_selecionadas, _matriculas_reais)
 		total += discentes.size()
 	return total
 
@@ -102,7 +115,7 @@ func _imprimir_choque_par(aloc_a: Dictionary, aloc_b: Dictionary, detalhar: bool
 	var cod_a: String = aloc_a.get("codigo", "").to_lower()
 	var cod_b: String = aloc_b.get("codigo", "").to_lower()
 	var discentes: Dictionary = _analise_historico.comparar_discentes_disciplina(\
-		cod_a, cod_b, _condicoes_discentes, _condicoes_selecionadas)
+		cod_a, cod_b, _condicoes_discentes, _condicoes_selecionadas, _matriculas_reais)
 	var n: int = discentes.size()
 	var rot_a: String = _ger_alocacoes.rotulo_alocacao(aloc_a)
 	var rot_b: String = _ger_alocacoes.rotulo_alocacao(aloc_b)

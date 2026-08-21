@@ -279,7 +279,8 @@ func disciplinas_cursaveis(matricula: String, grades_disciplinas_curriculos: Dic
 					# pós-processamento abaixo, que produzem o código-ALVO (da grade atual) em
 					# matriculado_agora_aproveitamento. Adicionar aqui o código-FONTE (de outra grade)
 					# duplicaria a disciplina (caso aproveitamento) ou criaria entradas-fantasma (caso a
-					# matrícula seja NORMAL, cursada direto na grade do aluno).
+					# matrícula seja NORMAL, cursada direto na grade do aluno). O choque de alunos
+					# recupera o fonte em tempo de consulta (indice_matriculas_reais + discentes_disciplina).
 					continue
 				if cursaveis.has(cond) and cod_alvo in cursaveis[cond]:
 					var cond_aprov: String = cond + "_aproveitamento"
@@ -343,8 +344,14 @@ func condicoes_discentes(lista_alunos: Array, historico: Dictionary, condicoes: 
 
 ## Verifica, para uma disciplina, a lista de discentes que tem [param condição] com a mesma. [br]
 ## Formato de [param cod_disciplina] é só o código por extenso (e.g. "al0001"). [br]
-## Formato de [param condicoes_discentes] segue o formato de saída de [method condicoes_discentes].
-func discentes_disciplina(cod_disciplina: String, condicoes_discentes: Dictionary, condicoes: Array) -> Dictionary:
+## Formato de [param condicoes_discentes] segue o formato de saída de [method condicoes_discentes]. [br]
+## [param matriculas_reais] (opcional, saída de [method indice_matriculas_reais]) recupera as
+## matrículas reais sob código de outra grade, que [method disciplinas_cursaveis] reescreve para o
+## código-alvo equivalente (descartando o fonte): o aluno matriculado sob o código pesquisado que
+## não aparece em NENHUMA condição entra em [code]matriculado_agora_aproveitamento[/code]. Só quando
+## essa condição está entre as [param condicoes] selecionadas. Edge aceito: matrícula real cujo alvo
+## caiu em condição irregular também sai rotulada assim — distinguir exigiria equivalencias aqui.
+func discentes_disciplina(cod_disciplina: String, condicoes_discentes: Dictionary, condicoes: Array, matriculas_reais: Dictionary = {}) -> Dictionary:
 	var condicoes_discentes_na_disciplina: Dictionary
 	for a in condicoes.size():
 		condicoes_discentes_na_disciplina[condicoes[a]] = []
@@ -355,13 +362,33 @@ func discentes_disciplina(cod_disciplina: String, condicoes_discentes: Dictionar
 			for b in cond_disciplinas[condicoes[a]].size():
 				if cond_disciplinas[condicoes[a]][b] == cod_disciplina:
 					condicoes_discentes_na_disciplina[condicoes[a]].append(matricula)
+	if not matriculas_reais.is_empty() and "matriculado_agora_aproveitamento" in condicoes:
+		var cod_lower: String = cod_disciplina.to_lower()
+		for matricula in matriculas_reais.get(cod_lower, []):
+			if not condicoes_discentes.has(matricula):
+				continue
+			# Só entra o código que o pipeline descartou: se aparece em QUALQUER condição do aluno
+			# (selecionada ou não), a matrícula é normal/irregular na própria grade e já é (ou não,
+			# por escolha do usuário) coberta pelo laço acima — reincluir duplicaria o par.
+			var cond_disciplinas: Dictionary = condicoes_discentes[matricula]
+			var presente: bool = false
+			for cond in cond_disciplinas.keys():
+				for cod in cond_disciplinas[cond]:
+					if str(cod).to_lower() == cod_lower:
+						presente = true
+						break
+				if presente:
+					break
+			if not presente:
+				condicoes_discentes_na_disciplina["matriculado_agora_aproveitamento"].append(matricula)
 	return condicoes_discentes_na_disciplina
 
 ## Verifica que discentes encontram-se matriculados em ambas disciplinas informadas. [br]
 ## Formato de [param cod_disciplina1] é só o código por extenso (e.g. "al0001"). [br]
 ## Formato de [param cod_disciplina2] é só o código por extenso (e.g. "al0363"). [br]
-## Formato de [param condicoes_discentes] segue o formato de saída de [method condicoes_discentes].
-func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: String, condicoes_discentes: Dictionary, condicoes: Array) -> Dictionary:
+## Formato de [param condicoes_discentes] segue o formato de saída de [method condicoes_discentes]. [br]
+## [param matriculas_reais] (opcional) é repassado a [method discentes_disciplina] — ver lá.
+func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: String, condicoes_discentes: Dictionary, condicoes: Array, matriculas_reais: Dictionary = {}) -> Dictionary:
 	# ~discentes_ambas tem o seguinte formato:
 	# { matricula1:
 	#     [condicao_disc_1, condicao_disc_2],
@@ -369,8 +396,8 @@ func comparar_discentes_disciplina(cod_disciplina1: String, cod_disciplina2: Str
 	#     [condicao_disc_1, condicao_disc_2],
 	# }
 	var discentes_ambas: Dictionary
-	var condicoes_discentes_na_disciplina1: Dictionary = discentes_disciplina(cod_disciplina1, condicoes_discentes, condicoes)
-	var condicoes_discentes_na_disciplina2: Dictionary = discentes_disciplina(cod_disciplina2, condicoes_discentes, condicoes)
+	var condicoes_discentes_na_disciplina1: Dictionary = discentes_disciplina(cod_disciplina1, condicoes_discentes, condicoes, matriculas_reais)
+	var condicoes_discentes_na_disciplina2: Dictionary = discentes_disciplina(cod_disciplina2, condicoes_discentes, condicoes, matriculas_reais)
 	for cond1 in condicoes_discentes_na_disciplina1.keys():
 		for a in condicoes_discentes_na_disciplina1[cond1].size():
 			for cond2 in condicoes_discentes_na_disciplina2.keys():
@@ -459,7 +486,8 @@ func _inferir_cod_curso_por_semestre(semestre: String, cursos: Dictionary) -> St
 ## oferta). Classifica em [code]matriculado_agora[/code] quando o código está na grade do aluno
 ## ([code]disc_cursaveis["matriculado_agora"][/code]) e em [code]matriculado_agora_aproveitamento[/code]
 ## caso contrário (matrícula cursada via outra grade — inclui aproveitamento completo e divisões
-## incompletas/sem equivalência). Assim, toda matrícula real aparece nos horários e no choque.
+## incompletas/sem equivalência). Assim, toda matrícula real aparece nos horários; no choque de
+## alunos, quem honra o código real é [method indice_matriculas_reais] + [method discentes_disciplina].
 func matriculada_com_turma(disc_cursaveis: Dictionary, historico_matricula: Dictionary) -> Dictionary:
 	var resultado: Dictionary = {"matriculado_agora": [], "matriculado_agora_aproveitamento": []}
 	var na_grade: Dictionary = {}
@@ -480,6 +508,28 @@ func matriculada_com_turma(disc_cursaveis: Dictionary, historico_matricula: Dict
 		else:
 			resultado["matriculado_agora_aproveitamento"].append([cod_disciplina, cod_turma])
 	return resultado
+
+## Índice das matrículas atuais por código REAL do histórico: [code]{cod_lower: [matricula, ...]}[/code]. [br]
+## Considera toda entrada com situação "matr*" e o [code]codigocurriculo[/code] tal como registrado
+## (já minúsculo pela leitura), deduplicando por par código/matrícula. Preserva o código sob o qual
+## o aluno realmente se matriculou — informação que [method disciplinas_cursaveis] descarta ao
+## reescrever matrículas de outra grade para o código-alvo equivalente. Consumido pelo choque de
+## alunos via [method discentes_disciplina].
+func indice_matriculas_reais(historico: Dictionary) -> Dictionary:
+	var indice: Dictionary = {}
+	for matricula in historico.keys():
+		var vistos: Dictionary = {}
+		for dado in historico[matricula].get("dados", []):
+			if not str(dado.get("situacao", "")).begins_with("matr"):
+				continue
+			var cod_lower: String = str(dado.get("codigocurriculo", "")).to_lower()
+			if cod_lower.is_empty() or vistos.has(cod_lower):
+				continue
+			vistos[cod_lower] = true
+			if not indice.has(cod_lower):
+				indice[cod_lower] = []
+			indice[cod_lower].append(matricula)
+	return indice
 
 # Aproveita as disciplinas encontradas em [param historico] que foram feitas em grade diferente da atual, usando equivalencias.
 # Formato de [param lista_aproveitar] deve ser um Array de Dictionary, cada um com as chaves de uma

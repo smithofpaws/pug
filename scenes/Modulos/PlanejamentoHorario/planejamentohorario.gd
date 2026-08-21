@@ -3350,12 +3350,14 @@ func _montar_preferencias_professores() -> Dictionary:
 	return preferencias
 
 # Callable do posicionador: nº de discentes que cursariam ambas as disciplinas, nas condições
-# selecionadas no SeletorCondicoesChoque. Retorna 0 quando não há hist.csv carregado.
+# selecionadas no SeletorCondicoesChoque. Usa o mesmo índice de matrículas reais do ChoquesAlunos
+# para o peso refletir o que a barra de status acusa. Retorna 0 quando não há hist.csv carregado.
 func _peso_choque_alunos(cod_a: String, cod_b: String) -> int:
 	if _condicoes_discentes.is_empty() or _condicoes_choque_selecionadas.is_empty():
 		return 0
 	return analise_historico.comparar_discentes_disciplina(cod_a, cod_b, \
-		_condicoes_discentes, _condicoes_choque_selecionadas).size()
+		_condicoes_discentes, _condicoes_choque_selecionadas, \
+		_choques_alunos.matriculas_reais()).size()
 
 # Aplica o plano do posicionador: aloca cada slot, atualiza a CH dos cards, imprime o relatório do
 # posicionamento (título + filtro de curso + não alocadas) e repinta a grade. Os choques resultantes
