@@ -1,0 +1,84 @@
+# Configuracao do gdlint (gdtoolkit 4.x) para o PUG.
+#
+# Este arquivo precisa existir e ser versionado: sem gdlintrc o linter procura a
+# config em todos os diretorios-pai e pode travar indefinidamente.
+#
+# Cada divergencia da config padrao esta comentada com o motivo. As regras que o
+# gdlint nao consegue expressar (ordem de secoes por tipo de script, fronteira de
+# filesystem, tooltip unico) vivem em .tools/guardrails.py, que tambem chama este
+# linter. Rode sempre pelo guardrails.py, nunca pelo gdlint direto.
+#
+# gdformat NAO e usado neste projeto: ele segue o style guide oficial do Godot,
+# que conflita com o FORMATACAO.md (2 linhas entre funcoes vs 1, quebra em 100
+# colunas). A convencao escrita do projeto ganha.
+
+# --- Ordem de definicoes -----------------------------------------------------
+# DESABILITADA: o projeto tem DOIS layouts (FORMATACAO.md §2) — scripts
+# standalone (Resource) e modulos de cena, estes com #region Sinais ao final.
+# Um unico class-definitions-order nao expressa os dois. A checagem correta,
+# que escolhe o layout pelo `extends`, esta no guardrails.py.
+
+# --- Nomes -------------------------------------------------------------------
+# Prefixo "_" e a marca de privado/interno em todo o projeto (FORMATACAO.md §5),
+# inclusive em variaveis de escopo de funcao e parametros.
+function-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+
+# FORMATACAO.md §5 define constantes em snake_case — divergencia deliberada do
+# style guide oficial do Godot. Aceita as duas formas para nao brigar com codigo
+# existente que usa UPPER_SNAKE.
+constant-name: _?([A-Z][A-Z0-9]*(_[A-Z0-9]+)*|[a-z][a-z0-9]*(_[a-z0-9]+)*)
+load-constant-name: (([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+
+# --- Limites estruturais -----------------------------------------------------
+# Teto contra linhas descontroladas, nao meta de estilo. Calibrado contra o
+# codigo existente em 2026-08-21.
+max-line-length: 200
+
+# Modulos de analise e fachadas tem muitos metodos pequenos por desenho.
+max-public-methods: 60
+
+# Validadores em guard clause: cada return e uma condicao de saida nomeada.
+max-returns: 12
+
+max-file-lines: 3000
+function-arguments-number: 12
+
+# --- Regras mantidas no padrao -----------------------------------------------
+class-load-variable-name: (([A-Z][a-z0-9]*)+|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+class-name: ([A-Z][a-z0-9]*)+
+class-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+comparison-with-itself: null
+duplicated-load: null
+enum-element-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'
+enum-name: ([A-Z][a-z0-9]*)+
+expression-not-assigned: null
+function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+function-name: (_on_([A-Z][a-z0-9]*)+(_[a-z0-9]+)*|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+function-preload-variable-name: ([A-Z][a-z0-9]*)+
+loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+mixed-tabs-and-spaces: null
+no-elif-return: null
+no-else-return: null
+signal-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+sub-class-name: _?([A-Z][a-z0-9]*)+
+tab-characters: 1
+trailing-whitespace: null
+unnecessary-pass: null
+unused-argument: null
+
+# Omitir uma chave nao desliga a regra — o gdlint volta ao default. Desligar
+# exige nomear a regra aqui.
+disable:
+- class-definitions-order
+
+# dados/ e exportacoes/ nao tem .gd, mas ficam aqui por precaucao; externo/ e
+# utilitario Python empacotado; addons/ e dependencia de terceiros (GUT).
+excluded_directories: !!set
+  .git: null
+  .godot: null
+  .claude: null
+  addons: null
+  .backup: null
+  dados: null
+  exportacoes: null
+  externo: null

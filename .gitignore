@@ -46,3 +46,10 @@ ehthumbs.db
 .DS_Store
 ~$*
 *.tmp
+
+# Cache do Python dos scripts de .tools/
+__pycache__/
+
+# Configuracao local por maquina do Claude Code e worktrees de agentes
+.claude/settings.local.json
+.claude/worktrees/

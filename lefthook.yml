@@ -1,0 +1,28 @@
+# Guarda de pre-commit do PUG.
+#
+# Camada irma dos hooks do Claude Code (.claude/settings.json). Aquele pega no
+# instante da edicao e devolve o erro ao agente; este pega tambem o que foi
+# editado FORA do Claude — editor do Godot, VSCodium, colagem manual. Um cobre o
+# agente, o outro cobre o repositorio.
+#
+# Setup em cada clone (o .git/hooks/ nao e versionado):
+#   lefthook install
+#
+# Se subir o Godot a cada commit incomodar, mova unit-tests para um bloco
+# `pre-push:` e deixe so o guardrails aqui. E o padrao da industria e nao muda
+# mais nada da configuracao.
+
+pre-commit:
+  # Sequencial de proposito: o lint custa ~2s e o Godot ~5s. Falhar no lint
+  # primeiro evita subir a engine so para descobrir um erro de estilo.
+  parallel: false
+  jobs:
+    - name: guardrails
+      glob: "*.gd"
+      run: python .tools/guardrails.py {staged_files}
+
+    - name: unit-tests
+      glob: "*.gd"
+      # Via run_tests.py, nao chamando o Godot direto: o caminho do binario tem
+      # espaco no Windows e nao sobrevive a interpolacao de shell do lefthook.
+      run: python .tools/run_tests.py
