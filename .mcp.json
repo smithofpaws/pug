@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": [
+        "${GODOT_MCP_SERVER:-C:/Users/diego/mcp-servers/godot-mcp/build/index.js}"
+      ],
+      "env": {
+        "GODOT_PATH": "${GODOT_PATH:-C:/Program Files/Godot/Godot_console.exe}"
+      }
+    }
+  }
+}

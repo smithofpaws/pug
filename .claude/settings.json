@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(python .tools/guardrails.py:*)",
+      "Bash(python .tools/run_tests.py:*)",
+      "Bash(python .tools/claude_hooks.py:*)",
+      "Bash(python -m gdtoolkit.linter:*)",
+      "Bash(lefthook:*)",
+      "PowerShell(& \"C:\\Program Files\\Godot\\Godot_console.exe\" --headless --path * --editor --quit)",
+      "PowerShell(& \"C:\\Program Files\\Godot\\Godot_console.exe\" --headless --path * -s res://addons/gut/gut_cmdln.gd*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(diff:*)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(cp:*)",
+      "Bash(mkdir:*)",
+      "Bash(command -v:*)",
+      "Bash(which:*)"
+    ],
+    "deny": [
+      "Edit(dados/**)",
+      "Write(dados/**)",
+      "Edit(exportacoes/**)",
+      "Write(exportacoes/**)",
+      "Edit(arquivos/oferta/**)",
+      "Write(arquivos/oferta/**)",
+      "Edit(.godot/**)",
+      "Write(.godot/**)",
+      "Bash(git reset --hard:*)",
+      "Bash(git stash:*)",
+      "Bash(rm:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .tools/claude_hooks.py pre-tool-use",
+            "timeout": 20,
+            "statusMessage": "Checando caminho protegido"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .tools/claude_hooks.py post-tool-use",
+            "timeout": 120,
+            "statusMessage": "Rodando guardrails"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .tools/claude_hooks.py session-start",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .tools/claude_hooks.py subagent-stop",
+            "timeout": 180,
+            "statusMessage": "Guardrails no diff do subagente"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .tools/claude_hooks.py stop",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}
