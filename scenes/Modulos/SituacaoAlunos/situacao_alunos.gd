@@ -333,8 +333,8 @@ func _analisar_matricula(matricula: String, impressao: bool = true, revisao: boo
 	var cursadas: Array[String] = analise_historico.disciplinas_concluidas(matricula, _historico)
 	var vazio_destacar: Array[String] = []
 	$"%GradeCurricular".dados = analise_grades.montar_grade_curricular(grades_disciplinas_curriculos[_grade_ativa], \
-	disc_cursaveis, cursadas, lista_cores, _forma_apresentacao_grade, vazio_destacar, {}, {}, [], [], \
-	Color.TRANSPARENT, _codigos_distantes(matricula, disc_cursaveis, cursadas))
+	disc_cursaveis, _cursadas_com_equivalencia(cursadas), lista_cores, _forma_apresentacao_grade, vazio_destacar, \
+	{}, {}, [], [], Color.TRANSPARENT, _codigos_distantes(matricula, disc_cursaveis, cursadas))
 	# Nova análise zera a seleção de pré-requisitos e remove as linhas de conexão.
 	_codigo_selecionado = ""
 	_codigo_selecionado_direito = ""
@@ -990,6 +990,16 @@ func _codigos_distantes(matricula: String, disc_cursaveis: Dictionary, cursadas:
 	return analise_grades.disciplinas_distantes(grades_disciplinas_curriculos[_grade_ativa], \
 		disc_cursaveis, cursadas, equivalencias, _grade_ativa, codigos_historico)
 
+# Soma a [param cursadas] os alvos concluídos por equivalência na grade ativa (ver
+# [method AnaliseGrades.concluidas_por_equivalencia]), para que a grade curricular pinte esses alvos
+# com a cor de "cursada". Não muta o argumento; usada só como entrada de [method montar_grade_curricular]
+# — a lista crua de [param cursadas] continua indo para [method _codigos_distantes] e o resto do relatório.
+func _cursadas_com_equivalencia(cursadas: Array[String]) -> Array[String]:
+	var expandidas: Array[String] = []
+	expandidas.append_array(cursadas)
+	expandidas.append_array(analise_grades.concluidas_por_equivalencia(cursadas, equivalencias, _grade_ativa))
+	return expandidas
+
 ## Regera apenas a grade curricular (sem reprocessar horários ou percentuais),
 ## aplicando os destaques de pré-requisitos conforme [_codigos_destacar].
 func _atualizar_grade_curricular() -> void:
@@ -999,7 +1009,7 @@ func _atualizar_grade_curricular() -> void:
 	$"%GradeCurricular".dados = analise_grades.montar_grade_curricular(
 		grade_ativa,
 		disc_cursaveis,
-		cursadas,
+		_cursadas_com_equivalencia(cursadas),
 		lista_cores,
 		_forma_apresentacao_grade,
 		_codigos_destacar,

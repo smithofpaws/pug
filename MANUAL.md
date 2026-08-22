@@ -145,6 +145,8 @@ Escolha o aluno pelo menu suspenso ao lado. A interface é atualizada imediatame
 
 Exibe a estrutura completa do currículo, organizada por semestres. Cada célula representa uma disciplina e recebe uma cor conforme a situação do aluno nela (cursada, disponível para matrícula, bloqueada por pré-requisitos, etc.).
 
+**Aproveitamento por equivalência (célula dourada):** disciplina concluída sob o código de outra grade — via equivalência entre currículos ou entre cursos — recebe a mesma cor dourada de "cursada". Quando a grade nova divide uma disciplina antiga em duas ou mais (ex.: *Saneamento Básico* → *Saneamento I* + *Saneamento II*), o dourado só aparece depois que TODAS as partes forem concluídas; concluir apenas uma delas não pinta a célula.
+
 **Disciplinas distantes (célula hachurada):** as disciplinas que o aluno ainda não pode alcançar no próximo passo aparecem com uma hachura leve, deixando a célula um pouco mais escura. São aquelas que dependem de aprovação em algo que, por sua vez, ainda depende de outra aprovação. Exemplo: um aluno matriculado em *Mecânica dos Solos II* cursará *Obras de Terra* se for aprovado — essa aparece normalmente; já *Fundações e Estruturas de Contenção*, que exige *Obras de Terra*, está duas etapas à frente e aparece hachurada. A hachura separa, portanto, "falta uma aprovação" de "falta uma cadeia de aprovações". Disciplinas já concluídas sob o código de outra grade (aproveitamento) não são hachuradas.
 
 - **Clique esquerdo** em uma disciplina: destaca todos os seus pré-requisitos (diretos e transitivos), com linhas de conexão entre elas.

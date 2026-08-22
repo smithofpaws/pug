@@ -1,7 +1,7 @@
 ---
 id: 0004-cor-concluida-por-equivalencia
 title: Disciplina concluída por equivalência recebe a cor de cursada na grade
-status: ready
+status: done
 origin: IDEAS.md (seção BUGs, alta prioridade)
 layers: [standalone_scripts/analise, scenes/Modulos/SituacaoAlunos]
 interviewed: true
@@ -37,13 +37,13 @@ discordarem. O módulo já recebe as equivalências injetadas — sem mudança n
 
 ## Acceptance criteria
 
-- [ ] Cursada fonte com equivalência para a grade ativa → o alvo entra na
+- [x] Cursada fonte com equivalência para a grade ativa → o alvo entra na
       lista de concluídas por equivalência -- verify: `headless`
-- [ ] Disciplina dividida (2 fontes → 1 alvo): o alvo só entra quando TODAS as
+- [x] Disciplina dividida (2 fontes → 1 alvo): o alvo só entra quando TODAS as
       fontes foram cursadas -- verify: `headless`
-- [ ] Grade ativa sem arquivo de equivalência → retorno vazio, sem erro
+- [x] Grade ativa sem arquivo de equivalência → retorno vazio, sem erro
       (no-op) -- verify: `headless`
-- [ ] `montar_grade_curricular` com as cursadas expandidas pinta o alvo com
+- [x] `montar_grade_curricular` com as cursadas expandidas pinta o alvo com
       `lista_cores["cursada"]`, mantendo a precedência de cursada sobre
       condições -- verify: `headless`
 - [ ] Visual: aluno com disciplina cursada sob código de outra grade vê a

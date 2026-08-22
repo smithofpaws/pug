@@ -79,7 +79,9 @@ func codigos_ausentes(grades_disciplinas_curriculos: Dictionary, codigos: Array)
 ## Formato de [param disc_cursaveis] segue a saída de [method AnaliseHistorico.condicoes_discentes] para um
 ## discente: uma chave para cada condição e em cada chave a lista de códigos. [br]
 ## Formato de [param cursadas] deve ser a lista de códigos já concluídos (saída de
-## [method AnaliseHistorico.disciplinas_concluidas]). [br]
+## [method AnaliseHistorico.disciplinas_concluidas]); pode vir somada aos alvos de
+## [method concluidas_por_equivalencia], para que a disciplina concluída sob o código de outra grade
+## também receba a cor de "cursada". [br]
 ## Formato de [param lista_cores] deve ser o dicionário [code]lista_cores[/code] de [code]base_config.json[/code]. [br]
 ## Formato de [param forma_apresentacao] define como o texto da célula é formatado: [br]
 ## - [code]"somente_codigo"[/code]: apenas o código (ex.: AL0001); [br]
@@ -633,6 +635,30 @@ func alvo_completo(cod_alvo: String, equivalencias: Dictionary, versao_grade: St
 		if todas:
 			return true
 	return not houve_grupo
+
+## Expande [param cursadas] para os códigos-alvo concluídos por equivalência: para cada código já
+## cursado, obtém os alvos na grade [param versao_grade] via [method para_o_codigo_qual_a_equivalencia]
+## e devolve apenas os alvos cujo grupo está completo segundo [method alvo_completo] — todas as fontes
+## do grupo também CONCLUÍDAS (não apenas presentes no histórico); disciplina dividida cursada pela
+## metade não entra (critério mais estrito que o de [method disciplinas_distantes], de propósito). [br]
+## Retorna somente os alvos NOVOS, em minúsculas, sem duplicatas, excluindo os que já estão em
+## [param cursadas] — somar [param cursadas] ao retorno nunca duplica nem "rebaixa" um alvo já cursado
+## diretamente. Sem equivalência aplicável a [param versao_grade] (curso sem arquivo de equivalência),
+## retorna [code][][/code] sem erro.
+func concluidas_por_equivalencia(cursadas: Array[String], equivalencias: Dictionary, versao_grade: String) -> Array[String]:
+	var presentes: Dictionary = {}
+	for codigo in cursadas:
+		presentes[str(codigo).to_lower()] = true
+	var novos: Array[String] = []
+	for codigo in cursadas:
+		var cl: String = str(codigo).to_lower()
+		for alvo in para_o_codigo_qual_a_equivalencia(cl, equivalencias, versao_grade):
+			var alvo_lower: String = str(alvo).to_lower()
+			if presentes.has(alvo_lower) or novos.has(alvo_lower):
+				continue
+			if alvo_completo(alvo_lower, equivalencias, versao_grade, presentes):
+				novos.append(alvo_lower)
+	return novos
 
 ## Pega cada código de disciplina contido em ~equivalencias_para_versao e obtem a equivalencia para a [param versao_grade]. [br]
 ## Formato de [param cod_disciplina] deve ser o código da disciplina em String (e.g. "al0001").
