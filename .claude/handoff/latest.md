@@ -1,75 +1,65 @@
-# Handoff — 2026-08-21
+# Handoff — 2026-08-22 09:15
 
 ## Onde parei
-O pipeline de desenvolvimento do 3d World foi portado e adaptado para o PUG:
-skills, workflow, Cards/, handoff, portões (guardrails + GUT + parser), hooks do
-Claude Code e pre-commit do Lefthook. Tudo criado nesta sessão, nada commitado
-ainda.
+A fila automática rodou pela primeira vez e entregou os cards 0001 e 0002 na
+branch `cards/2026-08-22` (4 commits). O pipeline
+(`godot-feature-pipeline.js`) funcionou de ponta a ponta nas duas execuções —
+o piloto passou. A branch ainda **não foi mesclada em `master`**.
 
 ## Card ativo
-Nenhum. O índice em `Cards/README.md` está vazio — o primeiro card nasce da
-entrevista da skill `godot-session-setup` (ou do modo migração sobre o `IDEAS.md`).
+Nenhum. 0001 e 0002 estão `done`; não há card `ready` nem `todo` no índice.
 
 ## Feito nesta sessão
-- `.tools/guardrails.py` (gdlint + regras do projeto, com **baseline/catraca** em
-  `.tools/guardrails_baseline.json` — 375 violações históricas congeladas em 99
-  pares arquivo+regra), `.tools/run_tests.py`, `.tools/claude_hooks.py`.
-- `gdlintrc`, `lefthook.yml` (pre-commit instalado), `.gutconfig.json`.
-- `addons/gut/` copiado do 3DWorld (GUT 9.x); `test/unit/test_general_functions.gd`
-  (5 testes, 12 asserts, verdes); `test/fixtures/README.md` (regra: só dado fictício).
-- `Cards/README.md` (convenção + índice vazio) e `Cards/.gdignore`.
-- `.claude/settings.json` (hooks + permissões), `.claude/handoff/` (este arquivo),
-  `.claude/workflows/godot-feature-pipeline.js`, `.mcp.json` (MCP godot).
-- 5 skills em `.claude/skills/`: godot-session-setup, godot-feature-design,
-  godot-gdscript-dev, godot-code-review, godot-smoke-test — todas adaptadas ao
-  domínio do PUG (LGPD, multi-curso, snake_case, injeção pelo main).
-- `AGENTS.md`: nova seção "Pipeline de desenvolvimento (cards)".
-- `IDEAS.md`: cabeçalho ligando o backlog ao modo migração (título "TODO" → "IDEAS").
-- `export_presets.cfg`: `addons/gut/*` e `test/*` no exclude_filter dos 4 presets.
-- `.gitignore`: `__pycache__/`, `.claude/settings.local.json`, `.claude/worktrees/`.
+Tudo commitado na branch `cards/2026-08-22`:
+- `1dcbc4a` / `beb9bb1` — cards 0001 e 0002 registrados (entrevistados numa
+  sessão anterior, estavam sem commit no working tree).
+- `fd50092` — **Card 0001**: `AnaliseHorarios.ordenar_condicoes` (ordem
+  canônica ajuste → base_config → desconhecidas), efeito colateral de poda no
+  array do chamador removido, 8 testes novos, MANUAL.md atualizado.
+- `0270e15` — **Card 0002**: `PlanilhaAjuste.parse()` mescla respostas
+  múltiplas (união; conflito = menção mais recente; mesma resposta = exclusão
+  prevalece), regex de código com `\b`, 13 testes novos + fixture fictícia,
+  MANUAL.md atualizado.
+- Handoff atualizado (este arquivo).
 
 ## Pela metade / não verificado
-- **O workflow (`godot-feature-pipeline.js`) nunca rodou de ponta a ponta** — foi
-  adaptado do 3DWorld mas nenhum card existe ainda. O primeiro card é o piloto do
-  pipeline; esperar ajustes (especialmente no smoke, que aqui tem a restrição
-  LGPD de captura).
-- **Smoke test nunca foi exercitado neste projeto**: `--write-movie` foi validado
-  no 3DWorld (mesma engine), não aqui. O primeiro card com AC `smoke` prova.
-- **MCP godot não testado nesta sessão** (`.mcp.json` copiado do 3DWorld; o
-  servidor existe em `C:/Users/diego/mcp-servers/godot-mcp`). Requer reiniciar a
-  sessão do Claude Code para carregar.
-- A baseline congela dívida real (86 static-typing, 115 trailing-whitespace, 55
-  tabs, 53 private-docstring, 34 section-order...). Queimá-la é trabalho de card
-  futuro — sugestão registrada abaixo.
+- **AC4 (`manual`) do card 0001 está aberto**: conferir que, no modo ajuste, a
+  pedida de inclusão (fundo verde) vem primeiro na célula. Roteiro em
+  `Cards/0001-ordem-prioridade-grade-horarios/smoke/smoke.md`. Só o dev fecha,
+  com dados fictícios. A caixa do AC4 no card segue desmarcada de propósito.
+- O comportamento do 0002 nunca foi observado com um CSV real do Forms — os 26
+  testes usam fixtures. O primeiro uso real do Modo Ajuste é a validação de
+  campo.
+- Finding residual **não-bloqueante** do 0002: token curto isolado antes de
+  número ("Lab 101", "em 2026") ainda vira candidato de código. Documentado no
+  comentário do regex e travado por 2 testes como limitação aceita; estreitar
+  mais é decisão futura do dev (validação contra grade é non-goal do card).
+- Nenhum smoke com PNG foi exercitado ainda (os dois cards não tinham cenário
+  visual). O caminho `--write-movie` do smoke segue não testado neste projeto.
 
 ## Estado dos portões
-guardrails: ok (0 acima da baseline) · testes: ok (5/5) · parser: ok (exit 0) —
-rodados em 2026-08-21, ao fim da implementação.
+guardrails: ok (0 acima da baseline de 375) · testes: ok (26/26, 3 scripts) ·
+parser: ok — rodados pelo pipeline do 0002 e re-rodados pelo pre-commit do
+Lefthook em cada commit, em 2026-08-22.
 
 ## Estado do git
-Branch `master`, working tree SUJO — toda a implementação está sem commit.
-Modificados: `.gitignore`, `AGENTS.md`, `IDEAS.md`, `export_presets.cfg`.
-Novos: `.claude/`, `.tools/`, `Cards/`, `addons/`, `test/`, `gdlintrc`,
-`lefthook.yml`, `.gutconfig.json`, `.mcp.json`.
+Branch `cards/2026-08-22`, working tree limpo, 4 commits à frente de `master`
+(+ o commit deste handoff). `master` local = `origin/master`. Merge em
+`master` é decisão do dev (seria fast-forward).
 
 ## Decisões tomadas que não estão em card nenhum
-- **Baseline/catraca** em vez de corrigir as 375 violações históricas: portão
-  nasce verde, violação nova é barrada, dívida registrada. Já documentada em
-  `AGENTS.md` e `Cards/README.md`.
-- Allowlist de `FileAccess` no guardrails é **congelamento** dos 10 arquivos que
-  já tocavam disco, não endosso — código novo lê via main/FileHandling.
-- `Cards/` fica fora do PCK por `.gdignore`; `addons/gut/*` e `test/*` por
-  exclude_filter (eles precisam ser visíveis ao Godot para o GUT rodar).
+- Menção multi-código no 0002 emite **o código puro** por decisão, não a
+  entrada inteira (evita o módulo re-extrair sempre o primeiro candidato) —
+  registrada no comentário de `_mesclar_lado` e na spec do card, não precisa
+  migrar para o AGENTS.md.
 
 ## Próximo passo concreto
-Commitar por tema (sugestão: 1. portões e ferramentas; 2. GUT + testes;
-3. Cards/ + handoff + skills + workflow; 4. AGENTS/IDEAS/presets/gitignore) e
-então rodar a primeira entrevista de card — candidato natural: um dos BUGs de
-alta prioridade do `IDEAS.md` (ex.: "disciplina concluída por equivalência não
-recebe cor na grade", que já tem edge cases mapeados).
+Dev executa o roteiro do AC4 do 0001 (`smoke/smoke.md`) com dados fictícios e
+registra o resultado no `card.md`; depois decide o merge de
+`cards/2026-08-22` em `master` e o push de `master`.
 
 ## Em aberto para o dev
-- Aprovar (ou ajustar) a estratégia da baseline — alternativa seria limpar as
-  violações mecânicas (whitespace) num card dedicado.
-- Decidir se o primeiro card vem de entrevista nova ou da migração de um item do
-  `IDEAS.md`.
+- AC4 do 0001: confere e marca a caixa (ou reporta falha — aí vira reabertura).
+- Mesclar `cards/2026-08-22` em `master` agora ou deixar a branch maturar?
+- O residual do regex do 0002 incomoda o suficiente para virar ideia no
+  `IDEAS.md`?
