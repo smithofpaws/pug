@@ -25,6 +25,11 @@ class_name AnaliseHorarios extends Resource
 ## Formato de [param horarios_txt] deve ser conforme [method horarios_exe.carregar_horarios_txt]. [br]
 ## Formato de [param condicoes] deve ser a lista de condições no arquivo [code]base_config.json[/code]. [br]
 
+## Condições sintéticas do Modo Ajuste, em ordem de prioridade. Não existem em
+## [code]base_config.json:condicoes[/code] — são criadas em memória pelo chamador (hoje
+## [code]situacao_alunos.gd[/code]) e nunca persistidas.
+const CONDICOES_AJUSTE: Array[String] = ["ajuste_incluir", "ajuste_excluir"]
+
 var analise_historico := AnaliseHistorico.new()
 var general_functions := GeneralFunctions.new()
 var horariosexe := HorariosExe.new()
@@ -43,6 +48,26 @@ func horas_das_aulas(_horarios_ini: Dictionary = {}) -> Array[String]:
 	arr.assign(GV.configuracao_base.get("horarios_aula", []))
 	return arr
 
+## Ordena [param condicoes] na ordem canônica de prioridade da grade de horários: primeiro as de
+## [constant CONDICOES_AJUSTE] (na ordem da constante), depois as presentes em [param condicoes_base]
+## (na ordem dela), por fim as desconhecidas, preservando a ordem relativa de entrada entre si. [br]
+## Retorna um array novo; não muta [param condicoes]. Duplicatas na entrada são preservadas.
+static func ordenar_condicoes(condicoes: Array, condicoes_base: Array) -> Array[String]:
+	var decoradas: Array[Array] = []
+	for indice in condicoes.size():
+		var item: String = condicoes[indice]
+		decoradas.append([_prioridade_condicao(item, condicoes_base), indice, item])
+	# sort_custom nao e estavel; o indice original no par de comparacao garante desempate
+	# deterministico entre itens de mesma prioridade (ex.: duas condicoes desconhecidas).
+	decoradas.sort_custom(func(a: Array, b: Array) -> bool:
+		if a[0] != b[0]:
+			return a[0] < b[0]
+		return a[1] < b[1])
+	var resultado: Array[String] = []
+	for decorada in decoradas:
+		resultado.append(decorada[2])
+	return resultado
+
 ## Obtem, para uma matrícula, as disciplinas sendo cursadas e seus horarios. [br]
 ## Formato de [param disc_cursaveis] deve ser um dicionário com as chaves que vem do arquivo [code]base_config.json[/code], como
 ## "matriculavel", "seaprovado", etc. [br]
@@ -58,16 +83,21 @@ func horas_das_aulas(_horarios_ini: Dictionary = {}) -> Array[String]:
 ## [param codigos_incluir]/[param codigos_excluir] (Modo Ajuste, em minúsculas) marcam as disciplinas
 ## solicitadas no formulário de ajuste: as de incluir saem com fundo verde
 ## ([code]PaletaSemantica.FUNDO_AJUSTE_INCLUIR[/code]) e as de excluir com fundo vermelho
-## ([code]FUNDO_AJUSTE_EXCLUIR[/code]). Vazios (padrão) não alteram nada.
+## ([code]FUNDO_AJUSTE_EXCLUIR[/code]). Vazios (padrão) não alteram nada. [br]
+## [param condicoes] é reordenado pela ordem canônica de prioridade antes de montar a matriz
+## (ver [method ordenar_condicoes]), independentemente da ordem recebida; o array do chamador
+## não é mutado.
 func determinar_horarios(horarios_ini: Dictionary, horarios_txt: Array, disc_cursaveis: Dictionary,\
 historico_matricula: Dictionary, condicoes: Array = ["matriculado_agora"], \
 lista_cores: Dictionary = {"matriculado_agora": "GREEN"}, forma_apresentacao: String = "somente_codigo", \
 codigos_incluir: Array = [], codigos_excluir: Array = []) -> Array:
 	var dias: Array[String] = dias_da_semana(horarios_ini)
 	var horas: Array[String] = horas_das_aulas(horarios_ini)
+	var condicoes_ordenadas: Array[String] = AnaliseHorarios.ordenar_condicoes(condicoes, \
+	GV.configuracao_base.get("condicoes", []))
 	var matriculada_com_turma: Dictionary = analise_historico.matriculada_com_turma(disc_cursaveis, historico_matricula)
 	var horarios_txt_condicao: Dictionary = extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
-	var matriz_grade: Array[Array] = _preparar_horarios(dias, horas, horarios_txt_condicao, condicoes, \
+	var matriz_grade: Array[Array] = _preparar_horarios(dias, horas, horarios_txt_condicao, condicoes_ordenadas, \
 	lista_cores, forma_apresentacao, codigos_incluir, codigos_excluir)
 	return matriz_grade
 
@@ -265,6 +295,17 @@ func _obter_turmas(turma: String) -> Array:
 					lista_turmas[i] = lista_turmas[i] + letra_final
 					
 	return lista_turmas
+
+# Prioridade de ordenacao de uma condicao: 0/1 para o tier ajuste (indice em CONDICOES_AJUSTE),
+# 2+indice para o tier base (indice em condicoes_base), ou 2+condicoes_base.size() para desconhecida.
+static func _prioridade_condicao(condicao: String, condicoes_base: Array) -> int:
+	var indice_ajuste: int = AnaliseHorarios.CONDICOES_AJUSTE.find(condicao)
+	if indice_ajuste != -1:
+		return indice_ajuste
+	var indice_base: int = condicoes_base.find(condicao)
+	if indice_base != -1:
+		return AnaliseHorarios.CONDICOES_AJUSTE.size() + indice_base
+	return AnaliseHorarios.CONDICOES_AJUSTE.size() + condicoes_base.size()
 
 # Cria a matriz de horarios contendo dias da semana vs hora.
 # Formato de [param dias_da_semana] deve ser uma matriz sequencial com os dias da semana.

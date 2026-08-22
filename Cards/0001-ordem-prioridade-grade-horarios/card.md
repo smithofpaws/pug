@@ -1,7 +1,7 @@
 ---
 id: 0001-ordem-prioridade-grade-horarios
 title: Ordem de prioridade das disciplinas na grade de horários
-status: ready
+status: done
 origin: IDEAS.md (seção GERAL)
 layers: [standalone_scripts/analise, scenes/Modulos/SituacaoAlunos, scenes/Modulos/SituacaoDisciplinas]
 interviewed: true
@@ -38,11 +38,11 @@ Situação de Disciplinas.
 
 ## Acceptance criteria
 
-- [ ] Com condições passadas em ordem embaralhada a `determinar_horarios`, a
+- [x] Com condições passadas em ordem embaralhada a `determinar_horarios`, a
       célula concatena na ordem canônica -- verify: `headless`
-- [ ] `ajuste_incluir` aparece antes de `ajuste_excluir`, e ambas antes de
+- [x] `ajuste_incluir` aparece antes de `ajuste_excluir`, e ambas antes de
       qualquer outra condição -- verify: `headless`
-- [ ] Condição desconhecida (fora da lista canônica) fica no fim, preservando o
+- [x] Condição desconhecida (fora da lista canônica) fica no fim, preservando o
       destaque atual ([shake] para condição sem cor) -- verify: `headless`
 - [ ] Visual no modo ajuste: a pedida de inclusão aparece primeiro na célula,
       com o fundo verde (`FUNDO_AJUSTE_INCLUIR`) -- verify: `manual`

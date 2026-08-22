@@ -160,7 +160,7 @@ Exibe uma tabela com os horários do semestre (linhas) cruzados com os dias da s
 - Disciplinas nas quais o aluno **poderia se matricular**, conforme os pré-requisitos.
 - **Indicação de choque:** quando uma disciplina disponível conflita com uma já matriculada no mesmo horário.
 
-Filtros permitem exibir apenas disciplinas em condições específicas (matriculado, matriculável, etc.).
+Filtros permitem exibir apenas disciplinas em condições específicas (matriculado, matriculável, etc.). Quando mais de uma disciplina cai na mesma célula, a ordem de concatenação é sempre a mesma, independentemente da ordem de seleção dos filtros: no Modo Ajuste, primeiro a disciplina pedida para inclusão e depois a pedida para exclusão; em seguida, as matriculadas, depois as matriculáveis e por fim as demais condições.
 
 #### Relatório no terminal
 
