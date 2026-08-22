@@ -44,8 +44,9 @@ Situação de Disciplinas.
       qualquer outra condição -- verify: `headless`
 - [x] Condição desconhecida (fora da lista canônica) fica no fim, preservando o
       destaque atual ([shake] para condição sem cor) -- verify: `headless`
-- [ ] Visual no modo ajuste: a pedida de inclusão aparece primeiro na célula,
+- [x] Visual no modo ajuste: a pedida de inclusão aparece primeiro na célula,
       com o fundo verde (`FUNDO_AJUSTE_INCLUIR`) -- verify: `manual`
+      (fechado por relato do dev em 2026-08-22, testes rápidos ok)
 
 ## Edge cases
 
