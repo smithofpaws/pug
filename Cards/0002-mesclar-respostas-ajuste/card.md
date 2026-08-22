@@ -1,7 +1,7 @@
 ---
 id: 0002-mesclar-respostas-ajuste
 title: Mesclar múltiplas respostas do mesmo aluno no ajuste de matrícula
-status: ready
+status: done
 origin: IDEAS.md (seção GERAL)
 layers: [standalone_scripts/io]
 interviewed: true
@@ -27,15 +27,15 @@ do CSV estão em ordem cronológica do Forms).
 
 ## Acceptance criteria
 
-- [ ] Duas respostas da mesma matrícula com inclusões disjuntas → o resultado é
+- [x] Duas respostas da mesma matrícula com inclusões disjuntas → o resultado é
       a união de todas -- verify: `headless`
-- [ ] Código incluído na 1ª resposta e excluído na 2ª → só aparece em
+- [x] Código incluído na 1ª resposta e excluído na 2ª → só aparece em
       `excluir` (e vice-versa) -- verify: `headless`
-- [ ] Mesmo código no mesmo lado em 2 respostas → uma entrada só, com o texto
+- [x] Mesmo código no mesmo lado em 2 respostas → uma entrada só, com o texto
       da menção mais recente -- verify: `headless`
-- [ ] Entrada sem código extraível é mantida (dedup por texto normalizado) e
+- [x] Entrada sem código extraível é mantida (dedup por texto normalizado) e
       continua chegando ao módulo para aparecer como inválida -- verify: `headless`
-- [ ] Formato de retorno inalterado:
+- [x] Formato de retorno inalterado:
       `{ok, respostas: [{matricula, incluir, excluir}]}` -- verify: `headless`
 
 ## Edge cases

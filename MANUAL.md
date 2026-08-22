@@ -162,6 +162,10 @@ Exibe uma tabela com os horários do semestre (linhas) cruzados com os dias da s
 
 Filtros permitem exibir apenas disciplinas em condições específicas (matriculado, matriculável, etc.). Quando mais de uma disciplina cai na mesma célula, a ordem de concatenação é sempre a mesma, independentemente da ordem de seleção dos filtros: no Modo Ajuste, primeiro a disciplina pedida para inclusão e depois a pedida para exclusão; em seguida, as matriculadas, depois as matriculáveis e por fim as demais condições.
 
+#### Modo Ajuste
+
+O botão **Modo Ajuste**, ao lado da grade de horários, baixa e interpreta as respostas de um formulário de ajuste de matrícula (planilha do Google publicada em CSV) e sobrepõe, na grade de cada aluno, as disciplinas que ele pediu para incluir ou excluir. Quando o mesmo aluno responde o formulário mais de uma vez, as respostas são **mescladas**: os pedidos de inclusão e exclusão de respostas diferentes se somam, e um conflito na mesma disciplina (pedida nos dois lados em respostas diferentes) é resolvido a favor da menção mais recente. Dentro de uma única resposta, se a mesma disciplina aparecer pedida para os dois lados ao mesmo tempo, a exclusão prevalece.
+
 #### Relatório no terminal
 
 O checkbox **Modo Detalhado**, no topo, controla o nível de detalhe do relatório: marcado (padrão), o terminal traz também as seções analíticas — **Previsão de formatura** e **Índice de aprovação**; desmarcado, o relatório fica restrito à situação de matrícula do aluno. A exportação em Markdown traz sempre o relatório completo, independentemente do checkbox.

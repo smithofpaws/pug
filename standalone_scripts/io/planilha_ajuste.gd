@@ -22,7 +22,14 @@ var _http: HTTPRequest
 # Guarda contra requisicoes concorrentes no mesmo HTTPRequest.
 var _ocupado: bool = false
 # Regex de codigo de disciplina (ex.: "al0162", "AL0400", "Al 0015"): 2-3 letras + opcional espaco +
-# 3-4 digitos. Exclui o codigo de turma/curso tipo "T20" (1 letra + 2 digitos).
+# 3-4 digitos. Exclui o codigo de turma/curso tipo "T20" (1 letra + 2 digitos). O \b inicial exige
+# fronteira de palavra antes das letras -- sem ele, a cauda de texto livre comum em resposta de
+# Forms ("Sala 302", "Turma 101", "predio 1102") casava um falso segundo codigo em pleno meio de
+# palavra ("ala302", "rma101", "dio1102"), fazendo _mesclar_lado tratar uma unica mencao valida como
+# duas e gerando alerta de "problema" falso no modulo (Cards/0002, finding de review). Residual
+# aceito: um token curto isolado seguido de numero ("Lab 101", "em 2026") ainda satisfaz o \b e
+# ainda casa como candidato -- distinguir isso de um segundo codigo real exige a grade do aluno,
+# que este parser nao tem (validacao e non-goal do card, fica no modulo).
 var _regex_codigo: RegEx = null
 
 
@@ -69,8 +76,11 @@ func baixar(url: String) -> Dictionary:
 
 
 ## Interpreta o [param csv] das respostas. Localiza as colunas pelas palavras-chave do cabeçalho e
-## devolve, por matrícula (mantendo a [b]resposta mais recente[/b] — última linha do arquivo),
-## as entradas de texto a incluir/excluir. Retorna
+## devolve, por matrícula, a [b]mesclagem[/b] de todas as respostas do aluno: quando o mesmo aluno
+## responde mais de uma vez, incluir/excluir viram a união das menções, e um conflito por disciplina
+## (mesmo código nos dois lados em respostas [i]diferentes[/i]) é resolvido pela menção mais recente
+## — as linhas do CSV estão em ordem cronológica do Forms. Um conflito dentro da [i]mesma[/i] resposta
+## (sem "mais recente" possível) é resolvido a favor da exclusão. Retorna
 ## [code]{ "ok": bool, "respostas": Array, "erro": String }[/code], onde cada item de
 ## [code]respostas[/code] é [code]{ "matricula": String, "incluir": Array[String], "excluir": Array[String] }[/code].
 func parse(csv: String) -> Dictionary:
@@ -92,29 +102,42 @@ func parse(csv: String) -> Dictionary:
 		return { "ok": false, "respostas": [], \
 			"erro": "Cabeçalho sem a(s) coluna(s): " + ", ".join(faltando) + ". Confira o formulário." }
 
-	# Mantem a resposta mais recente por matricula (linhas em ordem cronologica do Forms; last-wins).
+	# Mescla todas as respostas por matricula (linhas em ordem cronologica do Forms): o estado por
+	# matricula acumula, por codigo de disciplina, a mencao mais recente (ver _mesclar_lado).
 	var por_matricula: Dictionary = {}
 	for i in range(1, linhas.size()):
 		var linha: Array = linhas[i]
 		var matricula: String = _celula(linha, col_matricula).strip_edges()
 		if matricula.is_empty():
 			continue
-		por_matricula[matricula] = {
-			"matricula": matricula,
-			"incluir": _separar_entradas(_celula(linha, col_incluir)),
-			"excluir": _separar_entradas(_celula(linha, col_excluir)),
-		}
-	return { "ok": true, "respostas": por_matricula.values(), "erro": "" }
+		if not por_matricula.has(matricula):
+			por_matricula[matricula] = {
+				"matricula": matricula,
+				"decisoes": {},
+				"problemas_incluir": {},
+				"problemas_excluir": {},
+			}
+		var estado: Dictionary = por_matricula[matricula]
+		# Incluir antes de excluir: desempate de conflito na mesma linha (ver _mesclar_lado).
+		_mesclar_lado(estado, _separar_entradas(_celula(linha, col_incluir)), "incluir", i)
+		_mesclar_lado(estado, _separar_entradas(_celula(linha, col_excluir)), "excluir", i)
+
+	var respostas: Array = []
+	for matricula: String in por_matricula:
+		respostas.append(_montar_resposta(por_matricula[matricula]))
+	return { "ok": true, "respostas": respostas, "erro": "" }
 
 
 ## Extrai os códigos de disciplina candidatos de uma [param entrada] de texto livre (ex.:
 ## [code]"AL0400 - Fundacoes - T20 - Maria"[/code] → [code]["al0400"][/code]). Normaliza para
-## minúsculas e sem espaço. Pode retornar 0, 1 ou mais candidatos; a validação contra a grade fica
-## no módulo.
+## minúsculas e sem espaço. Exige que o código comece numa fronteira de palavra, então cauda de
+## texto livre como [code]"Sala 302"[/code] ou [code]"Turma 101"[/code] não vira candidato (o
+## trecho numérico está em pleno meio da palavra anterior). Pode retornar 0, 1 ou mais candidatos;
+## a validação contra a grade fica no módulo.
 func extrair_codigos(entrada: String) -> Array[String]:
 	if _regex_codigo == null:
 		_regex_codigo = RegEx.new()
-		_regex_codigo.compile("[A-Za-z]{2,3}\\s?\\d{3,4}")
+		_regex_codigo.compile("\\b[A-Za-z]{2,3}\\s?\\d{3,4}")
 	var codigos: Array[String] = []
 	for ocorrencia in _regex_codigo.search_all(entrada):
 		var cod: String = ocorrencia.get_string().replace(" ", "").to_lower()
@@ -138,6 +161,61 @@ func _garantir_http() -> void:
 		_http = HTTPRequest.new()
 		_http.timeout = _TIMEOUT_SEGUNDOS
 		add_child(_http)
+
+
+# Mescla, no [param estado] da matricula, as [param entradas] de um [param lado] ("incluir" ou
+# "excluir") da linha [param ordem]. Entrada sem codigo extraivel vira "problema" desse lado
+# (dedupado por texto normalizado, primeira ocorrencia define o texto exibido); entrada com
+# codigo(s) concorre pela decisao de estado.decisoes[codigo], vencida pela mencao de maior ordem —
+# em ordem igual (mesma linha), "excluir" vence "incluir". Dentro da mesma linha e mesmo lado, a
+# primeira mencao de um codigo repetido e mantida (nao ha "mais recente" possivel).
+func _mesclar_lado(estado: Dictionary, entradas: Array[String], lado: String, ordem: int) -> void:
+	var problemas: Dictionary = estado["problemas_incluir"] if lado == "incluir" else estado["problemas_excluir"]
+	var decisoes: Dictionary = estado["decisoes"]
+	for entrada: String in entradas:
+		var codigos: Array[String] = extrair_codigos(entrada)
+		if codigos.is_empty():
+			var chave: String = _sem_acento(entrada)
+			if not problemas.has(chave):
+				problemas[chave] = entrada
+			continue
+		for codigo: String in codigos:
+			# Mencao multi-codigo emite o proprio codigo (nao a entrada inteira) — reusar o texto
+			# faria o modulo re-extrair sempre o mesmo primeiro candidato para todos os codigos.
+			# Cuidado: NAO trocar para "sempre entrada" achando que resolve ruido de regex sem
+			# tocar aqui (foi essa a correcao proposta e descartada no finding de review do
+			# Cards/0002) — duas copias identicas da entrada fariam _classificar_codigos escolher
+			# sempre o MESMO primeiro candidato valido nas duas, perdendo silenciosamente o segundo
+			# codigo real em mencoes genuinamente multiplas (test_mencao_multi_codigo_decide_por_codigo).
+			# O ruido de regex foi tratado na raiz, no \b de extrair_codigos.
+			var texto: String = entrada if codigos.size() == 1 else codigo
+			var substitui: bool = true
+			if decisoes.has(codigo):
+				var atual: Dictionary = decisoes[codigo]
+				substitui = ordem > int(atual["ordem"]) \
+					or (ordem == int(atual["ordem"]) and lado == "excluir")
+			if substitui:
+				decisoes[codigo] = { "lado": lado, "texto": texto, "ordem": ordem }
+
+
+# Reconstroi a resposta final de uma matricula a partir do [param estado] mesclado: os codigos
+# decididos (na ordem de primeira mencao — Dictionary preserva insercao mesmo em overwrite) seguidos
+# dos problemas (entradas sem codigo extraivel) de cada lado.
+func _montar_resposta(estado: Dictionary) -> Dictionary:
+	var incluir: Array[String] = []
+	var excluir: Array[String] = []
+	var decisoes: Dictionary = estado["decisoes"]
+	for codigo: String in decisoes:
+		var decisao: Dictionary = decisoes[codigo]
+		if decisao["lado"] == "incluir":
+			incluir.append(decisao["texto"])
+		else:
+			excluir.append(decisao["texto"])
+	for problema: String in estado["problemas_incluir"].values():
+		incluir.append(problema)
+	for problema: String in estado["problemas_excluir"].values():
+		excluir.append(problema)
+	return { "matricula": estado["matricula"], "incluir": incluir, "excluir": excluir }
 
 
 # Divide o conteudo de uma celula de disciplinas (varias separadas por virgula) em entradas limpas,
