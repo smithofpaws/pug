@@ -90,9 +90,16 @@ O repositório guarda **código**, não dados pessoais. Já gitignorados, **nunc
 `arquivos/` (grades, cargas, equivalências) **é** versionado. Antes de qualquer `push`/commit,
 conferir `git status` para garantir que nenhum CSV de `dados/` ou token entrou.
 
-**Nada de nome real de pessoa em arquivo versionado** — nem em exemplo de documentação. O repositório
-é público e o `MANUAL.md` vai dentro do pacote distribuído. Use nomes fictícios (`Maria da Silva
-Souza`) nos exemplos do manual, das dicas e dos prompts.
+**O que conta como dado pessoal em arquivo versionado** (o repositório é público e o `MANUAL.md`
+vai dentro do pacote distribuído):
+
+- **Aluno: tudo é sensível, inclusive o nome.** Nenhum dado real de aluno (nome, matrícula,
+  e-mail, histórico) em arquivo versionado, nunca.
+- **Docente: o nome, por si só, não é um problema** — é informação funcional pública (aparece na
+  oferta de disciplinas). O que **não** pode ser versionado é dado além do nome: e-mail, CPF,
+  preferências de horário, histórico de oferta, avaliações.
+- Em exemplos de documentação (manual, dicas, prompts), ainda assim **prefira nomes fictícios**
+  (`Maria da Silva Souza`) — real só quando o exemplo perde sentido sem ele.
 
 #### Exceção controlada: sincronização de planejamento (servidor Kinto)
 
@@ -302,8 +309,9 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
   anterior vai para `archive/`). É estado versionado, não documentação — regras
   no `README.md` da pasta.
 - **LGPD no pipeline:** `Cards/` é versionado e público — nenhum dado pessoal
-  real em card, spec, teste, fixture (`test/fixtures/`) ou PNG de smoke.
-  Smoke test só com `dados/` vazio ou fixtures fictícias. `Cards/` tem
+  real em card, spec, teste, fixture (`test/fixtures/`) ou PNG de smoke (nome
+  de docente sozinho é tolerado, mas prefira fictício; ver a régua na seção
+  LGPD). Smoke test só com `dados/` vazio ou fixtures fictícias. `Cards/` tem
   `.gdignore` (fora do import e do PCK); `addons/gut/*` e `test/*` estão no
   `exclude_filter` de todos os presets de export.
 - **Setup por clone:** `python -m pip install --user "gdtoolkit==4.*"` e

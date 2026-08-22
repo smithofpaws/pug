@@ -34,9 +34,11 @@ Cards/
 
 > **LGPD — regra absoluta desta pasta:** o repositório é público e `Cards/` é
 > versionado. Nenhum PNG de smoke, roteiro ou texto de card pode conter dado
-> pessoal real (nome de aluno/docente, matrícula, e-mail). Capturas de tela só
-> com `dados/` vazio ou com fixtures fictícias (`test/fixtures/`); exemplos em
-> texto usam nomes fictícios (`Maria da Silva Souza`).
+> pessoal real de **aluno** (nome, matrícula, e-mail) nem dado de **docente
+> além do nome** (e-mail, preferências, histórico de oferta); o nome de docente
+> sozinho é tolerado, mas prefira fictício. Capturas de tela só com `dados/`
+> vazio ou com fixtures fictícias (`test/fixtures/`); exemplos em texto usam
+> nomes fictícios (`Maria da Silva Souza`).
 
 ## Status
 
