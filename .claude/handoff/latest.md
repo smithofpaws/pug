@@ -1,60 +1,62 @@
-# Handoff — 2026-08-22 13:30
+# Handoff — 2026-08-22 19:11
 
 ## Onde parei
-Três cards entregues pela fila hoje. Os cards 0001 e 0002 já estão mesclados em
-`master` e pushados; o card 0003 está entregue na branch `cards/2026-08-22`
-(commits `1ea5c49` card + `0d100dd` entrega), **ainda não mesclada em `master`**
-nesta segunda leva. O pipeline rodou de ponta a ponta três vezes sem falha.
+Quarto card do dia entregue pela fila. `master` contém os cards 0001–0003, a
+regra LGPD refinada e o fechamento do AC4 do 0001 (relato do dev). O card 0004
+está entregue na branch `cards/2026-08-22` (commits `9e85227` card + `6eb0a27`
+entrega), branch pushada, **ainda não mesclada em `master`**.
 
 ## Card ativo
-Nenhum. 0001, 0002 e 0003 estão `done`; não há card `ready`/`todo` no índice.
+Nenhum `ready`/`in_progress`. 0001–0004 estão `done` — mas veja o AC5 do 0004
+abaixo.
 
-## Feito nesta sessão
-- Fila da manhã: cards 0001 (ordem canônica na grade de horários) e 0002
-  (mesclagem de respostas do ajuste) — entregues, mesclados em `master`,
-  pushados.
-- `2152fb5` (em `master`): regra LGPD refinada por decisão do dev — dado de
-  aluno segue todo protegido (inclusive nome); de docente, o nome sozinho não é
-  sensível, dados além do nome sim. `AGENTS.md` + `Cards/README.md`.
-- Card 0003 (na branch): rótulo de opção do Forms com vírgulas era estilhaçado
-  em entradas fantasma ("T40;60;80", nome de professor) exibidas como "código
-  inválido/ausente". `_separar_entradas` agora re-anexa fragmento sem código à
-  entrada anterior da célula. 8 testes novos (34/34 na suíte), review limpo em
-  1 rodada, 2 findings não-bloqueantes já aplicados (mensagem de asserção
-  corrigida; limitação multi-código registrada na spec e no `IDEAS.md`).
+## Feito nesta sessão (após o handoff das 13:30)
+- Card 0003 mesclado em `master` e pushado; AC4 do 0001 fechado por relato do
+  dev (`3b2c01d`).
+- Investigação do bug `calculo_carga_horaria.gd:13` (a pedido do dev):
+  4 defeitos concretos identificados e relatados — (1) reprovações/trancamentos
+  contam como CH vencida (filtro é "não-matr" em vez de aprovado/dispensado);
+  (2) sem teto por núcleo e sem conferência de chaves estcurricular×exigida;
+  (3) denominador ajustado por ignorahora, numerador não; (4) equivalências não
+  expandem. Itens 1 e 3 corrigíveis sem regra de negócio; 2 depende da fórmula
+  oficial da Unipampa; 4 tem a mesma raiz do card 0004. **Ainda não virou card.**
+- Card 0004 (branch): `AnaliseGrades.concluidas_por_equivalencia` (pura, grupo
+  completo CONCLUÍDO — mais estrita que a hachura, de propósito) +
+  `_cursadas_com_equivalencia` nos 2 call sites da grade da Situação Alunos.
+  7 testes novos (41/41), review limpo em 1 rodada, MANUAL.md atualizado.
 
 ## Pela metade / não verificado
-- **AC4 (`manual`) do card 0001 segue aberto**: conferir no modo ajuste que a
-  pedida de inclusão (fundo verde) vem primeiro na célula. Roteiro em
-  `Cards/0001-ordem-prioridade-grade-horarios/smoke/smoke.md`. Só o dev fecha.
-- 0002 e 0003 nunca foram observados com um CSV real do Forms — a validação de
-  campo é o próximo uso real do Modo Ajuste.
-- Limitação nova registrada (item no `IDEAS.md`, "A IMPLEMENTAR"): texto
-  re-anexado a menção multi-código é descartado do retorno (causa em
-  `_mesclar_lado`/0002) — candidato a card futuro.
-- Merge de `cards/2026-08-22` (0003) em `master` pendente de palavra do dev
-  (seria fast-forward).
+- **AC5 (`manual`) do 0004 é o item crítico**: o review registrou que reverter
+  só a fiação do módulo mantém os 41 testes verdes — o roteiro manual
+  (`Cards/0004-cor-concluida-por-equivalencia/smoke/smoke.md`, 5 passos +
+  contraprova) é a ÚNICA prova de que a cor chega à tela. Card marcado `done`
+  pela regra da fila, mas o bug só está provado corrigido após o relato do dev.
+- Bug do `calculo_carga_horaria` investigado mas sem card — aguarda o dev
+  decidir escopo (sugestão: card só para os itens 1 e 3, headless).
+- Ideia nova no `IDEAS.md`: origem da equivalência na célula (tooltip) — fora
+  do 0004 por decisão de escopo.
 
 ## Estado dos portões
-guardrails: ok (0 acima da baseline de 375) · testes: ok (34/34, 3 scripts) ·
-parser: ok — pipeline do 0003 + pre-commit do Lefthook, em 2026-08-22.
+guardrails: ok (0 acima da baseline) · testes: ok (41/41, 4 scripts) ·
+parser: ok — pipeline do 0004 + pre-commit, em 2026-08-22.
 
 ## Estado do git
-Branch `cards/2026-08-22`, working tree limpo, 3 commits à frente de `master`
-(card 0003 + entrega + este handoff), branch pushada. `master` local =
-`origin/master` (contém 0001, 0002 e a regra LGPD).
+Branch `cards/2026-08-22`, working tree limpo, pushada; 2 commits à frente de
+`master` (+ este handoff). Merge em `master` aguarda o dev (fast-forward).
 
 ## Decisões tomadas que não estão em card nenhum
-- Regra LGPD sobre nome de docente: já migrada para o `AGENTS.md` (`2152fb5`).
-- Trade-off do 0003 (texto livre após vírgula em menção válida não alerta
-  mais): documentado na spec do card, no MANUAL e travado em teste.
+- Critério da expansão de equivalência para COR exige fontes concluídas
+  (presença = cursadas), mais estrito que o da hachura (presença = histórico
+  inteiro) — documentado na docstring de `concluidas_por_equivalencia` e na
+  spec do 0004.
 
 ## Próximo passo concreto
-Mesclar `cards/2026-08-22` em `master` e pushar (aguardando o dev); depois,
-dev executa o roteiro do AC4 do 0001 e registra no `card.md`.
+Dev roda o roteiro do AC5 do 0004 (aluno com disciplina cursada sob código de
+outra grade → célula dourada) e registra no `card.md`; merge de
+`cards/2026-08-22` em `master` quando ele mandar.
 
 ## Em aberto para o dev
-- Merge do 0003 em `master` agora?
-- AC4 do 0001: rodar o roteiro manual.
-- O item novo do `IDEAS.md` (texto descartado no caminho multi-código) merece
-  virar card já, ou espera aparecer na prática?
+- AC5 do 0004 (a prova real do bug corrigido).
+- Merge em `master` agora?
+- O bug do `calculo_carga_horaria` vira card já (itens 1 e 3) ou espera a
+  fórmula oficial para fazer tudo junto?
