@@ -9,6 +9,7 @@ Apagar uma linha não exige justificativa.
 # GERAL
 
 - Adicionar no PUG também o ranking, para saber se a pessoa está no horário correto;
+- Na grade de integralização, indicar a origem de uma disciplina concluída por equivalência (ex.: tooltip `DicaFlutuante` na célula mostrando o código cursado e a grade de origem). A célula da `Grade` não tem tooltip hoje — seria infraestrutura nova no componente; ficou de fora do card 0004 por decisão de escopo. Alternativa mais barata: linha no relatório do terminal.
 - Atualizar no json 2023 que parece que inst eletrica predial nao tem arquitetura;
 - Adicionar um check online para bloquear o software de funcionar se eu quiser;
 
@@ -19,7 +20,6 @@ Apagar uma linha não exige justificativa.
 - [ ] **calculo_carga_horaria.gd:13** -- Revisar se a forma de calculo de percentagem do curso esta correta. Validar contra regras de negocio da universidade.
 - [x] **calculo da reprovação por nota e por falta** uma discente, por exemplo, aparecia com 5 RN apesar de ter reprovado apenas uma vez. — Causa: o `hist.csv` exportado do GURI repete a mesma linha várias vezes (fan-out da consulta; no arquivo de 10/08/2026 são 17.799 linhas para 6.214 reais). `FileHandling.ler_dados` agora descarta, dentro de cada matrícula, linhas idênticas em todas as colunas lidas — reprovações da mesma disciplina em **semestres diferentes** continuam contando. Corrige junto o CR (`calculadorcr.gd` somava nota×CH por linha) e as contagens de Situação de Disciplinas.
 - [x] **indicador de matriculável na grade** as disciplinas matriculáveis e não matriculáveis tem a mesma cor de fonte na grade. — Resolvido por **hachura**, não por cor: na grade de integralização as disciplinas ainda **distantes** (nenhuma condição e não concluídas — dependem de uma cadeia de aprovações) recebem hachura leve, ficando levemente mais escuras (`AnaliseGrades.disciplinas_distantes` + `HachuraOverlay.leve`). Assim, matriculável e distante deixam de ser indistinguíveis mesmo mantendo a mesma cor de fonte. A alternativa por cor foi testada e descartada (`matriculavel` segue como token neutro em `paleta_semantica.gd`).
-- [ ] **disciplina concluída por equivalência não recebe cor na grade** Quem cursou a disciplina sob o código de outra grade (ex.: discente aprovado em `al0383` Mecânica dos Solos I da `alec_2023`, equivalente a `al0067` da `alec_2010`) aparece na grade **sem cor nenhuma** — igual a uma disciplina matriculável. `disciplinas_concluidas` só olha os códigos brutos do histórico, sem expandir equivalências. A hachura de distantes já trata esses casos corretamente (não os hachura, via `AnaliseGrades.disciplinas_distantes`), mas a **cor** de "cursada" continua faltando. Decidir se a concluída por equivalência recebe o dourado de "cursada" ou um token próprio.
 
 ## A IMPLEMENTAR
 

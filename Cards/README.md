@@ -100,3 +100,4 @@ O `pre-commit` do Lefthook roda os dois. Os hooks do Claude Code
 | 0001 | [Ordem de prioridade das disciplinas na grade de horários](0001-ordem-prioridade-grade-horarios/card.md) | done | IDEAS.md (seção GERAL) |
 | 0002 | [Mesclar múltiplas respostas do mesmo aluno no ajuste de matrícula](0002-mesclar-respostas-ajuste/card.md) | done | IDEAS.md (seção GERAL) |
 | 0003 | [Re-anexar fragmentos de rótulo sem código no ajuste de matrícula](0003-reanexar-fragmentos-rotulo-ajuste/card.md) | done | IDEAS.md (seção GERAL) |
+| 0004 | [Disciplina concluída por equivalência recebe a cor de cursada na grade](0004-cor-concluida-por-equivalencia/card.md) | ready | IDEAS.md (BUGs, alta prioridade) |
