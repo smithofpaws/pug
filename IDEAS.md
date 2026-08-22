@@ -8,7 +8,6 @@ Apagar uma linha não exige justificativa.
 
 # GERAL
 
-- No módulo situação alunos, a ordem de prioridade de apresentação das disciplinas na grade de horários deve ser: as que o aluno pediu matrícula (quando estiver no modo ajuste), seguidas das matriculadas, seguida das matriculáveis, seguida das matriculáveis com aproveitamento, seguida pelas demais;
 - Adicionar no PUG também o ranking, para saber se a pessoa está no horário correto;
 - No módulo situação alunos, no modo de ajuste de matrícula, se o mesmo aluno preencheu a planilha múltiplas vezez, terá múltiplas linhas. O código só pega a ultima.
 - Atualizar no json 2023 que parece que inst eletrica predial nao tem arquitetura;
