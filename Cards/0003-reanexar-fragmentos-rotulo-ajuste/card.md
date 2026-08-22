@@ -1,7 +1,7 @@
 ---
 id: 0003-reanexar-fragmentos-rotulo-ajuste
 title: Re-anexar fragmentos de rótulo sem código no ajuste de matrícula
-status: ready
+status: done
 origin: IDEAS.md (seção GERAL)
 layers: [standalone_scripts/io]
 interviewed: true
@@ -31,17 +31,17 @@ original. Uma opção marcada = uma menção, mesmo com vírgulas no rótulo.
 
 ## Acceptance criteria
 
-- [ ] Célula `"AL0394: Administração, T40;60;80, João Pereira Lima;"` produz
+- [x] Célula `"AL0394: Administração, T40;60;80, João Pereira Lima;"` produz
       UMA menção (código `al0394`) e zero problemas -- verify: `headless`
-- [ ] Duas opções com código na mesma célula, cada uma com vírgulas no rótulo,
+- [x] Duas opções com código na mesma célula, cada uma com vírgulas no rótulo,
       produzem DUAS menções com os códigos corretos -- verify: `headless`
-- [ ] Fragmento sem código no INÍCIO da célula (sem entrada anterior) continua
+- [x] Fragmento sem código no INÍCIO da célula (sem entrada anterior) continua
       como problema visível -- verify: `headless`
-- [ ] Célula só com texto livre com vírgulas vira UM problema com o texto
+- [x] Célula só com texto livre com vírgulas vira UM problema com o texto
       re-juntado -- verify: `headless`
-- [ ] Comportamento aceito travado em teste: texto livre após vírgula numa
+- [x] Comportamento aceito travado em teste: texto livre após vírgula numa
       menção com código é absorvido por ela (não alerta mais) -- verify: `headless`
-- [ ] Suíte do 0002 continua verde sem alteração nos testes existentes
+- [x] Suíte do 0002 continua verde sem alteração nos testes existentes
       -- verify: `headless`
 
 ## Edge cases

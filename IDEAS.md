@@ -23,6 +23,7 @@ Apagar uma linha não exige justificativa.
 
 ## A IMPLEMENTAR
 
+- [ ] **Texto re-anexado some no caminho multi-código do ajuste** Em `PlanilhaAjuste`, um fragmento sem código re-anexado (card 0003) a uma menção com 2 ou mais códigos é descartado do retorno — `_mesclar_lado` (card 0002) emite o código puro nesse caminho, então o texto não vira menção nem problema (antes do 0003 aparecia como "código inválido/ausente"). Ajustar `_mesclar_lado` para não descartar o texto re-anexado; comportamento atual travado em `test_fragmento_reanexado_a_mencao_multi_codigo_perde_o_texto`.
 - [ ] **Colisão de cor na paleta semântica** `matriculavel_aproveitamento` e `corequisito_matriculavel` usam ambos `WEB_GRAY` em `paleta_semantica.gd`, ficando indistinguíveis. O desenho previsto pelo próprio arquivo é uma matiz por família (matriculável, corequisito, seaprovado) com o alvo de contraste sutil diferenciando a variante `_aproveitamento` — decidir as matizes e unificar.
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
 - [ ] Adicionar ao SituaçãoAlunos o modo "Ajuste de Matrícula". Permite importar uma planilha csv ou direto a planilha resposta do google com atualização

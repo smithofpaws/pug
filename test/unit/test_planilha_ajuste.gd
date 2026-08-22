@@ -192,6 +192,100 @@ func test_formato_de_retorno_inalterado() -> void:
 	])
 
 
+func test_rotulo_com_virgulas_vira_uma_mencao() -> void:
+	# Cards/0003: o Forms junta as opcoes marcadas por virgula, entao um rotulo com virgulas
+	# ("AL0394: Administracao, T40;60;80, Joao Pereira Lima;") estilhacava em 3 entradas falsas.
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"AL0394: Administração, T40;60;80, João Pereira Lima;\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], ["AL0394: Administração, T40;60;80, João Pereira Lima;"], \
+		"rotulo inteiro deve ser reconstituido como uma unica mencao")
+	assert_eq(resposta["excluir"], [], "coluna excluir vazia nesta linha do CSV (fragmento vazado da celula incluir cairia em incluir, nunca aqui)")
+	assert_eq(_planilha.extrair_codigos(resposta["incluir"][0]), ["al0394"])
+
+
+func test_duas_opcoes_com_virgulas_no_rotulo_viram_duas_mencoes() -> void:
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"AL0394: Administração, T40;60;80, João Pereira Lima, AL0401: Estruturas de Concreto, T10;20, Maria da Silva Souza\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], [
+		"AL0394: Administração, T40;60;80, João Pereira Lima",
+		"AL0401: Estruturas de Concreto, T10;20, Maria da Silva Souza",
+	], "cada opcao marcada deve virar uma mencao, na ordem em que aparecem na celula")
+	assert_eq(_planilha.extrair_codigos(resposta["incluir"][0]), ["al0394"])
+	assert_eq(_planilha.extrair_codigos(resposta["incluir"][1]), ["al0401"])
+
+
+func test_fragmento_sem_codigo_no_inicio_continua_problema() -> void:
+	# Sem entrada anterior para reanexar, o 1o fragmento da celula abre entrada propria mesmo
+	# sem codigo -- vira "problema" e continua visivel ao coordenador.
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"pedido sem codigo, AL0394: Administração, T40\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	# Decisoes (com codigo) antes dos problemas -- ordem de _montar_resposta.
+	assert_eq(resposta["incluir"], ["AL0394: Administração, T40", "pedido sem codigo"])
+
+
+func test_celula_so_texto_livre_vira_um_problema_rejuntado() -> void:
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,,\"Desisti da disciplina, motivo pessoal, obrigado\"",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["excluir"], ["Desisti da disciplina, motivo pessoal, obrigado"], \
+		"texto livre com virgulas sem nenhum codigo deve virar UM problema re-juntado")
+
+
+func test_texto_livre_apos_mencao_valida_e_absorvido() -> void:
+	# Trade-off aceito na entrevista (AC5): pedido em texto livre escrito apos virgula numa
+	# mencao com codigo passa a ser absorvido pela mencao -- deixa de gerar alerta de "codigo
+	# invalido/ausente" separado. O coordenador ve o texto completo, so nao ve mais o alerta.
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"AL0400 Fundações, quero também a de concreto\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], ["AL0400 Fundações, quero também a de concreto"])
+
+
+func test_reanexo_compoe_com_mesclagem_mais_recente() -> void:
+	# O mesmo rotulo com virgulas (reconstituido pelo reanexo) e incluido na 1a resposta e
+	# excluido na 2a -- a mencao mais recente vence, entao so sobra em excluir (0002 intacto).
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"AL0394: Administração, T40;60;80, João Pereira Lima\",",
+		"2026/08/11 9:00:00,2409990011,,\"AL0394: Administração, T40;60;80, João Pereira Lima\"",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], [])
+	assert_eq(resposta["excluir"], ["AL0394: Administração, T40;60;80, João Pereira Lima"])
+
+
+func test_fragmento_reanexado_a_mencao_multi_codigo_perde_o_texto() -> void:
+	# Amplificacao (nao-AC, mas real) de um limite ja existente do 0002: numa mencao com 2+
+	# codigos, _mesclar_lado emite o codigo puro por codigo (nao a entrada inteira -- ver
+	# comentario em _mesclar_lado). Antes do 0003, o fragmento apos a virgula virava entrada
+	# propria e sobrava como "problema" visivel. Agora ele e reanexado ao rotulo multi-codigo e
+	# desaparece do retorno por completo -- nem vira mencao nem problema. Travado aqui para nao
+	# virar "descoberta" de novo; corrigir exige tocar _mesclar_lado, fora do escopo deste card.
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"al0400 e al0401, professor Fulano\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], ["al0400", "al0401"], \
+		"'professor Fulano' some do retorno -- nem mencao nem problema")
+
+
+func test_fragmento_residual_de_regex_inicia_mencao() -> void:
+	# Limite deliberado herdado do 0002 (non-goal deste card): "Lab 101" contem candidato
+	# ("lab101"), entao inicia mencao nova em vez de ser reanexado ao fragmento anterior.
+	var csv: String = _csv_respostas([
+		"2026/08/10 8:00:00,2409990011,\"AL0400 Fundacoes, Lab 101\",",
+	])
+	var resposta: Dictionary = _planilha.parse(csv)["respostas"][0]
+	assert_eq(resposta["incluir"], ["AL0400 Fundacoes", "Lab 101"])
+
+
 # Monta um CSV com o cabecalho realista do Forms a partir de [param linhas] de dados ja
 # formatadas ("carimbo,matricula,incluir,excluir").
 func _csv_respostas(linhas: Array[String]) -> String:

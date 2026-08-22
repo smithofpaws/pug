@@ -12,7 +12,10 @@ class_name PlanilhaAjuste extends Node
 ## colunas de interesse são localizadas pelas [b]palavras-chave[/b] no cabeçalho: [code]matricula[/code],
 ## [code]incluir[/code] e [code]excluir[/code] (comparação sem acento e sem caixa). Quando o discente
 ## escolhe várias disciplinas, o Forms agrupa tudo numa única célula entre aspas, separadas por
-## vírgula; cada entrada é texto livre do qual se extrai ao menos o código da disciplina.
+## vírgula — mas o rótulo de uma única opção marcada também pode conter vírgulas, então a célula é
+## dividida pelos fragmentos que contêm código extraível: fragmento sem código é re-anexado à opção
+## anterior, reconstituindo o rótulo original (uma opção marcada = uma entrada de texto livre, da
+## qual se extrai ao menos o código da disciplina).
 
 # Tempo maximo (segundos) de espera por uma resposta, evitando travar o guard _ocupado para sempre.
 const _TIMEOUT_SEGUNDOS := 15.0
@@ -77,7 +80,8 @@ func baixar(url: String) -> Dictionary:
 
 ## Interpreta o [param csv] das respostas. Localiza as colunas pelas palavras-chave do cabeçalho e
 ## devolve, por matrícula, a [b]mesclagem[/b] de todas as respostas do aluno: quando o mesmo aluno
-## responde mais de uma vez, incluir/excluir viram a união das menções, e um conflito por disciplina
+## responde mais de uma vez, incluir/excluir viram a união das menções (uma opção marcada no Forms
+## sempre vira uma única menção, mesmo com vírgulas no rótulo), e um conflito por disciplina
 ## (mesmo código nos dois lados em respostas [i]diferentes[/i]) é resolvido pela menção mais recente
 ## — as linhas do CSV estão em ordem cronológica do Forms. Um conflito dentro da [i]mesma[/i] resposta
 ## (sem "mais recente" possível) é resolvido a favor da exclusão. Retorna
@@ -188,6 +192,12 @@ func _mesclar_lado(estado: Dictionary, entradas: Array[String], lado: String, or
 			# sempre o MESMO primeiro candidato valido nas duas, perdendo silenciosamente o segundo
 			# codigo real em mencoes genuinamente multiplas (test_mencao_multi_codigo_decide_por_codigo).
 			# O ruido de regex foi tratado na raiz, no \b de extrair_codigos.
+			# Consequencia do reanexo do Cards/0003: quando uma entrada multi-codigo ganha uma cauda
+			# reanexada sem codigo ("al0400 e al0401, professor Fulano"), esse texto so existe aqui
+			# dentro de `entrada` -- e como o caminho multi-codigo abaixo usa `codigo` (nao
+			# `entrada`), a cauda desaparece do retorno por completo (nem mencao nem problema; ver
+			# test_fragmento_reanexado_a_mencao_multi_codigo_perde_o_texto). Amplificacao aceita e
+			# travada em teste, fora do escopo do 0003 corrigir (exigiria mudar este metodo).
 			var texto: String = entrada if codigos.size() == 1 else codigo
 			var substitui: bool = true
 			if decisoes.has(codigo):
@@ -218,14 +228,24 @@ func _montar_resposta(estado: Dictionary) -> Dictionary:
 	return { "matricula": estado["matricula"], "incluir": incluir, "excluir": excluir }
 
 
-# Divide o conteudo de uma celula de disciplinas (varias separadas por virgula) em entradas limpas,
-# descartando as vazias.
+# Divide o conteudo de uma celula em entradas: uma opcao marcada no Forms = uma entrada, mesmo
+# quando o rotulo da opcao contem virgulas (Cards/0003). A celula e cortada por virgula, mas nem
+# todo fragmento abre entrada nova -- so o 1o da celula (nao ha entrada anterior para reanexar) e
+# qualquer fragmento com codigo extraivel (ele e o delimitador: um rotulo novo comecando). Fragmento
+# sem codigo e sem ser o 1o e re-anexado ao final da ultima entrada, re-juntado com ", ", o que
+# reconstitui o rotulo original que o Forms colocou entre virgulas na mesma celula. Fragmento com
+# codigo nunca e re-anexado, entao o separador ", " nunca atravessa a fronteira entre duas entradas
+# -- nao ha risco de formar um codigo falso emendando o fim de uma com o inicio da outra.
 func _separar_entradas(celula: String) -> Array[String]:
 	var entradas: Array[String] = []
 	for parte in celula.split(","):
 		var limpa: String = parte.strip_edges()
-		if not limpa.is_empty():
+		if limpa.is_empty():
+			continue
+		if entradas.is_empty() or not extrair_codigos(limpa).is_empty():
 			entradas.append(limpa)
+		else:
+			entradas[-1] += ", " + limpa
 	return entradas
 
 
