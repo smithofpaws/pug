@@ -46,8 +46,9 @@ discordarem. O módulo já recebe as equivalências injetadas — sem mudança n
 - [x] `montar_grade_curricular` com as cursadas expandidas pinta o alvo com
       `lista_cores["cursada"]`, mantendo a precedência de cursada sobre
       condições -- verify: `headless`
-- [ ] Visual: aluno com disciplina cursada sob código de outra grade vê a
+- [x] Visual: aluno com disciplina cursada sob código de outra grade vê a
       célula dourada na grade de integralização -- verify: `manual`
+      (fechado por relato do dev em 2026-08-22, roteiro do smoke.md executado)
 
 ## Edge cases
 
