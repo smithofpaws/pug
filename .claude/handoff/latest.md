@@ -59,13 +59,11 @@ Tudo commitado (ver "Estado do git"):
 (41/41, 4 scripts), parser ok.
 
 ## Estado do git
-Branch `master`, working tree limpo, **2 commits à frente de `origin/master`**
-(limpeza do `IDEAS.md`; handoff) — mais um terceiro, de correção deste próprio
-arquivo. **Esses commits não foram pushados** — o dev decide.
-
-O que **saiu** da máquina nesta sessão: só o
-`git push origin --delete cards/2026-08-22`, que apagou no GitHub a branch já
-mesclada. Nenhum commit novo chegou ao `origin`.
+Branch `master`, working tree limpo, **sincronizada com `origin/master`**. Três
+commits pushados nesta sessão (`bbd20e3` limpeza do `IDEAS.md`, `ea15b0a`
+handoff, `98f0289` correção do estado do git no próprio handoff), mais este
+quarto. A branch `cards/2026-08-22`, já mesclada, foi apagada local e no
+`origin`.
 
 ## Decisões tomadas que não estão em card nenhum
 - Item de backlog só sai do `IDEAS.md` quando o comportamento existe **inteiro**
@@ -74,13 +72,14 @@ mesclada. Nenhum commit novo chegou ao `origin`.
   para o `AGENTS.md`.
 
 ## Próximo passo concreto
-Entrevistar o bug de `CalculoCargaHoraria.percentagem_curso` (itens 1 e 3) e
-escrever o card — é headless, cai inteiro em `standalone_scripts/analise/`, e é o
-único defeito conhecido que ainda afeta um número mostrado ao coordenador.
+Nenhum trabalho pendente atribuído. O candidato natural é o card do
+`CalculoCargaHoraria.percentagem_curso` — **mas o dev pediu tempo para pensar no
+escopo** (ver "Em aberto"). Não abrir esse card sem a decisão dele.
 
 ## Em aberto para o dev
-- Push destes dois commits agora?
-- O card do cálculo de CH sai só com os itens 1 e 3, ou espera a fórmula oficial
-  da Unipampa para fazer os quatro de uma vez?
+- **Escopo do card de `percentagem_curso` — decisão adiada por escolha dele**, que
+  quis pensar com calma. As opções postas foram: só os itens 1 e 3 (headless, sem
+  depender de regra de negócio nova) ou os quatro de uma vez, esperando a fórmula
+  oficial da Unipampa. Retomar por aqui, não por uma terceira opção inventada.
 - A falta de `al0171` em `al0081` vale também para a grade `alec_2010`, ou lá o
   pré-requisito realmente não existe?
