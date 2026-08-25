@@ -10,23 +10,26 @@ Apagar uma linha não exige justificativa.
 
 - Adicionar no PUG também o ranking, para saber se a pessoa está no horário correto;
 - Na grade de integralização, indicar a origem de uma disciplina concluída por equivalência (ex.: tooltip `DicaFlutuante` na célula mostrando o código cursado e a grade de origem). A célula da `Grade` não tem tooltip hoje — seria infraestrutura nova no componente; ficou de fora do card 0004 por decisão de escopo. Alternativa mais barata: linha no relatório do terminal.
-- Atualizar no json 2023 que parece que inst eletrica predial nao tem arquitetura;
+- Em `alec_2023.json`, falta **Arquitetura (`al0171`) como pré-requisito de Instalações Elétricas Prediais (`al0081`)**. Hoje `al0081` tem só `prerequisito0: al0006`, e isso vale para as duas grades (`alec_2010` e `alec_2023`). Editar no repositório canônico do curso (`alec-data`) e sincronizar com `ferramentas/sincronizar_dados_curso.ps1` — não direto em `arquivos/`.
 - Adicionar um check online para bloquear o software de funcionar se eu quiser;
 
 ## BUGs
 
 ### Alta prioridade
 
-- [ ] **calculo_carga_horaria.gd:13** -- Revisar se a forma de calculo de percentagem do curso esta correta. Validar contra regras de negocio da universidade.
-- [x] **calculo da reprovação por nota e por falta** uma discente, por exemplo, aparecia com 5 RN apesar de ter reprovado apenas uma vez. — Causa: o `hist.csv` exportado do GURI repete a mesma linha várias vezes (fan-out da consulta; no arquivo de 10/08/2026 são 17.799 linhas para 6.214 reais). `FileHandling.ler_dados` agora descarta, dentro de cada matrícula, linhas idênticas em todas as colunas lidas — reprovações da mesma disciplina em **semestres diferentes** continuam contando. Corrige junto o CR (`calculadorcr.gd` somava nota×CH por linha) e as contagens de Situação de Disciplinas.
-- [x] **indicador de matriculável na grade** as disciplinas matriculáveis e não matriculáveis tem a mesma cor de fonte na grade. — Resolvido por **hachura**, não por cor: na grade de integralização as disciplinas ainda **distantes** (nenhuma condição e não concluídas — dependem de uma cadeia de aprovações) recebem hachura leve, ficando levemente mais escuras (`AnaliseGrades.disciplinas_distantes` + `HachuraOverlay.leve`). Assim, matriculável e distante deixam de ser indistinguíveis mesmo mantendo a mesma cor de fonte. A alternativa por cor foi testada e descartada (`matriculavel` segue como token neutro em `paleta_semantica.gd`).
+- [ ] **`CalculoCargaHoraria.percentagem_curso`** — o percentual de conclusão do curso está errado. Quatro defeitos já levantados:
+  1. Reprovações e trancamentos contam como CH vencida (o filtro é "não-matriculado" em vez de aprovado/dispensado);
+  2. Sem teto por núcleo e sem conferência de que as chaves do `estcurricular` batem com as da carga exigida;
+  3. `ignorahora` ajusta o denominador (`AnaliseGrades.ajustarch_tccestagio`) mas não o numerador;
+  4. Equivalências não expandem — mesma raiz do card 0004.
+  Os itens **1 e 3** são corrigíveis sem regra de negócio nova (candidatos a um card headless); o **2** depende da fórmula oficial da Unipampa. Validar o resultado contra o GURI (ver Situação Alunos › A IMPLEMENTAR).
 
 ## A IMPLEMENTAR
 
 - [ ] **Texto re-anexado some no caminho multi-código do ajuste** Em `PlanilhaAjuste`, um fragmento sem código re-anexado (card 0003) a uma menção com 2 ou mais códigos é descartado do retorno — `_mesclar_lado` (card 0002) emite o código puro nesse caminho, então o texto não vira menção nem problema (antes do 0003 aparecia como "código inválido/ausente"). Ajustar `_mesclar_lado` para não descartar o texto re-anexado; comportamento atual travado em `test_fragmento_reanexado_a_mencao_multi_codigo_perde_o_texto`.
 - [ ] **Colisão de cor na paleta semântica** `matriculavel_aproveitamento` e `corequisito_matriculavel` usam ambos `WEB_GRAY` em `paleta_semantica.gd`, ficando indistinguíveis. O desenho previsto pelo próprio arquivo é uma matiz por família (matriculável, corequisito, seaprovado) com o alvo de contraste sutil diferenciando a variante `_aproveitamento` — decidir as matizes e unificar.
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
-- [ ] Adicionar ao SituaçãoAlunos o modo "Ajuste de Matrícula". Permite importar uma planilha csv ou direto a planilha resposta do google com atualização
+- [ ] **Importar planilha CSV local no Modo Ajuste** O Modo Ajuste do SituaçãoAlunos já existe, mas só baixa a planilha do Google publicada, por URL (`PlanilhaAjuste.baixar`; endereço em `config_usuario.json:modo_ajuste.url_planilha`). Falta o caminho de abrir um `.csv` do disco — útil sem rede ou com a planilha exportada à mão.
 - [ ] Nos exportadores de disciplinas falta indicar quais são corequisitos (os corequisitos aparecem apenas como pre)
 
 ## Divergências de CH entre grades `alec_2010` e `alec_2023`
@@ -85,9 +88,9 @@ Tudo certo neste módulo.
 
 ## A IMPLEMENTAR
 
-- [ ] **Verificar carga horária mínima do discente** nos horários e no trancamento (útil para verificar mínimo de 20h para bolsa).
-- [ ] **Verificar se o cálculo da carga horária do aluno bate com a do sistema GURI**
-- [ ] **Regra 2550h para TCC** — Verificar se `cargarequisito` nas grades (ex.: `alec_2010.json`) está correto e se a funcionalidade já é implementada em tempo de execução. Atualmente hardcoded em `situacao_alunos.gd:257-260`. Verificar também a funcionalidade geral de `cargarequisito` se está implementada (ex.: `al0410` Estágio tem `cargarequisito: "50"`).
+- [ ] **Verificar carga horária mínima do discente** nos horários e no trancamento, para conferir o mínimo de 20h exigido para bolsa. (Absorve a ideia de um módulo próprio de verificação de CH mínima, que estava repetida em "Novos Módulos Sugeridos".)
+- [ ] **Verificar se o cálculo da carga horária do aluno bate com a do sistema GURI** — mesma área do bug de `calculo_carga_horaria.gd` (GERAL › BUGs › Alta prioridade); bater contra o GURI é o teste de aceitação natural daquela correção.
+- [ ] **Regra 2550h para TCC** — a exigência está hardcoded em `situacao_alunos.gd:386-388`, com um `TODO` no próprio arquivo para movê-la para `base_config.json:cursos`. O consumo genérico de `cargarequisito` **já existe** (`analise_curricular.gd:172`); falta conferir se os valores nas grades estão certos (ex.: `al0410` Estágio, `cargarequisito: "50"`).
 
 ---
 
@@ -113,11 +116,10 @@ Tudo certo neste módulo.
 
 ## A IMPLEMENTAR
 
-- [ ] **trancamentos.gd** -- Revisar integracao com `base_config.json:48` (`"enabled": false`). Modulo desabilitado por padrao.
+- [ ] **trancamentos.gd** — revisar a integração; o módulo vem desabilitado por padrão (`base_config.json:modulos.trancamento = false`).
 
 ---
 
 # Novos Modulos Sugeridos
 
-- [ ] **Módulo de verificação de carga horária mínima** para análise de bolsas (mínimo de 20h).
 - [ ] **Opção de mostrar disciplinas não suprimidas no tempo** (ex.: mostrar IEC ao invés de ICT).
