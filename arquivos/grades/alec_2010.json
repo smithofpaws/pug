@@ -1081,6 +1081,12 @@
         "ch": "60",
         "nucleo": "cccg"
     },
+    "al2243": {
+        "nome": "Concreto Protendido",
+        "semestre": "0",
+        "ch": "60",
+        "nucleo": "cccg"
+    },
     "al5152": {
         "nome": "Materiais e Meio Ambiente REVER CÓDIGO",
         "prerequisito0": "al0148",
