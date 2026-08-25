@@ -10,8 +10,10 @@ Apagar uma linha não exige justificativa.
 
 - Adicionar no PUG também o ranking, para saber se a pessoa está no horário correto;
 - Na grade de integralização, indicar a origem de uma disciplina concluída por equivalência (ex.: tooltip `DicaFlutuante` na célula mostrando o código cursado e a grade de origem). A célula da `Grade` não tem tooltip hoje — seria infraestrutura nova no componente; ficou de fora do card 0004 por decisão de escopo. Alternativa mais barata: linha no relatório do terminal.
-- Em `alec_2023.json`, falta **Arquitetura (`al0171`) como pré-requisito de Instalações Elétricas Prediais (`al0081`)**. Hoje `al0081` tem só `prerequisito0: al0006`, e isso vale para as duas grades (`alec_2010` e `alec_2023`). Editar no repositório canônico do curso (`alec-data`) e sincronizar com `ferramentas/sincronizar_dados_curso.ps1` — não direto em `arquivos/`.
 - Adicionar um check online para bloquear o software de funcionar se eu quiser;
+- **Auditar as atas aprovadas contra o `alec-data`.** Duas decisões já foram encontradas aplicadas pela metade (a de 2025, SEI 1848924, teve o item de grade corrigido em 2026-08-25). Faltam conferir as demais pastas de `Coordenacao/Atualizacao PPCs/` — 21 pastas, ~65 PDFs: `2025 ACGs 2023`, `2025 Correcao da carga horaria total`, `2025 Pre requisitos tabela 6`, `2026 Alteracao regulamentacao AGC`, `2026 Regra de aproveitamento` e as de disciplina individual. É trabalho de dado, não de código — o card 0005 automatiza só a detecção dos defeitos estruturais.
+- **Chave `agc` vs `acg` na carga exigida.** `cargaexigida/alec_2010.json` usa `agc`; a `alec_2023.json` usa `acg` (Atividades Complementares de Graduação). Nenhum `.gd` lê essas chaves pelo nome, então nada quebra visivelmente — mas a chave entra no denominador de `CalculoCargaHoraria.percentagem_curso` sem nunca somar no numerador. Decidir qual é a grafia boa e unificar (o `alec_2010` é do `alec-data`; editar lá).
+- Na `alec_2023`, `al5022` (Metodologia de Trabalho Científico) tem `prerequisito0: "ch 50%"` — texto livre num campo que em todo o resto contém código de disciplina. Provável candidato a `cargarequisito`. Editar no `alec-data`.
 
 ## BUGs
 
