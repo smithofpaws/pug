@@ -22,6 +22,7 @@ Apagar uma linha não exige justificativa.
   2. Sem teto por núcleo e sem conferência de que as chaves do `estcurricular` batem com as da carga exigida;
   3. `ignorahora` ajusta o denominador (`AnaliseGrades.ajustarch_tccestagio`) mas não o numerador;
   4. Equivalências não expandem — mesma raiz do card 0004.
+
   Os itens **1 e 3** são corrigíveis sem regra de negócio nova (candidatos a um card headless); o **2** depende da fórmula oficial da Unipampa. Validar o resultado contra o GURI (ver Situação Alunos › A IMPLEMENTAR).
 
 ## A IMPLEMENTAR
@@ -89,7 +90,7 @@ Tudo certo neste módulo.
 ## A IMPLEMENTAR
 
 - [ ] **Verificar carga horária mínima do discente** nos horários e no trancamento, para conferir o mínimo de 20h exigido para bolsa. (Absorve a ideia de um módulo próprio de verificação de CH mínima, que estava repetida em "Novos Módulos Sugeridos".)
-- [ ] **Verificar se o cálculo da carga horária do aluno bate com a do sistema GURI** — mesma área do bug de `calculo_carga_horaria.gd` (GERAL › BUGs › Alta prioridade); bater contra o GURI é o teste de aceitação natural daquela correção.
+- [ ] **Verificar se o cálculo da carga horária do aluno bate com a do sistema GURI** — mesma área do bug de `CalculoCargaHoraria.percentagem_curso` (GERAL › BUGs › Alta prioridade); bater contra o GURI é o teste de aceitação natural daquela correção.
 - [ ] **Regra 2550h para TCC** — a exigência está hardcoded em `situacao_alunos.gd:386-388`, com um `TODO` no próprio arquivo para movê-la para `base_config.json:cursos`. O consumo genérico de `cargarequisito` **já existe** (`analise_curricular.gd:172`); falta conferir se os valores nas grades estão certos (ex.: `al0410` Estágio, `cargarequisito: "50"`).
 
 ---

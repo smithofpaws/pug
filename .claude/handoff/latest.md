@@ -59,9 +59,13 @@ Tudo commitado (ver "Estado do git"):
 (41/41, 4 scripts), parser ok.
 
 ## Estado do git
-Branch `master`, working tree limpo, sincronizada com `origin/master`. Dois
-commits novos (limpeza do `IDEAS.md`; handoff). **Push ainda não feito** — o dev
-decide.
+Branch `master`, working tree limpo, **2 commits à frente de `origin/master`**
+(limpeza do `IDEAS.md`; handoff) — mais um terceiro, de correção deste próprio
+arquivo. **Esses commits não foram pushados** — o dev decide.
+
+O que **saiu** da máquina nesta sessão: só o
+`git push origin --delete cards/2026-08-22`, que apagou no GitHub a branch já
+mesclada. Nenhum commit novo chegou ao `origin`.
 
 ## Decisões tomadas que não estão em card nenhum
 - Item de backlog só sai do `IDEAS.md` quando o comportamento existe **inteiro**
