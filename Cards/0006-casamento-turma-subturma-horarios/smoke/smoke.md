@@ -31,7 +31,7 @@ máquina e conferir com os olhos.
 | AC10 | headless | turma composta `30/60B` casa com `T30;60` | `test_extrair_horarios_txt_turma_composta_com_letra_propagada` | passou |
 | AC11 | headless | non-goal: hist `20` × txt só `T80` continua só `matriculavel` | `test_extrair_horarios_txt_turma_ausente_no_txt_continua_matriculavel` | passou |
 | AC12 | headless | os 8 testes já existentes de `test_analise_horarios.gd` seguem passando | suíte completa: 19/19 (8 antigos + 11 novos) | passou |
-| AC13 | manual | `al0376` turma `20A` aparece Matriculada com `dados/` reais de 2026/2 | roteiro abaixo — **sem captura** (dado de aluno) | não verificado |
+| AC13 | manual | `al0376` turma `20A` aparece Matriculada com `dados/` reais de 2026/2 | roteiro abaixo — **sem captura** (dado de aluno) | **confirmado pelo dev em 2026-08-31** |
 
 ## Log
 

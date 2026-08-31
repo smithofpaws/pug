@@ -1,7 +1,7 @@
 ---
 id: 0006-casamento-turma-subturma-horarios
 title: Casamento de turma e subturma na grade de horários
-status: in_progress
+status: done
 origin: novo (defeito relatado pelo dev; uma matrícula em al0376 turma 20A aparecia como Matriculável)
 layers: [standalone_scripts/analise/analise_horarios.gd]
 interviewed: true
@@ -9,10 +9,9 @@ interviewed: true
 
 # 0006 - Casamento de turma e subturma na grade de horários
 
-> Pipeline concluído (commit `f129dcf`): os 12 ACs `headless` estão provados
-> e a suíte passa 52/52. O card **não** é `done` porque o AC13 é `manual` e
-> só fecha por relato do dev — uma sessão não certifica o próprio trabalho.
-> Roteiro em `smoke/smoke.md`.
+> Concluído. Os 12 ACs `headless` estão provados pela suíte (52/52, commit
+> `f129dcf`) e o AC13, que é `manual`, foi **confirmado pelo dev em
+> 2026-08-31** na tela de Situação de Alunos, com os dados reais de 2026/2.
 
 ## Goal
 A grade de horários de **Situação de Alunos** passa a reconhecer que a letra da
@@ -82,7 +81,7 @@ a teórica de quem estivesse nesse estado.
 - [x] Turma composta com letra propagada: discente com `30/60B` casa com a linha `T30;60` -- verify: `headless`
 - [x] Não-regressão do non-goal: discente com turma `20` e disciplina cuja única linha no txt é `T80` continua indo só para `matriculavel` -- verify: `headless`
 - [x] Os 8 testes já existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
-- [ ] Com os dados reais de 2026/2 carregados, uma matrícula em `al0376` (turma `20A`) aparece como **Matriculada** na grade de horários de Situação de Alunos -- verify: `manual`
+- [x] Com os dados reais de 2026/2 carregados, uma matrícula em `al0376` (turma `20A`) aparece como **Matriculada** na grade de horários de Situação de Alunos -- verify: `manual`
 
 ## Edge cases
 - **Turma vazia.** O `horarios.txt` tem uma linha de cabeçalho com todos os

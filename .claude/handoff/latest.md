@@ -2,14 +2,15 @@
 
 ## Onde parei
 Um defeito relatado ("disciplina matriculada aparecendo como Matriculável")
-virou o card 0006, que foi entrevistado, executado pelo pipeline e commitado.
+virou o card 0006, que foi entrevistado, executado pelo pipeline, commitado e
+**fechado** (`done`, AC13 confirmado pelo dev).
 No meio do caminho descobri que **os portões de qualidade estavam desligados
 nesta máquina, falhando em silêncio** — isso vale mais que o card.
 
 ## Card ativo
-0006-casamento-turma-subturma-horarios, status `in_progress`. Os 12 ACs
-`headless` estão provados e commitados; falta **só o AC13, que é `manual`**.
-0005 continua `ready` e nunca rodou.
+Nenhum. **0006 fechou `done`**: os 12 ACs `headless` provados pela suíte e o
+AC13 (`manual`) confirmado pelo dev na tela, com os dados reais de 2026/2.
+0005 continua `ready` e nunca rodou — é o próximo da fila.
 
 ## Feito nesta sessão
 Tudo commitado, dois commits em `master`, **não pushados**.
@@ -31,9 +32,6 @@ casar) e corrige **44 discentes**: `al0376` inteira (o caso relatado) mais as
 teóricas de `al0003`, `al0021` e `al0366`. 11 testes novos; suíte 41 → 52.
 
 ## Pela metade / não verificado
-- **AC13 não verificado.** É a única verificação visual do card e depende do
-  dev abrir Situação de Alunos com os dados reais. Roteiro em
-  `Cards/0006-.../smoke/smoke.md`. Sem PNG: a tela mostra nome de aluno.
 - **Os outros 2 PCs quase certamente têm os portões quebrados do mesmo jeito**
   (ver abaixo). Não foi conferido em nenhum deles.
 - **Os 3 casos de turma divergente seguem sem card**: `al0037` (hist `20/80` ×
@@ -107,10 +105,12 @@ GitHub, foram commitados depois.
 ## Próximo passo concreto
 Rodar os dois comandos de setup nos outros 2 PCs e, em cada um, provar que o
 portão recusa: criar um `.gd` com `var x = 1`, `git add`, rodar
-`lefthook run pre-commit` e exigir exit 1.
+`lefthook run pre-commit` e exigir exit 1. **Enquanto isso não for feito, o
+pipeline rodando naquelas máquinas aprova sem verificar de verdade.**
+
+Depois disso, a fila tem o 0005 (`ready`, headless puro, 12 ACs).
 
 ## Em aberto para o dev
-- Fechar o AC13 do 0006 (abrir Situação de Alunos e confirmar `al0376`).
-- Push do commit deste handoff (os outros 2 ja foram).
+- Push do commit deste handoff (os dois primeiros já foram).
 - Escrever o parágrafo do `AGENTS.md` sobre hooks × OneDrive?
 - Card para os 3 casos de turma divergente, ou deixar para o 0005?
