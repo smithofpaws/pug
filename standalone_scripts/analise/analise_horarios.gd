@@ -259,14 +259,39 @@ func extrair_horarios_txt(horarios_txt: Array, matriculada_com_turma: Dictionary
 						horarios_txt_condicao[key].append(horarios_txt[a])
 	return horarios_txt_condicao
 
-# Determina qual a(s) turma(s) a partir do texto informado. [br]
-# Formato de [param turma] pode ser o da turma do [method horarios_exe.carregar_horarios_txt] (e.g. "T10/70", 
-# "T20/30/60A"), ou do [method FileHandling.ler_dados] (e.g "20/30"). [br]
-# Compara dois identificadores de turma. [br]
-# Retorna [code]true[/code] se forem equivalentes.
+# Compara dois identificadores de turma no formato numero + letra opcional (Cards/0006). [br]
+# Casam quando os numeros sao iguais e as letras sao compativeis: letras iguais casam, e letra
+# ausente de qualquer um dos lados casa com qualquer letra (regra simetrica). Turma sem numero
+# (vazia, so espaco ou so letra) nunca casa, nem com outra turma sem numero.
 static func _comparar_turmas(turma_a: String, turma_b: String) -> bool:
-	return turma_a.to_lower().replacen("t", "") == turma_b.to_lower().replacen("t", "")
+	var partes_a: Dictionary = AnaliseHorarios._partir_turma(turma_a)
+	var partes_b: Dictionary = AnaliseHorarios._partir_turma(turma_b)
+	if partes_a["numero"].is_empty() or partes_b["numero"].is_empty():
+		return false
+	if partes_a["numero"] != partes_b["numero"]:
+		return false
+	return partes_a["letras"].is_empty() or partes_b["letras"].is_empty() or partes_a["letras"] == partes_b["letras"]
 
+# Separa um identificador de turma em numero e letras (Cards/0006). [br]
+# Normaliza com strip_edges(), to_lower() e a mesma remocao do prefixo "t" que _obter_turmas ja
+# faz, depois varre caractere a caractere: digitos vao para "numero", o restante (nao-espaco) vai
+# para "letras". Nunca crasha; ambas as chaves sempre existem e sao String, possivelmente vazias.
+static func _partir_turma(turma: String) -> Dictionary:
+	turma = turma.strip_edges().to_lower().replacen("t", "")
+	var numero: String = ""
+	var letras: String = ""
+	for ch in turma:
+		if ch == " ":
+			continue
+		elif ch.is_valid_int():
+			numero += ch
+		else:
+			letras += ch
+	return {"numero": numero, "letras": letras}
+
+# Determina qual a(s) turma(s) a partir do texto informado. [br]
+# Formato de [param turma] pode ser o da turma do [method horarios_exe.carregar_horarios_txt] (e.g. "T10/70",
+# "T20/30/60A"), ou do [method FileHandling.ler_dados] (e.g "20/30"). [br]
 # Retorna uma matriz contendo os números das turmas.
 func _obter_turmas(turma: String) -> Array:
 	turma = turma.to_lower().replacen("t", "")

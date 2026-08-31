@@ -168,3 +168,109 @@ func test_determinar_horarios_nao_poda_condicoes_entre_chamadas() -> void:
 	var matriz_b: Array = _analise.determinar_horarios({}, horarios_txt_b, disc_cursaveis_b, historico_matricula, condicoes, lista_cores)
 
 	assert_true(matriz_b[1][1].contains("AL0007"), "corequisito_seaprovado da segunda matricula nao pode sumir por causa da primeira")
+
+
+## Prova o casamento turma/subturma (Cards/0006-casamento-turma-subturma-horarios): a letra da
+## turma identifica uma subturma, e letra ausente de qualquer um dos lados casa com qualquer letra.
+
+func test_comparar_turmas_letra_de_um_lado_casa() -> void:
+	assert_true(AnaliseHorarios._comparar_turmas("20", "20a"), "turma sem letra deve casar com a subturma")
+
+
+func test_comparar_turmas_e_simetrica() -> void:
+	assert_true(AnaliseHorarios._comparar_turmas("20a", "20"), "a regra deve valer nos dois sentidos")
+
+
+func test_comparar_turmas_letras_distintas_nao_casam() -> void:
+	assert_false(AnaliseHorarios._comparar_turmas("20a", "20b"), "grupos diferentes nao podem casar")
+
+
+func test_comparar_turmas_identicas_casam() -> void:
+	assert_true(AnaliseHorarios._comparar_turmas("20a", "20a"), "turmas identicas com letra devem casar")
+	assert_true(AnaliseHorarios._comparar_turmas("20", "20"), "turmas identicas sem letra devem casar")
+
+
+func test_comparar_turmas_numero_diferente_nao_casa() -> void:
+	assert_false(AnaliseHorarios._comparar_turmas("20", "80"), "numero diferente nunca casa")
+	assert_false(AnaliseHorarios._comparar_turmas("20a", "80a"), "numero manda mesmo com letras iguais")
+
+
+func test_comparar_turmas_ignora_prefixo_t_e_caixa() -> void:
+	assert_true(AnaliseHorarios._comparar_turmas("t20", "20A"), "prefixo T e caixa continuam irrelevantes")
+
+
+func test_comparar_turmas_sem_numero_nao_casa_com_nada() -> void:
+	assert_false(AnaliseHorarios._comparar_turmas("", ""), "duas turmas vazias nao podem casar entre si")
+	assert_false(AnaliseHorarios._comparar_turmas(" ", " "), "turma so com espaco continua sem numero")
+	assert_false(AnaliseHorarios._comparar_turmas("a", "a"), "letra sem numero nao pode casar")
+	assert_false(AnaliseHorarios._comparar_turmas("", "20"), "turma vazia nao casa com turma valida")
+
+
+func test_extrair_horarios_txt_teorica_sem_letra_casa_com_subturma() -> void:
+	# Caso al0376 do card: o txt so tem a teorica (sem letra) e o historico grava a subturma.
+	var horarios_txt: Array = [
+		{"disciplina": "Nome Ficticio (al0376)", "turma": "T20"},
+	]
+	var matriculada_com_turma: Dictionary = {
+		"matriculado_agora": [["al0376", "20A"]],
+		"matriculado_agora_aproveitamento": [],
+	}
+	var disc_cursaveis: Dictionary = {"matriculado_agora": [], "matriculavel": []}
+
+	var resultado: Dictionary = _analise.extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
+
+	assert_eq(resultado["matriculado_agora"].size(), 1, "a teorica sem letra deve casar com a subturma do historico")
+	assert_true(resultado["matriculavel"].is_empty(), "a linha casada nao pode duplicar em matriculavel")
+
+
+func test_extrair_horarios_txt_separa_subturma_do_grupo_errado() -> void:
+	# Caso al0003 do card: teorica e a subturma do proprio grupo casam; a do outro grupo nao.
+	var horarios_txt: Array = [
+		{"disciplina": "Nome Ficticio (al0003)", "turma": "T20"},
+		{"disciplina": "Nome Ficticio (al0003)", "turma": "T20A"},
+		{"disciplina": "Nome Ficticio (al0003)", "turma": "T20B"},
+	]
+	var matriculada_com_turma: Dictionary = {
+		"matriculado_agora": [["al0003", "20A"]],
+		"matriculado_agora_aproveitamento": [],
+	}
+	var disc_cursaveis: Dictionary = {"matriculado_agora": [], "matriculavel": []}
+
+	var resultado: Dictionary = _analise.extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
+
+	assert_eq(resultado["matriculado_agora"].size(), 2, "teorica e subturma do proprio grupo devem casar")
+	assert_eq(resultado["matriculavel"].size(), 1, "subturma do outro grupo deve cair em matriculavel")
+
+
+func test_extrair_horarios_txt_turma_composta_com_letra_propagada() -> void:
+	# Turma composta com letra propagada (_obter_turmas): "30/60B" -> ["30b", "60b"].
+	var horarios_txt: Array = [
+		{"disciplina": "Nome Ficticio (al0055)", "turma": "T30;60"},
+	]
+	var matriculada_com_turma: Dictionary = {
+		"matriculado_agora": [["al0055", "30/60B"]],
+		"matriculado_agora_aproveitamento": [],
+	}
+	var disc_cursaveis: Dictionary = {"matriculado_agora": [], "matriculavel": []}
+
+	var resultado: Dictionary = _analise.extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
+
+	assert_eq(resultado["matriculado_agora"].size(), 1, "a letra propagada deve casar com a turma sem letra do txt")
+	assert_true(resultado["matriculavel"].is_empty(), "a linha casada nao pode duplicar em matriculavel")
+
+
+func test_extrair_horarios_txt_turma_ausente_no_txt_continua_matriculavel() -> void:
+	# Non-goal do card: turma do historico que nao existe no txt continua em matriculavel.
+	var horarios_txt: Array = [
+		{"disciplina": "Nome Ficticio (al0037)", "turma": "T80"},
+	]
+	var matriculada_com_turma: Dictionary = {
+		"matriculado_agora": [["al0037", "20"]],
+		"matriculado_agora_aproveitamento": [],
+	}
+	var disc_cursaveis: Dictionary = {"matriculado_agora": [], "matriculavel": []}
+
+	var resultado: Dictionary = _analise.extrair_horarios_txt(horarios_txt, matriculada_com_turma, disc_cursaveis)
+
+	assert_true(resultado["matriculado_agora"].is_empty(), "numero diferente nao pode casar")
+	assert_eq(resultado["matriculavel"].size(), 1, "a linha sem casamento deve continuar em matriculavel")
