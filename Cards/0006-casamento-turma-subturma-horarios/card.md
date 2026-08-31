@@ -1,13 +1,18 @@
 ---
 id: 0006-casamento-turma-subturma-horarios
 title: Casamento de turma e subturma na grade de horários
-status: ready
+status: in_progress
 origin: novo (defeito relatado pelo dev; uma matrícula em al0376 turma 20A aparecia como Matriculável)
 layers: [standalone_scripts/analise/analise_horarios.gd]
 interviewed: true
 ---
 
 # 0006 - Casamento de turma e subturma na grade de horários
+
+> Pipeline concluído (commit `f129dcf`): os 12 ACs `headless` estão provados
+> e a suíte passa 52/52. O card **não** é `done` porque o AC13 é `manual` e
+> só fecha por relato do dev — uma sessão não certifica o próprio trabalho.
+> Roteiro em `smoke/smoke.md`.
 
 ## Goal
 A grade de horários de **Situação de Alunos** passa a reconhecer que a letra da
@@ -65,18 +70,18 @@ a teórica de quem estivesse nesse estado.
   `40b`, `80b`), que já existe e está correta.
 
 ## Acceptance criteria
-- [ ] `_comparar_turmas("20", "20a")` retorna `true` (letra de um lado só) -- verify: `headless`
-- [ ] `_comparar_turmas("20a", "20")` retorna `true` (simetria) -- verify: `headless`
-- [ ] `_comparar_turmas("20a", "20b")` retorna `false` (letras distintas) -- verify: `headless`
-- [ ] `_comparar_turmas("20a", "20a")` e `_comparar_turmas("20", "20")` retornam `true` -- verify: `headless`
-- [ ] `_comparar_turmas("20", "80")` e `_comparar_turmas("20a", "80a")` retornam `false` (número manda) -- verify: `headless`
-- [ ] `_comparar_turmas("t20", "20A")` retorna `true` (prefixo `T` e caixa continuam irrelevantes) -- verify: `headless`
-- [ ] Turma vazia ou só espaço não casa com nada, inclusive com outra vazia -- verify: `headless`
-- [ ] Caso `al0376`: discente com turma `20A` e um `horarios_txt` cuja única linha da disciplina é `T20` — a linha vai para `matriculado_agora` e **não** aparece em `matriculavel` -- verify: `headless`
-- [ ] Caso `al0003`: discente com turma `20A` e `horarios_txt` com `T20` (teórica), `T20A` e `T20B` — teórica e `T20A` vão para `matriculado_agora`; `T20B` vai para `matriculavel` -- verify: `headless`
-- [ ] Turma composta com letra propagada: discente com `30/60B` casa com a linha `T30;60` -- verify: `headless`
-- [ ] Não-regressão do non-goal: discente com turma `20` e disciplina cuja única linha no txt é `T80` continua indo só para `matriculavel` -- verify: `headless`
-- [ ] Os 8 testes já existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
+- [x] `_comparar_turmas("20", "20a")` retorna `true` (letra de um lado só) -- verify: `headless`
+- [x] `_comparar_turmas("20a", "20")` retorna `true` (simetria) -- verify: `headless`
+- [x] `_comparar_turmas("20a", "20b")` retorna `false` (letras distintas) -- verify: `headless`
+- [x] `_comparar_turmas("20a", "20a")` e `_comparar_turmas("20", "20")` retornam `true` -- verify: `headless`
+- [x] `_comparar_turmas("20", "80")` e `_comparar_turmas("20a", "80a")` retornam `false` (número manda) -- verify: `headless`
+- [x] `_comparar_turmas("t20", "20A")` retorna `true` (prefixo `T` e caixa continuam irrelevantes) -- verify: `headless`
+- [x] Turma vazia ou só espaço não casa com nada, inclusive com outra vazia -- verify: `headless`
+- [x] Caso `al0376`: discente com turma `20A` e um `horarios_txt` cuja única linha da disciplina é `T20` — a linha vai para `matriculado_agora` e **não** aparece em `matriculavel` -- verify: `headless`
+- [x] Caso `al0003`: discente com turma `20A` e `horarios_txt` com `T20` (teórica), `T20A` e `T20B` — teórica e `T20A` vão para `matriculado_agora`; `T20B` vai para `matriculavel` -- verify: `headless`
+- [x] Turma composta com letra propagada: discente com `30/60B` casa com a linha `T30;60` -- verify: `headless`
+- [x] Não-regressão do non-goal: discente com turma `20` e disciplina cuja única linha no txt é `T80` continua indo só para `matriculavel` -- verify: `headless`
+- [x] Os 8 testes já existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
 - [ ] Com os dados reais de 2026/2 carregados, uma matrícula em `al0376` (turma `20A`) aparece como **Matriculada** na grade de horários de Situação de Alunos -- verify: `manual`
 
 ## Edge cases

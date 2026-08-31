@@ -1,89 +1,116 @@
-# Handoff — 2026-08-25 (fim)
+# Handoff — 2026-08-31
 
 ## Onde parei
-Começou como faxina do `IDEAS.md` e virou correção de dado curricular. A
-decisão de grade aprovada em 2025 (SEI 1848924) estava aplicada pela metade no
-`alec-data`; foi completada, publicada e sincronizada para o pug. O card 0005
-nasceu daí e está `ready`, **não executado**.
+Um defeito relatado ("disciplina matriculada aparecendo como Matriculável")
+virou o card 0006, que foi entrevistado, executado pelo pipeline e commitado.
+No meio do caminho descobri que **os portões de qualidade estavam desligados
+nesta máquina, falhando em silêncio** — isso vale mais que o card.
 
 ## Card ativo
-Nenhum em execução. **0005 está `ready`** (validação de coerência dos dados
-curriculares) — aprovado pelo dev, nunca passou pelo pipeline.
+0006-casamento-turma-subturma-horarios, status `in_progress`. Os 12 ACs
+`headless` estão provados e commitados; falta **só o AC13, que é `manual`**.
+0005 continua `ready` e nunca rodou.
 
 ## Feito nesta sessão
-Tudo commitado. Duas partes.
+Tudo commitado, dois commits em `master`, **não pushados**.
 
-**1. Faxina (commits `bbd20e3`, `ea15b0a`, `98f0289`, `367a021`, todos pushados)**
-- `IDEAS.md`: removidos os dois `[x]` já entregues e a duplicata de CH mínima;
-  referências por número de linha trocadas por nome de função/chave; os 4
-  defeitos do `percentagem_curso` migrados do handoff para o backlog.
-- A linha do "Modo Ajuste de Matrícula" **não** foi removida: metade existe
-  (download por URL), metade não (importar `.csv` do disco). Foi reescrita para
-  a metade que falta.
-- Branch `cards/2026-08-22`, já mesclada, apagada local e no `origin`.
+**1. `94c50f9` — card 0006** (entrevista + índice).
 
-**2. Dado curricular — a parte que importa**
-- **`alec-data` (3 commits, pushados):** aplicada a decisão SEI 1848924 inteira,
-  aprovada por unanimidade na Comissão do Curso (17/07/2025), CLE (10/09/2025,
-  SEI 1834218) e Conselho do Campus (24/09/2025). Hidrologia (`al0109`) → 6º,
-  Arquitetura (`al0171`) → 5º, Instalações Hidráulicas (`al0163`) → 7º com
-  Arquitetura como pré-requisito, Arquitetura incluída em Instalações Elétricas
-  (`al0081`) e removida de Projeto Integrado (`al0408`). Concreto Protendido
-  (`al2243`) incluída na `alec_2010`, onde faltava pelo item (a) da mesma ata.
-- **Sincronizado** para `arquivos/grades/` com `sincronizar_dados_curso.ps1`.
-- **Card 0005** escrito e aprovado; `cargaexigida/alem_2023.json` (JSON inválido,
-  vírgula sobrando) corrigido.
+**2. `f129dcf` — a correção.** `AnaliseHorarios._comparar_turmas` comparava
+turma por igualdade exata de string. As duas fontes gravam a turma em
+granularidades diferentes: o `horarios.txt` põe a turma inteira na teórica
+(`T20`) e a subturma na prática (`T20A`/`T20B`), enquanto o `hist.csv` grava o
+discente **sempre** na subturma (`20A`) — conferido o fan-out, não existe linha
+com a turma cheia. Agora `_partir_turma` separa número e letra, e casam quando
+os números são iguais e as letras são compatíveis (letra ausente de qualquer
+lado casa com qualquer letra — regra simétrica, decisão do dev). Turma sem
+número nunca casa.
+
+Nos dados de 2026/2 a mudança é **puramente aditiva** (nenhuma linha deixa de
+casar) e corrige **44 discentes**: `al0376` inteira (o caso relatado) mais as
+teóricas de `al0003`, `al0021` e `al0366`. 11 testes novos; suíte 41 → 52.
 
 ## Pela metade / não verificado
-- **O card 0005 nunca rodou.** Está `ready` e nada mais.
-- **A auditoria das atas está só começada.** Confirmei o item de grade da SEI
-  1848924; as outras ~20 pastas de `Coordenacao/Atualizacao PPCs/` **não foram
-  conferidas**. Duas decisões já apareceram aplicadas pela metade, então a taxa
-  de acerto do passivo é desconhecida. Anotado no `IDEAS.md`.
-- **O PPC em Typst continua imprimindo a matriz antiga.** Ele lê
-  `data/grades/alec_2023.json` via subtree (`atualizar_alec_data.bat`, em
-  `Documentos/PPC/2023/Typst/`), que **não foi rodado** — é uma máquina e um
-  repositório fora do pug, e a decisão é do dev. Enquanto não rodar, a Tabela 5
-  do PPC mostra Arquitetura no 6º.
-- **`percentagem_curso` segue sem card**, e a sessão achou evidência concreta do
-  seu defeito nº 2: chaves do `cargaexigida` que não são núcleo de disciplina
-  nenhum (`estagio`, `tcc`, `praticas`, `acg`/`agc`) somam no denominador e
-  nunca no numerador.
-- Não conferi se as outras 11 disciplinas que existem só na `alec_2023` (e não
-  na `alec_2010`) deveriam estar nas duas. Só o `al2243` tinha ata explícita.
+- **AC13 não verificado.** É a única verificação visual do card e depende do
+  dev abrir Situação de Alunos com os dados reais. Roteiro em
+  `Cards/0006-.../smoke/smoke.md`. Sem PNG: a tela mostra nome de aluno.
+- **Os outros 2 PCs quase certamente têm os portões quebrados do mesmo jeito**
+  (ver abaixo). Não foi conferido em nenhum deles.
+- **Os 3 casos de turma divergente seguem sem card**: `al0037` (hist `20/80` ×
+  txt `30/60/90`), `al2126` e `al2129` (hist `20` × txt `80`). São turma que
+  não existe no txt — divergência de dado, não de comparação. Continuam caindo
+  em "Matriculável" em silêncio. Foi non-goal explícito do 0006.
+- **Herança do handoff anterior, tudo ainda aberto:** auditoria das ~20 atas de
+  PPC mal começada; o PPC em Typst ainda imprime a matriz antiga
+  (`atualizar_alec_data.bat` não rodado); `percentagem_curso` sem card; as 11
+  disciplinas que só existem na `alec_2023` não conferidas; `agc` vs `acg`.
+
+## O achado que importa: os portões estavam cegos nesta máquina
+Descoberto por acaso, ao tentar provar que o pre-commit barra um `.gd` sujo.
+Ele **não barrava** — o arquivo sujo passou limpo.
+
+Três camadas quebradas, todas **falhando abertas**:
+
+1. **lefthook não instalado.** O `.git/hooks/pre-commit` existia e chamava um
+   binário ausente; o script gerado pelo lefthook termina esse caminho com
+   `echo "Can't find lefthook in PATH"` **sem `exit 1`**, então o commit passava
+   com verificação nenhuma. Resolvido: `winget install evilmartians.lefthook`.
+2. **`gdtoolkit` não instalado.** O `run_gdlint` (`.tools/guardrails.py:387`) só
+   trata `FileNotFoundError`, que cobre o *executável* Python ausente, não o
+   *módulo*. Recebia código 1, não achava nenhuma linha no formato
+   `arquivo:linha: Error:`, registrava zero violações e devolvia "limpo". A
+   mensagem "instale com pip" que o script tem pronta nunca disparava.
+   Resolvido: `python -m pip install --user "gdtoolkit==4.*"`.
+3. **As regras próprias do projeto também morriam** junto, porque dependem do
+   parser do gdtoolkit. Isso não era óbvio: o mesmo arquivo de teste passou
+   limpo antes do pip e depois foi pego por `static-typing`, que é regra do
+   projeto, não do linter.
+
+**Por que ninguém percebeu:** o `.git/hooks/` não é versionado pelo git, mas o
+projeto vive no OneDrive, então o **arquivo** do hook se replicou para os 3 PCs
+enquanto o **binário** não. O hook existe em toda máquina e não bloqueia em
+nenhuma que não tenha o lefthook instalado.
+
+**O sintoma que estava à vista:** o handoff anterior registrava "375
+pré-existentes na baseline" e a execução reportava **108**. Eu vi a divergência,
+tratei como forma de contar diferente e segui. Era o portão morto.
+
+A baseline **não** foi corrompida: 375 entradas (147 do gdlint), intacta desde
+`cb310d3`. Ninguém rodou `--update-baseline` com o linter cego, então a catraca
+está preservada. Hoje a contagem é 374 — o diff do 0006 removeu de passagem um
+`trailing-whitespace` pré-existente.
 
 ## Estado dos portões
-guardrails: ok (limpo, 375 pré-existentes na baseline) · testes: ok (41/41) ·
-parser: não rodado (nenhum `.gd` mudou nesta sessão) — em 2026-08-25, depois da
-troca das grades.
+Todos verificados **depois** do conserto, em 2026-08-31:
+guardrails: ok (limpo, 374 toleradas) · testes: ok (52/52) · parser: ok
+(`--headless --editor --quit` sem erro) · pre-commit: **ok e provado que barra**
+(arquivo sujo em staging → exit 1, guardrails 🥊).
 
 ## Estado do git
-- **pug:** `master`, working tree limpo. 5 commits nesta sessão; os 4 primeiros
-  pushados, o último (card 0005 + `alem_2023`) pendente no momento em que este
-  arquivo foi escrito.
-- **`alec-data`:** `main` sincronizada com `origin/main`, 3 commits pushados.
+`master`, sincronizada com `origin/master` em `f129dcf` — os dois commits da
+sessão (`94c50f9`, `f129dcf`) foram pushados. Working tree com o card 0006
+atualizado (status + ACs marcados) e este handoff; se este texto está no
+GitHub, foram commitados depois.
 
 ## Decisões tomadas que não estão em card nenhum
-- **Item de backlog só sai do `IDEAS.md` quando o comportamento existe inteiro.**
-  Escopo entregue pela metade é reescrito para a metade que falta, não apagado.
-- **Ata aprovada exige conferir os dois campos.** A decisão de 2025 foi aplicada
-  na `posicao_grade` e não no campo `semestre`, e ficou assim por meses sem que
-  nada acusasse. As três disciplinas com `semestre` × `posicao_grade`
-  divergentes eram exatamente as três movidas pela ata. Quando uma ata for
-  aplicada, conferir os dois campos e rodar o card 0005 depois que ele existir.
-- **Nome de arquivo canônico não se corrige direto em `arquivos/`.** Editar no
-  repositório do curso, push, e só então sincronizar — o script clona do
-  GitHub, não da pasta local, então sem push a sincronização não vê nada.
+- **A letra da turma é subturma, e a regra é simétrica.** Quem está em `20A`
+  pertence à turma `20`. Consequência assumida: um discente registrado em `20`
+  numa disciplina com práticas A e B casa com as duas. Não ocorre em 2026/2.
+- **Portão que falha aberto é pior que portão nenhum**, porque produz confiança
+  falsa. "Instalou" não é prova; a prova é o portão **recusar** um caso ruim.
+- **Migrar para o AGENTS.md** (não cabe em card, é conhecimento durável): que
+  `.git/hooks/` não é versionado mas **é replicado pelo OneDrive**, de modo que
+  o `lefthook install` de uma máquina espalha o hook sem espalhar o binário; e
+  que o setup por clone (`lefthook install` + `pip install gdtoolkit`) precisa
+  ser conferido **por máquina**, com o teste de recusa, não com o de presença.
 
 ## Próximo passo concreto
-Rodar o pipeline do card 0005 (`args: {cardId: "0005-validacao-coerencia-dados-curriculares"}`).
-Ele é headless puro, tem 12 ACs falsificáveis e três defeitos reais nos dados
-para provar contra.
+Rodar os dois comandos de setup nos outros 2 PCs e, em cada um, provar que o
+portão recusa: criar um `.gd` com `var x = 1`, `git add`, rodar
+`lefthook run pre-commit` e exigir exit 1.
 
 ## Em aberto para o dev
-- Rodar `atualizar_alec_data.bat` no projeto do PPC em Typst, para o PDF passar
-  a refletir a grade nova?
-- `percentagem_curso`: escopo do card ainda não decidido (itens 1 e 3 só, ou os
-  quatro esperando a fórmula oficial da Unipampa). Decisão adiada por escolha
-  dele.
-- `agc` vs `acg`: qual é a grafia boa?
+- Fechar o AC13 do 0006 (abrir Situação de Alunos e confirmar `al0376`).
+- Push do commit deste handoff (os outros 2 ja foram).
+- Escrever o parágrafo do `AGENTS.md` sobre hooks × OneDrive?
+- Card para os 3 casos de turma divergente, ou deixar para o 0005?
