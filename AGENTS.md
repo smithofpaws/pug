@@ -314,8 +314,25 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
   LGPD). Smoke test só com `dados/` vazio ou fixtures fictícias. `Cards/` tem
   `.gdignore` (fora do import e do PCK); `addons/gut/*` e `test/*` estão no
   `exclude_filter` de todos os presets de export.
-- **Setup por clone:** `python -m pip install --user "gdtoolkit==4.*"` e
-  `lefthook install` (ver `Cards/README.md`).
+- **Setup por máquina (não basta por clone):** `python -m pip install --user "gdtoolkit==4.*"`,
+  `winget install evilmartians.lefthook` e `lefthook install` (ver `Cards/README.md`).
+  - **O OneDrive espalha o hook, mas não o que ele chama.** O git não versiona `.git/hooks/`,
+    só que o projeto vive no OneDrive, que replica a pasta `.git/` inteira. O `lefthook install`
+    feito numa máquina põe o *arquivo* do pre-commit nos 3 PCs; o *binário* do lefthook e o
+    *módulo* `gdtoolkit` ficam só onde foram instalados.
+  - **Sem eles, o portão deixa o commit passar sem verificar nada, e não avisa.** O hook gerado
+    pelo lefthook termina em `echo "Can't find lefthook in PATH"` **sem `exit 1`**. E o
+    `run_gdlint` (`.tools/guardrails.py`) só trata o *executável* Python ausente, não o *módulo*:
+    recebe código 1, não encontra nenhuma linha `arquivo:linha: Error:` e relata "limpo". As
+    regras próprias do projeto morrem junto, porque usam o parser do gdtoolkit. Foi assim que os
+    portões ficaram desligados sem ninguém notar até 2026-08-31.
+  - **A prova é o portão recusar, não estar instalado.** Em cada máquina: crie um `.gd`
+    descartável com `var x = 1`, faça `git add`, rode `lefthook run pre-commit` e exija
+    **exit ≠ 0**. Depois `git reset` no arquivo e apague-o. Sinal de alerta no dia a dia: o
+    guardrails tolerar bem menos violações do que as entradas de `.tools/guardrails_baseline.json`
+    significa linter cego, não código melhor.
+  - Ao concluir a migração para fora do OneDrive, o hook deixa de se replicar: cada clone passa a
+    precisar do próprio `lefthook install`. **Atualizar este item nessa hora.**
 
 ## Manual
 

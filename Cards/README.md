@@ -70,12 +70,17 @@ Todo AC declara o próprio método. É esse campo que liga o card aos portões:
 
 Um AC sem método declarado é um AC que o pipeline não sabe onde provar.
 
-## Setup (uma vez por clone)
+## Setup (uma vez por máquina)
 
 ```bash
 python -m pip install --user "gdtoolkit==4.*"   # gdlint, usado pelo guardrails
+winget install evilmartians.lefthook             # o binário que o pre-commit chama
 lefthook install                                 # grava o pre-commit em .git/hooks/
 ```
+
+Instalar não prova nada: sem essas peças o portão deixa tudo passar sem avisar. Confira com o
+teste de recusa descrito no `AGENTS.md` (seção "Pipeline de desenvolvimento", item "Setup por
+máquina").
 
 ## Portões
 
