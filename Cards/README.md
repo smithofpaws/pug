@@ -108,3 +108,4 @@ O `pre-commit` do Lefthook roda os dois. Os hooks do Claude Code
 | 0004 | [Disciplina concluída por equivalência recebe a cor de cursada na grade](0004-cor-concluida-por-equivalencia/card.md) | done | IDEAS.md (BUGs, alta prioridade) |
 | 0005 | [Validação de coerência dos dados curriculares](0005-validacao-coerencia-dados-curriculares/card.md) | ready | novo |
 | 0006 | [Casamento de turma e subturma na grade de horários](0006-casamento-turma-subturma-horarios/card.md) | done | novo (defeito relatado) |
+| 0007 | [Aviso de turma do histórico sem correspondência no horarios.txt](0007-aviso-turma-sem-correspondencia-horarios/card.md) | ready | novo (non-goal do 0006) |
