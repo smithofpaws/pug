@@ -1,13 +1,25 @@
 ---
 id: 0008-carga-horaria-lista-oficial-professores
 title: Verificar carga horária inclui a lista oficial de professores do curso
-status: ready
+status: in_progress
 origin: novo (pedido do dev)
 layers: [standalone_scripts/analise, scenes/Modulos/PlanejamentoOferta, arquivos/dicas.json, MANUAL.md]
 interviewed: true
 ---
 
 # 0008 - Verificar carga horária inclui a lista oficial de professores do curso
+
+> Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`), em 3
+> rodadas: os 11 ACs `headless` estão provados e a suíte passa 107/107. O card
+> **não** é `done` porque os ACs 12 e 13 são `manual` e só fecham por relato do
+> dev. Roteiro em `spec.md` (R1 e R2).
+>
+> O review bloqueou duas vezes, com razão: na rodada 1, uma continuação de
+> linha quebrada impedia o `planejamentooferta.gd` de carregar (os testes
+> passavam porque não abrem a cena); na rodada 2, o agente de correção tinha
+> apagado entradas da baseline do guardrails para passar, e elas foram
+> restauradas. Depois do pipeline, o orquestrador restaurou uma continuação de
+> linha que tinha virado tabs no meio da linha (`relatorios_oferta.gd`).
 
 ## Goal
 Em **Planejamento de Oferta › Carga horária › Verificar carga horária**, com um
@@ -49,17 +61,17 @@ A escolha de quem entra no relatório, com qual carga e qual status, sai do
 assinatura definidos no design). O relatório passa a só imprimir o resultado.
 Testes com nomes fictícios.
 
-- [ ] Com filtro, professor da lista oficial sem carga no plano entra com 0 cr e status "abaixo do mínimo" -- verify: `headless`
-- [ ] Com filtro, professor da lista oficial com carga no plano que nunca lecionou para o curso entra com a carga real (hoje fica de fora) -- verify: `headless`
-- [ ] Com filtro, professor com carga que lecionou para o curso e **não** está na lista continua entrando (regra atual preservada) -- verify: `headless`
-- [ ] Com filtro, professor com carga que não lecionou para o curso e não está na lista continua fora -- verify: `headless`
-- [ ] Sem filtro, a lista oficial não acrescenta ninguém: o resultado é o de hoje (todos com carga no plano) -- verify: `headless`
-- [ ] Professor que está na lista e no plano aparece **uma vez**, com a carga do plano (nome da lista com `_`, ex.: `Maria_da_Silva_Souza`, casa com `Maria Da Silva Souza` via `normalizar_nome`) -- verify: `headless`
-- [ ] Só entra a lista das chaves que correspondem aos `prefixos_semestre` do curso filtrado; lista de outro curso não entra -- verify: `headless`
-- [ ] Lista oficial vazia ou ausente dá o mesmo resultado de hoje, sem erro -- verify: `headless`
-- [ ] Status pelos limites de `config_oferta` (`ch_minimo`, `ch_ideal`, `ch_maximo`), sem mudança de regra: acima do máximo, acima do ideal, abaixo do mínimo, OK, testado nas fronteiras -- verify: `headless`
-- [ ] Ordem: carga decrescente, empate pelo nome (determinística; hoje o empate fica em ordem indefinida, e os vários 0 cr tornariam isso visível) -- verify: `headless`
-- [ ] Plano sem nenhuma alocação mantém a mensagem "Nenhum professor alocado.", mesmo com filtro e lista -- verify: `headless`
+- [x] Com filtro, professor da lista oficial sem carga no plano entra com 0 cr e status "abaixo do mínimo" -- verify: `headless`
+- [x] Com filtro, professor da lista oficial com carga no plano que nunca lecionou para o curso entra com a carga real (hoje fica de fora) -- verify: `headless`
+- [x] Com filtro, professor com carga que lecionou para o curso e **não** está na lista continua entrando (regra atual preservada) -- verify: `headless`
+- [x] Com filtro, professor com carga que não lecionou para o curso e não está na lista continua fora -- verify: `headless`
+- [x] Sem filtro, a lista oficial não acrescenta ninguém: o resultado é o de hoje (todos com carga no plano) -- verify: `headless`
+- [x] Professor que está na lista e no plano aparece **uma vez**, com a carga do plano (nome da lista com `_`, ex.: `Maria_da_Silva_Souza`, casa com `Maria Da Silva Souza` via `normalizar_nome`) -- verify: `headless`
+- [x] Só entra a lista das chaves que correspondem aos `prefixos_semestre` do curso filtrado; lista de outro curso não entra -- verify: `headless`
+- [x] Lista oficial vazia ou ausente dá o mesmo resultado de hoje, sem erro -- verify: `headless`
+- [x] Status pelos limites de `config_oferta` (`ch_minimo`, `ch_ideal`, `ch_maximo`), sem mudança de regra: acima do máximo, acima do ideal, abaixo do mínimo, OK, testado nas fronteiras -- verify: `headless`
+- [x] Ordem: carga decrescente, empate pelo nome (determinística; hoje o empate fica em ordem indefinida, e os vários 0 cr tornariam isso visível) -- verify: `headless`
+- [x] Plano sem nenhuma alocação mantém a mensagem "Nenhum professor alocado.", mesmo com filtro e lista -- verify: `headless`
 - [ ] Com os dados reais e o filtro em Engenharia Civil, o relatório traz os 14 professores da lista, e os sem carga aparecem como "abaixo do mínimo" -- verify: `manual`
 - [ ] A dica da ação (`arquivos/dicas.json`, `planejamento_oferta_acoes.verificar_carga_horaria`) e o `MANUAL.md` (Planejamento de Oferta › Ações disponíveis) descrevem a regra nova -- verify: `manual`
 

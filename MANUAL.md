@@ -281,7 +281,12 @@ Ao clicar em uma disciplina, o painel lateral mostra:
 
 - **Determinar demanda** — analisa o histórico para contar quantos alunos precisam de cada disciplina neste semestre.
 - **Determinar demanda (ignorar já ofertados)** — igual ao anterior, mas ignora alunos que já cursaram a disciplina neste semestre.
-- **Verificar carga horária** — gera um relatório consolidado da carga total de cada professor. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
+- **Verificar carga horária** — gera um relatório com a carga total de cada professor e o status frente aos limites mínimo, ideal e máximo (`base_config.json:planejamento_oferta`). A ordem é da maior para a menor carga e, no empate, pelo nome.
+  - **Sem curso no filtro**, entra apenas quem tem carga no planejamento.
+  - **Com um curso no filtro**, entram os professores que já lecionaram para esse curso (identificados pelo código da turma no histórico) **e** todos os da lista oficial do curso (`arquivos/oferta/lista_professores.json`), mesmo sem nenhuma disciplina no planejamento. Estes aparecem com **0 cr**, como abaixo do mínimo, para que ninguém seja esquecido.
+  - A carga mostrada é sempre a soma de todas as disciplinas do planejamento, de qualquer curso: o filtro escolhe **quem** aparece, não **o que** se soma.
+  - Sem a lista oficial (pasta `arquivos/oferta/` não sincronizada), vale só o histórico.
+  - Um nome grafado de forma diferente na lista e no planejamento (maiúsculas ou acentos) aparece duas vezes, por exemplo `Maria da Silva Souza` e `Maria Da Silva Souza`.
 - **Sugerir oferta** — propõe automaticamente quais disciplinas oferecer, com base na demanda levantada e na afinidade dos professores. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
 - **Verificar erro de afinidade** — valida a integridade dos dados históricos de afinidade. Com um curso selecionado no filtro, considera apenas professores que já lecionaram para esse curso (identificados pelo código da turma no histórico).
 - **Detectar problemas** — confere a oferta planejada contra as grades curriculares do **curso selecionado no filtro** e aponta inconsistências: (1) disciplinas obrigatórias da grade que faltam na oferta — considerando equivalências e respeitando a paridade do semestre em edição (1º/2º); e (2) disciplinas ofertadas alocadas em um semestre diferente do previsto na grade. As equivalências usadas para cobrir obrigatórias ausentes são listadas para conferência. Requer um curso selecionado no filtro.

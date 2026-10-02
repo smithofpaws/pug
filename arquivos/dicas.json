@@ -34,7 +34,7 @@
 	"planejamento_oferta_acoes": {
 		"determinar_demanda": "Analisa o histórico para contar [b]quantos alunos[/b] precisam de cada disciplina neste semestre.",
 		"determinar_demanda_ignorar_oferta": "Igual a [b]Determinar[/b], mas [b]ignora[/b] os alunos que já cursaram a disciplina neste semestre.",
-		"verificar_carga_horaria": "Relatório consolidado da [b]carga total[/b] de cada professor. Com um curso no filtro, só considera quem já lecionou para ele.",
+		"verificar_carga_horaria": "Relatório consolidado da [b]carga total[/b] de cada professor. Com um curso no filtro, mostra quem já lecionou para ele e [b]todos os professores da lista oficial[/b] do curso, inclusive os sem carga (0 cr, abaixo do mínimo).",
 		"sugerir_oferta": "Propõe automaticamente [b]quais disciplinas ofertar[/b], com base na demanda levantada e na afinidade dos professores.",
 		"verificar_erro_afinidade": "Valida a [b]integridade[/b] dos dados históricos de afinidade professor/disciplina.",
 		"detectar_problema_oferta": "Confere a oferta contra as [b]grades do curso filtrado[/b]: aponta obrigatórias ausentes e disciplinas alocadas em semestre divergente. [b]Requer um curso selecionado[/b]."

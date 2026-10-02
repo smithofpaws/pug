@@ -75,7 +75,7 @@
  "standalone_scripts/analise/analise_historico.gd|gdlint:trailing-whitespace": 11,
  "standalone_scripts/analise/analise_historico.gd|static-typing": 1,
  "standalone_scripts/analise/analise_horarios.gd|gdlint:max-line-length": 1,
- "standalone_scripts/analise/analise_horarios.gd|gdlint:trailing-whitespace": 13,
+ "standalone_scripts/analise/analise_horarios.gd|gdlint:trailing-whitespace": 10,
  "standalone_scripts/analise/analise_horarios.gd|static-typing": 1,
  "standalone_scripts/analise/analise_reprovacoes.gd|gdlint:trailing-whitespace": 1,
  "standalone_scripts/analise/calculo_carga_horaria.gd|gdlint:trailing-whitespace": 3,

@@ -283,41 +283,16 @@ func _inicializar_professores_historico() -> void:
 	_painel_atribuicoes.configurar(_todos_professores)
 
 
-# Monta [member _lista_professores_por_curso] a partir da lista ja injetada pelo main: para
-# cada chave de curso (ex. "ec"), normaliza cada nome e armazena num set (Dictionary com
-# value=true) para lookup O(1) ao montar o destaque no painel de afinidade. Lista vazia
-# segue silenciosa — o destaque simplesmente nao aparece.
+# Monta [member _lista_professores_por_curso] a partir da lista injetada pelo main (ver
+# [method CargaDocente.indexar_lista_oficial]). Lista vazia segue silenciosa.
 func _inicializar_lista_professores() -> void:
-	if lista_professores.is_empty():
-		return
-	for chave in lista_professores:
-		var lista = lista_professores[chave]
-		if not lista is Array:
-			continue
-		var nomes_normalizados: Dictionary = {}
-		for nome in lista:
-			var n: String = AnaliseAfinidade.normalizar_nome(str(nome))
-			if not n.is_empty():
-				nomes_normalizados[n] = true
-		_lista_professores_por_curso[str(chave).to_lower()] = nomes_normalizados
+	_lista_professores_por_curso = CargaDocente.indexar_lista_oficial(lista_professores)
 
 
-# Monta o set de nomes a destacar com base no filtro de curso ativo no PainelDisciplinas.
-# Mapeia [code]cod_curso[/code] → [code]prefixos_semestre[/code] (de base_config.json:cursos)
-# e une as listas de [code]_lista_professores_por_curso[/code] correspondentes (case-insensitive).
-# Retorna dict vazio quando nao ha filtro ativo ou quando a lista nao cobre o curso.
+# Set de nomes da lista oficial do curso do filtro ativo (ver [method CargaDocente.lista_oficial_do_curso]).
+# Dict vazio quando nao ha filtro ou a lista nao cobre o curso.
 func _calcular_profs_destacar() -> Dictionary:
-	var resultado: Dictionary = {}
-	var cod_curso: String = _painel_disciplinas.filtro_curso
-	if cod_curso.is_empty():
-		return resultado
-	var prefixos: Array = cursos.get(cod_curso, {}).get("prefixos_semestre", [])
-	for prefixo in prefixos:
-		var chave: String = str(prefixo).to_lower()
-		if _lista_professores_por_curso.has(chave):
-			for nome in _lista_professores_por_curso[chave]:
-				resultado[nome] = true
-	return resultado
+	return CargaDocente.lista_oficial_do_curso(_lista_professores_por_curso, cursos, _painel_disciplinas.filtro_curso)
 
 
 # Re-renderiza a disciplina atualmente selecionada quando o filtro de curso muda, para
@@ -1299,7 +1274,8 @@ func _on_acoes_opcao_selecionada(retorno: String, _lista_selecionada: Array[Stri
 					_painel_disciplinas._semestre_edicao,
 					_painel_disciplinas.codigos_presentes(), _historico_discentes)
 		"verificar_carga_horaria":
-			_relatorios.verificar_carga_horaria(_calcular_carga_por_prof(), _painel_disciplinas.filtro_curso)
+			_relatorios.verificar_carga_horaria(_calcular_carga_por_prof(), _painel_disciplinas.filtro_curso, \
+				_calcular_profs_destacar())
 			_atualizar_status_bar()
 		"sugerir_oferta":
 			# Carrega a demanda sem exigir (a sugestao degrada sem hist.csv) e sem limpar o terminal.

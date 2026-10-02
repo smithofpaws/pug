@@ -230,9 +230,10 @@ func _semestre_prefixed(grade_nome: String, sem: String) -> String:
 
 ## Lista a carga horaria alocada por professor (recebida em [param carga_por_prof]) e seu
 ## status frente aos limites min/ideal/max de [code]base_config.json[/code]. [br]
-## Quando [param cod_curso] nao e vazio, considera apenas professores que ja lecionaram ao curso
-## (via [method AnaliseAfinidade.professores_do_curso]).
-func verificar_carga_horaria(carga_por_prof: Dictionary, cod_curso: String = "") -> void:
+## Quando [param cod_curso] nao e vazio, lista quem ja lecionou ao curso (via
+## [method AnaliseAfinidade.professores_do_curso]) [b]mais[/b] a lista oficial do curso
+## ([param profs_oficiais_curso]), esta com carga 0 quando fora do plano. A regra fica em [CargaDocente].
+func verificar_carga_horaria(carga_por_prof: Dictionary, cod_curso: String = "", profs_oficiais_curso: Dictionary = {}) -> void:
 	var ch_min: int = int(_config_oferta.get("ch_minimo", 8))
 	var ch_ideal: int = int(_config_oferta.get("ch_ideal", 12))
 	var ch_max: int = int(_config_oferta.get("ch_maximo", 20))
@@ -242,30 +243,29 @@ func verificar_carga_horaria(carga_por_prof: Dictionary, cod_curso: String = "")
 	if carga_por_prof.is_empty():
 		_terminal.linha("Nenhum professor alocado.")
 		return
-	var nomes: Array = carga_por_prof.keys()
-	if not cod_curso.is_empty():
-		var do_curso: Dictionary = _afinidade.professores_do_curso(cod_curso)
-		nomes = nomes.filter(func(n): return do_curso.has(n))
-		if nomes.is_empty():
-			_terminal.linha("Nenhum professor alocado que tenha lecionado para o curso.")
-			return
-	nomes.sort_custom(func(a, b): return carga_por_prof[a] > carga_por_prof[b])
-	for nome in nomes:
-		var ch: int = int(carga_por_prof[nome])
-		var status: String
-		var cor: String = "sucesso"
-		if ch > ch_max:
-			status = "ACIMA DO MAXIMO (%d cr)" % ch_max
-			cor = "erro"
-		elif ch > ch_ideal:
-			status = "acima do ideal (%d cr)" % ch_ideal
-			cor = "aviso"
-		elif ch < ch_min:
-			status = "abaixo do minimo (%d cr)" % ch_min
-			cor = "aviso"
-		else:
-			status = "OK"
-		_terminal.item("%s: %d cr — %s" % [nome.capitalize(), ch, status], 0, cor)
+	var linhas: Array[Dictionary] = CargaDocente.verificacao_carga(carga_por_prof, cod_curso, \
+		_afinidade.professores_do_curso(cod_curso), profs_oficiais_curso, _config_oferta)
+	if linhas.is_empty():
+		_terminal.linha("Nenhum professor alocado que tenha lecionado para o curso.")
+		return
+	for item in linhas:
+		var texto: String
+		var cor: String
+		match item["status"]:
+			"acima_maximo":
+				texto = "ACIMA DO MAXIMO (%d cr)" % ch_max
+				cor = "erro"
+			"acima_ideal":
+				texto = "acima do ideal (%d cr)" % ch_ideal
+				cor = "aviso"
+			"abaixo_minimo":
+				texto = "abaixo do minimo (%d cr)" % ch_min
+				cor = "aviso"
+			_:
+				texto = "OK"
+				cor = "sucesso"
+		var nome: String = item["nome"]
+		_terminal.item("%s: %d cr — %s" % [nome.capitalize(), item["ch"], texto], 0, cor)
 	_terminal.espaco()
 	_terminal.linha("Minimo: %d cr | Ideal: ate %d cr | Maximo absoluto: %d cr" % [ch_min, ch_ideal, ch_max])
 
