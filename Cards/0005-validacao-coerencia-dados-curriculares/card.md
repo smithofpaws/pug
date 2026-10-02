@@ -1,13 +1,23 @@
 ---
 id: 0005-validacao-coerencia-dados-curriculares
 title: Validação de coerência dos dados curriculares
-status: ready
+status: done
 origin: novo (sessão de 2026-08-25, a partir de defeitos reais encontrados no alec-data)
 layers: [standalone_scripts, scenes/main.gd]
 interviewed: true
 ---
 
 # 0005 - Validação de coerência dos dados curriculares
+
+> Concluído em 2026-10-02 pela fila (branch `cards/2026-10-02`). Os 12 ACs são
+> `headless` e estão provados pela suíte (71/71). A spec registra quatro
+> divergências entre este card e os dados reais, resolvidas a favor dos ACs:
+> (1) o snapshot do AC12 tem **8** pré-requisitos inexistentes, não só o
+> `al5022` da `alec_2023` (a `alec_2010` tem mais 7); (2) `agc` × `acg`
+> **não** é detectado, porque o AC10 exclui chave de carga sem núcleo, e isso
+> exigiria um vocabulário canônico de categorias (outro card); (3) o
+> `alem_2023.json` já foi corrigido em `a8d7339`; (4) chave de equivalência
+> iniciada por `//` é tratada como comentário. Ver `spec.md`.
 
 ## Goal
 O programa passa a apontar, no carregamento, inconsistências **semânticas** nos
@@ -37,31 +47,31 @@ originou este card — não são hipóteses.
   pipeline.
 
 ## Acceptance criteria
-- [ ] Grade com `prerequisito0` apontando para código que não existe na própria
+- [x] Grade com `prerequisito0` apontando para código que não existe na própria
       grade é reportada, nomeando disciplina e código -- verify: `headless`
-- [ ] Grade com `prerequisito0`, `prerequisito1` e `prerequisito3` (buraco no
+- [x] Grade com `prerequisito0`, `prerequisito1` e `prerequisito3` (buraco no
       `2`) é reportada -- verify: `headless`
-- [ ] Grade em que uma disciplina exige pré-requisito do **mesmo** semestre ou
+- [x] Grade em que uma disciplina exige pré-requisito do **mesmo** semestre ou
       de semestre **posterior** é reportada -- verify: `headless`
-- [ ] A dupla `prerequisitoN` + `corequisitoN` para o mesmo código **não** é
+- [x] A dupla `prerequisitoN` + `corequisitoN` para o mesmo código **não** é
       reportada pela regra acima -- verify: `headless`
-- [ ] Disciplina cujo `semestre` difere de `posicao_grade[0]` é reportada
+- [x] Disciplina cujo `semestre` difere de `posicao_grade[0]` é reportada
       -- verify: `headless`
-- [ ] Disciplina **sem** `posicao_grade` (complementar, `semestre: "0"`) não é
+- [x] Disciplina **sem** `posicao_grade` (complementar, `semestre: "0"`) não é
       reportada por nenhuma das duas regras que dependem de semestre
       -- verify: `headless`
-- [ ] Equivalência apontando para código ausente na grade correspondente é
+- [x] Equivalência apontando para código ausente na grade correspondente é
       reportada -- verify: `headless`
-- [ ] Equivalência cujo lado é o placeholder `0000` ("sem grade") não é
+- [x] Equivalência cujo lado é o placeholder `0000` ("sem grade") não é
       reportada -- verify: `headless`
-- [ ] Núcleo usado por alguma disciplina da grade sem chave correspondente no
+- [x] Núcleo usado por alguma disciplina da grade sem chave correspondente no
       `cargaexigida/` da mesma grade é reportado -- verify: `headless`
-- [ ] Chave do `cargaexigida/` que não corresponde a núcleo nenhum **não** é
+- [x] Chave do `cargaexigida/` que não corresponde a núcleo nenhum **não** é
       reportada: `estagio`, `tcc`, `praticas` e `acg` são categorias agregadas,
       não núcleos de disciplina -- verify: `headless`
-- [ ] Grade, equivalência ou carga exigida ausente é no-op silencioso, sem erro
+- [x] Grade, equivalência ou carga exigida ausente é no-op silencioso, sem erro
       -- verify: `headless`
-- [ ] Rodando sobre os arquivos reais de `arquivos/`, a validação emite
+- [x] Rodando sobre os arquivos reais de `arquivos/`, a validação emite
       `push_warning` para os defeitos conhecidos listados em "Edge cases" e para
       nenhum outro -- verify: `headless`
 

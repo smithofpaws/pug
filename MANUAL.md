@@ -619,6 +619,12 @@ Oferta de disciplinas para o semestre planejado. Contém código da disciplina, 
 
 Cada grade é um arquivo JSON nomeado `<cod_curso>_<versao>.json` (ex.: `alec_2023.json`, `alem_2023.json`), onde `cod_curso` é o código do curso definido em `base_config.json`. O programa **detecta automaticamente** as grades disponíveis a partir desses arquivos na inicialização — para adicionar uma nova versão de currículo, basta colocar o arquivo na pasta e reabrir o programa; não é preciso editar o `base_config.json`. O sufixo `_0000` é um placeholder para "disciplinas sem grade".
 
+### 6.6 Conferência dos dados curriculares
+
+Ao iniciar, o programa confere a coerência entre as grades, as equivalências e as cargas exigidas, e avisa quando encontra: pré-requisito ou corequisito para código inexistente, buraco na numeração (`prerequisito0`, `prerequisito1`, `prerequisito3`), pré-requisito do mesmo semestre ou posterior (exceto quando o mesmo código também é corequisito), semestre diferente da posição na grade, equivalência para código ausente (o lado `_0000` e as chaves iniciadas por `//` ficam de fora) e núcleo sem carga exigida.
+
+Os avisos, iniciados por `VALIDACAO COERENCIA`, aparecem só no console (`Auxiliar.console.exe` e `Auxiliar_debug.console.exe`) ou no editor. Nada é corrigido nem bloqueado: a correção é feita no repositório do curso.
+
 ---
 
 ## 7. Arquivos de Saída

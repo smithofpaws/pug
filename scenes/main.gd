@@ -470,6 +470,8 @@ func _carregar_arquivos() -> void:
 	_carregar_json_de("arquivos/grades/", GV.grades, JsonValidator.validar_grade)
 	_carregar_json_de("arquivos/equivalencias/", GV.equivalencias, JsonValidator.validar_equivalencia)
 	_carregar_json_de("arquivos/cargaexigida/", GV.ch_exigida, JsonValidator.validar_carga_exigida)
+	# coerencia entre os arquivos: so avisa, nao bloqueia
+	ValidacaoCurricular.validar(GV.grades, GV.equivalencias, GV.ch_exigida)
 	# Deriva a lista de grades de cada curso a partir dos arquivos carregados (fonte unica de
 	# verdade: os proprios arquivos de grade, nomeados <cod_curso>_<versao>.json).
 	_derivar_grades_cursos()
