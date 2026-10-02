@@ -74,6 +74,14 @@ Localizada no topo da janela. Contém:
 
 Vários módulos exibem um painel de texto (chamado *terminal*) com análises, relatórios e avisos em texto colorido. O terminal pode ser ocultado e reexibido com o botão correspondente; o conteúdo é preservado.
 
+**Busca no terminal (Ctrl+F).** Clique no texto do terminal e pressione **Ctrl+F**: uma faixa de busca aparece no topo do terminal, empurrando o texto para baixo. Ao digitar, todas as ocorrências ficam realçadas, a atual com destaque mais forte, e o terminal rola até ela; o contador mostra a posição (ex.: `2 de 7`). A busca ignora maiúsculas e acentos (`calculo` encontra `Cálculo`) e considera só o texto exibido.
+
+- **Enter** ou **↓**: próxima ocorrência; **Shift+Enter** ou **↑**: anterior. Ao passar da última, volta à primeira (e vice-versa).
+- **Esc** ou **✕**: fecha a busca e remove o realce; a rolagem fica onde estava.
+- **Ctrl+F** com a faixa aberta volta ao campo e seleciona o termo. Ao reabrir, o último termo já vem selecionado: basta digitar para substituí-lo.
+- Se o conteúdo do terminal mudar (ex.: ao trocar de aluno), a busca fecha sozinha.
+- O atalho só vale com o foco no terminal: Ctrl+F em outra parte do programa não faz nada. Copiar (Ctrl+C) com a busca aberta copia o mesmo texto de sempre.
+
 ### 3.3 Botões de painel (mostrar/ocultar)
 
 Vários módulos têm botões que mostram ou ocultam painéis — terminal, grade de horários, grade curricular, painel de disciplinas, etc. Esses botões têm dois comportamentos:

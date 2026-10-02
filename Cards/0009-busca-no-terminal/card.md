@@ -1,13 +1,20 @@
 ---
 id: 0009-busca-no-terminal
 title: Busca com Ctrl+F no Terminal
-status: ready
+status: in_progress
 origin: novo (pedido do dev)
 layers: [standalone_scripts/utils, scenes/Complementares/Terminal, MANUAL.md]
 interviewed: true
 ---
 
 # 0009 - Busca com Ctrl+F no Terminal
+
+> Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`), em 1
+> rodada: os 8 ACs `headless` estão provados e a suíte passa 137/137. O card
+> **não** é `done` porque os ACs 9 a 16 são `manual` (teclado, foco, rolagem,
+> cópia, tema, dicas e manual) e só fecham por relato do dev. Roteiro em
+> `spec.md` (R1 a R8). Os testes de fiação (`test_terminal_fiacao_busca.gd`)
+> exercitam a cena real e servem de apoio, mas não substituem o roteiro.
 
 ## Goal
 Com o foco no Terminal (depois de clicar nele), **Ctrl+F** abre uma faixa de
@@ -65,14 +72,14 @@ A lógica de busca fica numa classe **pura** em `standalone_scripts/utils/`
 termo, e devolve as ocorrências e o BBCode realçado. O Terminal só cuida de
 teclado, faixa e rolagem.
 
-- [ ] Ignora maiúsculas e acentos: `calculo` encontra `Cálculo` e `CÁLCULO`; `acao` encontra `Ação` -- verify: `headless`
-- [ ] Ocorrências saem na ordem do texto e sem sobreposição (`aa` em `aaaa` dá 2); termo vazio ou só espaços dá nenhuma -- verify: `headless`
-- [ ] Só o texto visível conta: o termo não casa dentro de tags (`[color=#ffcc00]`, `[url=chave]`, `[bgcolor=...]`) -- verify: `headless`
-- [ ] Ocorrência que atravessa duas entradas do buffer na mesma linha (segmentos de cores diferentes, `newline = false`) é encontrada e realçada nas duas partes -- verify: `headless`
-- [ ] Realçar não altera o conteúdo: removidas as tags, o BBCode realçado dá exatamente o mesmo texto visível do original, inclusive com tag no meio de uma ocorrência -- verify: `headless`
-- [ ] A ocorrência atual recebe realce diferente das demais, e trocar a atual só move o realce forte -- verify: `headless`
-- [ ] Navegação circular: depois da última vem a primeira, antes da primeira vem a última; com zero ocorrências não há atual -- verify: `headless`
-- [ ] Os testes existentes seguem passando -- verify: `headless`
+- [x] Ignora maiúsculas e acentos: `calculo` encontra `Cálculo` e `CÁLCULO`; `acao` encontra `Ação` -- verify: `headless`
+- [x] Ocorrências saem na ordem do texto e sem sobreposição (`aa` em `aaaa` dá 2); termo vazio ou só espaços dá nenhuma -- verify: `headless`
+- [x] Só o texto visível conta: o termo não casa dentro de tags (`[color=#ffcc00]`, `[url=chave]`, `[bgcolor=...]`) -- verify: `headless`
+- [x] Ocorrência que atravessa duas entradas do buffer na mesma linha (segmentos de cores diferentes, `newline = false`) é encontrada e realçada nas duas partes -- verify: `headless`
+- [x] Realçar não altera o conteúdo: removidas as tags, o BBCode realçado dá exatamente o mesmo texto visível do original, inclusive com tag no meio de uma ocorrência -- verify: `headless`
+- [x] A ocorrência atual recebe realce diferente das demais, e trocar a atual só move o realce forte -- verify: `headless`
+- [x] Navegação circular: depois da última vem a primeira, antes da primeira vem a última; com zero ocorrências não há atual -- verify: `headless`
+- [x] Os testes existentes seguem passando -- verify: `headless`
 - [ ] Clicar no Terminal e apertar Ctrl+F abre a faixa no topo com o campo focado, e o texto desce; Ctrl+F com o foco fora do Terminal não abre nada. Conferido em pelo menos dois módulos (ex.: Situação de Alunos e Planejamento de Oferta) -- verify: `manual`
 - [ ] Ao digitar, todas as ocorrências ficam realçadas, a primeira com destaque forte, a tela rola até ela e o contador mostra `1 de N`; sem ocorrências, o contador indica zero e Enter não faz nada -- verify: `manual`
 - [ ] Enter e ↓ vão para a próxima, Shift+Enter e ↑ para a anterior, em ciclo, e a rolagem acompanha -- verify: `manual`
