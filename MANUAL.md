@@ -164,6 +164,16 @@ Exibe uma tabela com os horários do semestre (linhas) cruzados com os dias da s
 
 Filtros permitem exibir apenas disciplinas em condições específicas (matriculado, matriculável, etc.). Quando mais de uma disciplina cai na mesma célula, a ordem de concatenação é sempre a mesma, independentemente da ordem de seleção dos filtros: no Modo Ajuste, primeiro a disciplina pedida para inclusão e depois a pedida para exclusão; em seguida, as matriculadas, depois as matriculáveis e por fim as demais condições.
 
+#### Aviso de turmas sem correspondência
+
+Ao abrir a Situação de Alunos, o programa confere se algum discente do `hist.csv` (de qualquer curso, independentemente do filtro de curso do módulo) está matriculado numa turma que **não existe no `horarios.txt`** para aquela disciplina. Se houver, abre **uma vez** um diálogo com a lista; trocar de aluno ou de curso não o reabre, mas sair do módulo e voltar sim.
+
+O que significa: o GURI e o `horarios.txt` numeram a turma de forma diferente (em geral é a mesma turma). Enquanto isso, a grade de horários mostra essas aulas como **Matriculável**, e não como Matriculada. Turmas com o mesmo número e só a letra de subturma diferente (por exemplo `20A` e `T20`) não geram aviso, porque já são consideradas a mesma.
+
+Cada linha traz o código e o nome da disciplina, a turma do histórico, as turmas do `horarios.txt` e quantos discentes estão naquela situação. Os alunos não são listados.
+
+Para corrigir, acerte a numeração da turma no `horarios.txt` (pelo Horarios.exe) e reabra o módulo. Disciplina matriculada que não tem nenhuma aula no `horarios.txt` não entra neste aviso.
+
 #### Modo Ajuste
 
 O botão **Modo Ajuste**, ao lado da grade de horários, baixa e interpreta as respostas de um formulário de ajuste de matrícula (planilha do Google publicada em CSV) e sobrepõe, na grade de cada aluno, as disciplinas que ele pediu para incluir ou excluir. Quando o mesmo aluno responde o formulário mais de uma vez, as respostas são **mescladas**: os pedidos de inclusão e exclusão de respostas diferentes se somam, e um conflito na mesma disciplina (pedida nos dois lados em respostas diferentes) é resolvido a favor da menção mais recente. Dentro de uma única resposta, se a mesma disciplina aparecer pedida para os dois lados ao mesmo tempo, a exclusão prevalece.

@@ -231,18 +231,7 @@ func extrair_horarios_txt(horarios_txt: Array, matriculada_com_turma: Dictionary
 		for key in matriculada_com_turma.keys():
 			for b in matriculada_com_turma[key].size():
 				if matriculada_com_turma[key][b][0] == horariosexe.extrair_cod_horarios_txt(horarios_txt[a].get("disciplina")):
-					var turmas_txt: Array[String] = _obter_turmas(horarios_txt[a].get("turma"))
-					var turmas_aluno: Array[String] = _obter_turmas(matriculada_com_turma[key][b][1])
-					
-					var tem_turma_em_comum: bool = false
-					for c in turmas_txt.size():
-						for d in turmas_aluno.size():
-							if AnaliseHorarios._comparar_turmas(turmas_txt[c], turmas_aluno[d]):
-								tem_turma_em_comum = true
-								break
-						if tem_turma_em_comum:
-							break
-					
+					var tem_turma_em_comum: bool = _turma_casa(horarios_txt[a].get("turma"), matriculada_com_turma[key][b][1])
 					# Se houver correspondencia, adiciona a aula ao discente
 					if tem_turma_em_comum:
 						horarios_txt_condicao[key].append(horarios_txt[a])
@@ -258,6 +247,62 @@ func extrair_horarios_txt(horarios_txt: Array, matriculada_com_turma: Dictionary
 					if disc_cursaveis[key][b] == horariosexe.extrair_cod_horarios_txt(horarios_txt[a].get("disciplina")):
 						horarios_txt_condicao[key].append(horarios_txt[a])
 	return horarios_txt_condicao
+
+## Matrículas atuais com turma de cada discente de [param historico], sem filtro de curso. [br]
+## Retorna [code]{ "<matricula>": <saída de AnaliseHistorico.matriculada_com_turma> }[/code] para toda chave de
+## [param historico]; [param condicoes_discentes] tem o formato do cache de dados discentes. Discente ausente
+## de [param condicoes_discentes] cai todo em [code]matriculado_agora_aproveitamento[/code]. Não muta as entradas.
+func matriculadas_com_turma_por_discente(historico: Dictionary, condicoes_discentes: Dictionary) -> Dictionary:
+	var resultado: Dictionary = {}
+	for matricula in historico.keys():
+		resultado[matricula] = analise_historico.matriculada_com_turma( \
+			condicoes_discentes.get(matricula, {}), historico[matricula])
+	return resultado
+
+## Lista as turmas do histórico que não casam com nenhuma turma da mesma disciplina em [param horarios_txt]. [br]
+## [param matriculadas_por_discente] tem o formato de [method matriculadas_com_turma_por_discente]. As duas
+## condições de matrícula são avaliadas igualmente e disciplina sem nenhuma linha no txt é ignorada. [br]
+## Retorna um item por (codigo, turma_historico), ordenado por esses campos, com as chaves [code]codigo[/code],
+## [code]nome[/code], [code]turma_historico[/code], [code]turmas_txt[/code] (distintas, ordenadas) e
+## [code]discentes[/code] (matrículas distintas). Nenhum item carrega dado de discente.
+func turmas_sem_correspondencia(horarios_txt: Array, matriculadas_por_discente: Dictionary) -> Array[Dictionary]:
+	var indice: Dictionary = _indexar_turmas_txt(horarios_txt)
+	var grupos: Dictionary = {}
+	for matricula in matriculadas_por_discente.keys():
+		for condicao in matriculadas_por_discente[matricula].keys():
+			for par in matriculadas_por_discente[matricula][condicao]:
+				var codigo: String = str(par[0])
+				var turma_historico: String = str(par[1])
+				if codigo.is_empty() or not indice.has(codigo):
+					continue
+				var casou: bool = false
+				for turma_txt in indice[codigo]["turmas"]:
+					if _turma_casa(turma_txt, turma_historico):
+						casou = true
+						break
+				if casou:
+					continue
+				var chave: String = codigo + "\n" + turma_historico
+				if not grupos.has(chave):
+					grupos[chave] = {"codigo": codigo, "turma_historico": turma_historico, "matriculas": {}}
+				grupos[chave]["matriculas"][matricula] = true
+	var itens: Array[Dictionary] = []
+	for grupo in grupos.values():
+		var turmas_txt: Array[String] = []
+		turmas_txt.assign(indice[grupo["codigo"]]["turmas"])
+		turmas_txt.sort()
+		itens.append({
+			"codigo": grupo["codigo"],
+			"nome": indice[grupo["codigo"]]["nome"],
+			"turma_historico": grupo["turma_historico"],
+			"turmas_txt": turmas_txt,
+			"discentes": grupo["matriculas"].size(),
+		})
+	itens.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["codigo"] != b["codigo"]:
+			return a["codigo"] < b["codigo"]
+		return a["turma_historico"] < b["turma_historico"])
+	return itens
 
 # Compara dois identificadores de turma no formato numero + letra opcional (Cards/0006). [br]
 # Casam quando os numeros sao iguais e as letras sao compativeis: letras iguais casam, e letra
@@ -288,6 +333,33 @@ static func _partir_turma(turma: String) -> Dictionary:
 		else:
 			letras += ch
 	return {"numero": numero, "letras": letras}
+
+# Regra única de casamento entre a turma do txt e a do histórico: verdadeiro se alguma turma de uma
+# (já separada por _obter_turmas) casa com alguma da outra por _comparar_turmas. Usada pela grade e pelo aviso.
+func _turma_casa(turma_txt: String, turma_aluno: String) -> bool:
+	var turmas_txt: Array[String] = _obter_turmas(turma_txt)
+	var turmas_aluno: Array[String] = _obter_turmas(turma_aluno)
+	for turma_a in turmas_txt:
+		for turma_b in turmas_aluno:
+			if AnaliseHorarios._comparar_turmas(turma_a, turma_b):
+				return true
+	return false
+
+# Indexa o horarios.txt por código de disciplina: { codigo: {"nome", "turmas"} } com turmas distintas
+# na ordem de aparição. Linhas de código vazio (cabeçalho) ficam de fora.
+func _indexar_turmas_txt(horarios_txt: Array) -> Dictionary:
+	var indice: Dictionary = {}
+	for linha in horarios_txt:
+		var disciplina: String = str(linha.get("disciplina", ""))
+		var codigo: String = horariosexe.extrair_cod_horarios_txt(disciplina)
+		if codigo.is_empty():
+			continue
+		if not indice.has(codigo):
+			indice[codigo] = {"nome": horariosexe.extrair_nome_horarios_txt(disciplina), "turmas": []}
+		var turma: String = str(linha.get("turma", ""))
+		if not indice[codigo]["turmas"].has(turma):
+			indice[codigo]["turmas"].append(turma)
+	return indice
 
 # Determina qual a(s) turma(s) a partir do texto informado. [br]
 # Formato de [param turma] pode ser o da turma do [method horarios_exe.carregar_horarios_txt] (e.g. "T10/70",

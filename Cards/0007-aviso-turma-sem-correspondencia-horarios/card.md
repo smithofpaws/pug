@@ -1,13 +1,26 @@
 ---
 id: 0007-aviso-turma-sem-correspondencia-horarios
 title: Aviso de turma do histórico sem correspondência no horarios.txt
-status: ready
+status: in_progress
 origin: novo (non-goal do card 0006; casos AL0037, AL2126 e AL2129 em 2026/2)
 layers: [standalone_scripts/analise/analise_horarios.gd, scenes/Modulos/SituacaoAlunos]
 interviewed: true
 ---
 
 # 0007 - Aviso de turma do histórico sem correspondência no horarios.txt
+
+> Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`): os 12 ACs
+> `headless` estão provados e a suíte passa 86/86. O card **não** é `done`
+> porque os ACs 13 a 16 são `manual` e só fecham por relato do dev. Roteiro em
+> `spec.md` (R1 a R4).
+>
+> Correção do orquestrador depois do pipeline: o `analise_horarios.gd` saiu com
+> uma quebra de linha **literal** dentro de uma string (`codigo + "` / `" +
+> turma_historico`). O Godot aceita, o gdtoolkit não consegue ler o arquivo, e o
+> guardrails trata essa falha de leitura como "limpo": o arquivo inteiro ficou
+> fora do lint sem aviso. Trocado pelo escape `"\n"` (mesma string em tempo de
+> execução). Também restauradas 4 continuações de linha (`\` + quebra) que
+> tinham virado tabs no meio da linha.
 
 ## Goal
 Ao abrir **Situação de Alunos**, se houver discente matriculado numa turma que
@@ -55,18 +68,18 @@ Função pura nova em `AnaliseHorarios` (nome e assinatura definidos no design),
 que recebe o `horarios_txt` e as matrículas com turma de todos os discentes e
 devolve a lista de divergências agrupada por (disciplina, turma do histórico).
 
-- [ ] Discente com turma `20` numa disciplina cujas únicas linhas no txt são `T80` gera **um** item com o código, a turma do histórico `20`, as turmas do txt `[T80]` e 1 discente -- verify: `headless`
-- [ ] Turma composta `20/80` contra txt com `T30;60` e `T90` gera item com as **duas** turmas do txt -- verify: `headless`
-- [ ] Não gera item quando a turma casa pela regra do 0006: `20A` × `T20`, `20` × `T20A`, e composta com uma parte que casa (`30/60` × `T30;60`) -- verify: `headless`
-- [ ] Dois discentes na mesma disciplina e turma geram **um** item com contagem 2; linhas repetidas do mesmo discente (fan-out do GURI) não inflam a contagem -- verify: `headless`
-- [ ] Na mesma disciplina, duas turmas do histórico divergentes (`20` e `40`, txt só `T80`) geram **dois** itens -- verify: `headless`
-- [ ] Disciplina matriculada sem nenhuma linha no txt **não** gera item (non-goal) -- verify: `headless`
-- [ ] Matrícula na condição `matriculado_agora_aproveitamento` é avaliada como a de `matriculado_agora` -- verify: `headless`
-- [ ] Matrícula com turma vazia no histórico gera item (com turma vazia), sem crashar -- verify: `headless`
-- [ ] `horarios_txt` vazio ou nenhum discente matriculado devolvem lista vazia -- verify: `headless`
-- [ ] Os itens saem ordenados por código da disciplina e depois por turma do histórico -- verify: `headless`
-- [ ] **Coerência com a grade:** em todos os cenários acima, uma matrícula entra num item **se e somente se** `extrair_horarios_txt` não põe nenhuma linha daquela disciplina na condição de matrícula do discente. Os dois caminhos usam o mesmo critério de casamento, sem cópia da regra -- verify: `headless`
-- [ ] Os testes existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
+- [x] Discente com turma `20` numa disciplina cujas únicas linhas no txt são `T80` gera **um** item com o código, a turma do histórico `20`, as turmas do txt `[T80]` e 1 discente -- verify: `headless`
+- [x] Turma composta `20/80` contra txt com `T30;60` e `T90` gera item com as **duas** turmas do txt -- verify: `headless`
+- [x] Não gera item quando a turma casa pela regra do 0006: `20A` × `T20`, `20` × `T20A`, e composta com uma parte que casa (`30/60` × `T30;60`) -- verify: `headless`
+- [x] Dois discentes na mesma disciplina e turma geram **um** item com contagem 2; linhas repetidas do mesmo discente (fan-out do GURI) não inflam a contagem -- verify: `headless`
+- [x] Na mesma disciplina, duas turmas do histórico divergentes (`20` e `40`, txt só `T80`) geram **dois** itens -- verify: `headless`
+- [x] Disciplina matriculada sem nenhuma linha no txt **não** gera item (non-goal) -- verify: `headless`
+- [x] Matrícula na condição `matriculado_agora_aproveitamento` é avaliada como a de `matriculado_agora` -- verify: `headless`
+- [x] Matrícula com turma vazia no histórico gera item (com turma vazia), sem crashar -- verify: `headless`
+- [x] `horarios_txt` vazio ou nenhum discente matriculado devolvem lista vazia -- verify: `headless`
+- [x] Os itens saem ordenados por código da disciplina e depois por turma do histórico -- verify: `headless`
+- [x] **Coerência com a grade:** em todos os cenários acima, uma matrícula entra num item **se e somente se** `extrair_horarios_txt` não põe nenhuma linha daquela disciplina na condição de matrícula do discente. Os dois caminhos usam o mesmo critério de casamento, sem cópia da regra -- verify: `headless`
+- [x] Os testes existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
 - [ ] Com os dados reais de 2026/2, abrir Situação de Alunos mostra **um** diálogo (`Dialogos.escolha_lista`, lista rolável, **um** botão, **sem** Cancelar) com AL0037 `20/80` (2), AL2126 `20` (2) e AL2129 `20` (1), sem nome nem matrícula de discente -- verify: `manual`
 - [ ] Trocar de aluno não reabre o diálogo; fechar e reabrir o módulo reabre -- verify: `manual`
 - [ ] Com o `horarios.txt` ausente, o módulo abre sem diálogo e sem erro novo no log -- verify: `manual`

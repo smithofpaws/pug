@@ -205,6 +205,7 @@ func _ready() -> void:
 	# Executa a análise uma única vez após toda a configuração inicial.
 	_pronto = true
 	_rodar_análise()
+	_avisar_turmas_sem_correspondencia.call_deferred()
 	var btn_exportar := $"Topo/HBoxContainer/Exportar"
 	if not btn_exportar.pressed.is_connected(_on_exportar_button_up):
 		btn_exportar.pressed.connect(_on_exportar_button_up)
@@ -268,6 +269,38 @@ func _validar_grade_ativa() -> bool:
 		print_debug("ERRO: Grade '" + _grade_ativa + "' nao encontrada em grades_disciplinas_curriculos.")
 		return false
 	return true
+
+# Avisa, uma vez por abertura do modulo, as matriculas do historico cuja turma nao casa com nenhuma turma da
+# disciplina no horarios.txt (na grade elas ficam como Matriculavel). Considera todos os discentes do hist.csv,
+# sem o filtro de curso; sem divergencia (ou sem hist.csv/horarios.txt) nao abre nada.
+func _avisar_turmas_sem_correspondencia() -> void:
+	var itens: Array[Dictionary] = analise_horarios.turmas_sem_correspondencia(_horarios_txt, \
+		analise_horarios.matriculadas_com_turma_por_discente(_historico, _condicoes_discentes))
+	if itens.is_empty():
+		return
+	var linhas: Array[String] = []
+	for item in itens:
+		linhas.append(_rotulo_turma_sem_correspondencia(item))
+	var cabecalho: String = "Há discentes matriculados em turmas que não aparecem no horarios.txt para a disciplina. "
+	cabecalho += "Na grade de horários, essas aulas ficam como Matriculável, e não como Matriculada:"
+	var rodape: String = "Provavelmente é a mesma turma numerada de forma diferente. "
+	rodape += "Corrija a numeração no horarios.txt (Horarios.exe) e reabra o módulo."
+	Dialogos.escolha_lista(self, "Turmas sem correspondência no horarios.txt", cabecalho, linhas, rodape, \
+		[{"texto": "OK", "ao_acionar": Callable()}], "")
+
+# Formata um item de turmas_sem_correspondencia para o dialogo: so campos do item, nada de discente.
+static func _rotulo_turma_sem_correspondencia(item: Dictionary) -> String:
+	var turma_historico: String = String(item["turma_historico"]).strip_edges().to_upper()
+	if turma_historico.is_empty():
+		turma_historico = "(sem turma)"
+	var turmas_txt: Array[String] = []
+	for turma in item["turmas_txt"]:
+		var turma_formatada: String = String(turma).strip_edges().to_upper()
+		turmas_txt.append(turma_formatada if not turma_formatada.is_empty() else "(sem turma)")
+	var quantidade: int = item["discentes"]
+	var discentes: String = "1 discente" if quantidade == 1 else str(quantidade) + " discentes"
+	return "• " + String(item["codigo"]).to_upper() + " " + String(item["nome"]) + ": turma " + turma_historico + \
+		" no histórico; no horarios.txt: " + ", ".join(turmas_txt) + " (" + discentes + ")"
 
 # Faz a análise da integralização e horários para uma [param matricula]. [br]
 # Formato de [param matricula] deve ser apenas a sequencia numérica da matrícula em formato String. [br]
