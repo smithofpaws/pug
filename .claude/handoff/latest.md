@@ -1,12 +1,14 @@
-# Handoff — 2026-10-02 17:09
+# Handoff — 2026-10-03 07:42
 
 ## Onde parei
-A fila rodou os quatro cards `ready` (0005, 0007, 0008, 0009) na branch
-**`cards/2026-10-02`**, todos commitados, nenhum pushado, a branch **não**
-mesclada na `master`. Três cards esperam ACs `manual` do dev.
+Resolvidas três pendências do dev (guardrails falha fechado, `root` obrigatório
+no workflow, manual da Sugestão de oferta), todas commitadas na branch
+**`cards/2026-10-02`**. A quarta (`agc` → `acg`) depende do repositório
+alec-data, ao qual o dev não liberou acesso nesta sessão. Os ACs manuais dos
+cards 0007, 0008 e 0009 continuam esperando o dev.
 
 ## Card ativo
-Nenhum em execução. Estado de cada um:
+Nenhum em execução.
 
 | Card | Status | ACs pendentes (manual) | Commit |
 |---|---|---|---|
@@ -18,66 +20,58 @@ Nenhum em execução. Estado de cada um:
 Roteiros manuais: `Cards/<id>/spec.md` (R1...). Cada AC `manual` fecha por relato
 do dev, um a um.
 
-## Feito nesta sessão
-- `262362f` AGENTS.md "Setup por máquina"; `8644e45`, `f236e98`, `fd2d2f8` cards
-  0007, 0008 e 0009 (na `master`, não pushados).
-- Fila na branch `cards/2026-10-02`: os 4 commits da tabela acima.
-- Suíte: 52 → 137 testes.
+## Feito nesta sessão (2026-10-03)
+- `4028277` **Guardrails falha fechado.** `.gd` que o parser do gdtoolkit não lê
+  vira a violação `ilegivel` (nunca entra na baseline); `--update-baseline` se
+  recusa enquanto houver uma; gdtoolkit ausente aborta com código 2. Provado:
+  o `situacao_disciplinas.gd` ainda quebrado reprovou isolado e no projeto, o
+  `--update-baseline` recusou sem tocar a baseline, e os dois caminhos de
+  módulo ausente (simulados) abortaram.
+- No mesmo commit, **`situacao_disciplinas.gd` voltou a ser legível** (string
+  quebrada com barra dentro das aspas, desde `219131f`). A baseline foi criada
+  com ele já ilegível, então a dívida dele nunca foi congelada: as 12 violações
+  que apareceram foram **corrigidas**, não congeladas (tipos, espaços no fim,
+  `_rodar_análise` → `_rodar_analise`, ordem das funções). Baseline intacta.
+- `45c6de8` **`root` obrigatório** no `godot-feature-pipeline.js` (sem padrão
+  fixo `O:/...`); para antes do primeiro agente, normaliza barras. Testado com
+  quatro formatos de entrada no Node. Skill de setup e AGENTS.md atualizados.
+- `d1e6f78` **Manual da Sugestão de oferta** corrigido (usa a lista oficial com
+  filtro; o histórico só quando a lista não cobre o curso).
+- AGENTS.md: parágrafo do guardrails reescrito para o comportamento novo.
 
 ## Pela metade / não verificado
-- **ACs manuais** dos cards 0007, 0008 e 0009 (tabela acima). Nada visual foi
-  visto por ninguém ainda.
-- **O guardrails aprova arquivo que o gdtoolkit não consegue ler.** Quando o
-  parser do gdtoolkit falha, o `run_gdlint` não acha linhas `arquivo:linha:
-  Error:` e conta zero violações — o arquivo inteiro fica fora do lint e das
-  regras do projeto, em silêncio. Aconteceu no 0007 (`analise_horarios.gd`, já
-  corrigido). **Não corrigido no guardrails.**
-- **`scenes/Modulos/SituacaoDisciplinas/situacao_disciplinas.gd` está ilegível
-  para o gdtoolkit desde `219131f`** (linha 270, string). Está sem lint desde
-  então. Não mexido.
-- **Defeito de escrita dos agentes neste ambiente:** barra invertida dupla em
-  comando/edição chega como barra simples. Efeitos vistos: `"\n"` virando
-  quebra de linha real dentro de string (0007), continuação de linha (barra +
-  quebra) virando tabs no meio da linha (0007, 0008), `\n` literal quebrando o
-  parse do `planejamentooferta.gd` (0008, pego pelo review). O orquestrador
-  conferiu, depois de cada card: gdlint lê cada `.gd` tocado, sem tabs no meio de
-  linha, sem string aberta no fim da linha.
-- **Workflow com raiz fixa de outra máquina:** `godot-feature-pipeline.js` tem
-  `ROOT` padrão `O:/OneDrive/...`, que não existe na `apex`. Rodou com
-  `args.root` explícito. Não corrigido.
-- **Teste de recusa do pre-commit na `apex`: não rodado** (o dev negou). Os
-  commits da fila mostraram o pre-commit rodando guardrails + testes de verdade,
-  o que é indício, não a prova de recusa.
-- **0005 diverge do card em dois pontos** (decididos na spec, não pelo dev):
-  reporta 8 pré-requisitos inexistentes, não só o `al5022` da 2023; e **não**
-  detecta `agc` × `acg`. O teste do AC12 compara com os dados reais: corrigir um
-  desses defeitos no alec-data e sincronizar reprova a suíte até atualizar o
-  `SNAPSHOT` em `test/unit/test_validacao_curricular.gd`.
+- **`agc` → `acg` não feito.** O dev decidiu que o nome correto é só `acg`. A
+  chave errada está em `cargaexigida/alec_2010.json` (`"agc": "105"`), que
+  pertence ao **alec-data** (prefixo `alec_`). Nenhum código do pug lê a chave
+  pelo nome. Não foi conferido se outro consumidor (ex.: `ppc2023`) lê `agc`.
+  Caminho: corrigir no alec-data, push, rodar `ferramentas/sincronizar_dados_curso`
+  e commitar a cópia no pug. **Não editar a cópia em `arquivos/` direto.**
+- **`situacao_disciplinas.gd` mudou sem teste** (módulo de cena): o parser do
+  Godot compilou sem erro de tipo, mas ninguém abriu a Situação de Disciplinas
+  depois. Vale uma conferência rápida (análise isolada e comparação).
+- ACs manuais dos cards 0007, 0008 e 0009.
+- Teste de recusa do pre-commit na `apex`: ainda não rodado pelo dev. Os commits
+  mostram o pre-commit rodando guardrails + testes de verdade.
 
 ## Estado dos portões
-guardrails: ok (370 toleradas, baseline só apertou) · testes: ok (137/137) ·
-parser: ok · rodados em 2026-10-02 17:00, na branch `cards/2026-10-02`.
+guardrails: ok (370 toleradas) · testes: ok (137/137) · parser: ok · rodados em
+2026-10-03, na branch `cards/2026-10-02`. O guardrails agora falha fechado.
 
 ## Estado do git
-Branch `cards/2026-10-02`, working tree limpo (fora este handoff). `master` está
-4 commits à frente de `origin/master`; a branch, mais 4 (+ este handoff). Nada
-pushado.
+Branch `cards/2026-10-02`, working tree limpo (fora este handoff). Nada pushado:
+`master` 4 commits à frente de `origin/master`; a branch, mais 9 (+ este).
 
 ## Decisões tomadas que não estão em card nenhum
-- **Migrar para o AGENTS.md (Troubleshooting):** o colapso da barra dupla nas
-  edições dos agentes e a checagem pós-card que o pega; e que guardrails "limpo"
-  não prova que o arquivo foi lido.
+- O nome da categoria de carga é só `acg` (decisão do dev, 2026-10-03).
+- Migrar para o AGENTS.md (Troubleshooting): o colapso da barra dupla nas
+  edições dos agentes neste ambiente e a checagem pós-card que o pega
+  (gdlint lê cada `.gd` tocado, sem tabs no meio de linha, sem string aberta).
 
 ## Próximo passo concreto
-O dev roda os roteiros manuais (começar pelo 0009, que é o mais visível) e relata
-AC por AC. Com os ACs fechados: mesclar `cards/2026-10-02` na `master` e
-`git push`.
+O dev roda os roteiros manuais (começar pelo 0009) e relata AC por AC; depois
+mesclar `cards/2026-10-02` na `master` e `git push`.
 
 ## Em aberto para o dev
-- Corrigir o guardrails para **reprovar** arquivo ilegível? Exige também
-  consertar o `situacao_disciplinas.gd`, senão o portão completo passa a falhar.
-- Corrigir o `ROOT` padrão do workflow (ou torná-lo obrigatório)?
-- Cards novos: vocabulário de categorias de carga (`agc` × `acg`); chave
-  `al0367` duplicada em `alec_2023-alec_2010.json`; os `avisos_leitura` da
-  Situação de Alunos possivelmente apagados no `_ready`; o manual da Sugestão de
-  oferta desatualizado (achado do 0008).
+- Quem corrige o `agc` no alec-data: o dev, ou liberar o acesso ao repositório?
+- Cards possíveis: chave `al0367` duplicada em `alec_2023-alec_2010.json`; os
+  `avisos_leitura` da Situação de Alunos possivelmente apagados no `_ready`.
