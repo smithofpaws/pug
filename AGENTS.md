@@ -320,12 +320,16 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
     só que o projeto vive no OneDrive, que replica a pasta `.git/` inteira. O `lefthook install`
     feito numa máquina põe o *arquivo* do pre-commit nos 3 PCs; o *binário* do lefthook e o
     *módulo* `gdtoolkit` ficam só onde foram instalados.
-  - **Sem eles, o portão deixa o commit passar sem verificar nada, e não avisa.** O hook gerado
-    pelo lefthook termina em `echo "Can't find lefthook in PATH"` **sem `exit 1`**. E o
-    `run_gdlint` (`.tools/guardrails.py`) só trata o *executável* Python ausente, não o *módulo*:
-    recebe código 1, não encontra nenhuma linha `arquivo:linha: Error:` e relata "limpo". As
-    regras próprias do projeto morrem junto, porque usam o parser do gdtoolkit. Foi assim que os
+  - **Sem o lefthook, o commit passa sem verificar nada, e não avisa.** O hook gerado pelo
+    lefthook termina em `echo "Can't find lefthook in PATH"` **sem `exit 1`**. Foi assim que os
     portões ficaram desligados sem ninguém notar até 2026-08-31.
+  - **O guardrails falha fechado** (desde 2026-10-03). Sem o módulo `gdtoolkit`, ele aborta
+    (código 2) com a instrução de instalação. Um `.gd` que o parser do gdtoolkit não consegue
+    ler vira a violação `ilegivel`, que nunca entra na baseline — e o `--update-baseline` se
+    recusa a rodar enquanto houver uma. Antes, os dois casos davam "limpo": o arquivo ficava fora
+    do gdlint e das regras do projeto inteiro (aconteceu com o `situacao_disciplinas.gd` por
+    seis semanas). O Godot aceita coisas que o gdtoolkit não lê, como quebra de linha dentro de
+    string; por isso o parser do Godot passar não prova nada sobre o lint.
   - **A prova é o portão recusar, não estar instalado.** Em cada máquina: crie um `.gd`
     descartável com `var x = 1`, faça `git add`, rode `lefthook run pre-commit` e exija
     **exit ≠ 0**. Depois `git reset` no arquivo e apague-o. Sinal de alerta no dia a dia: o

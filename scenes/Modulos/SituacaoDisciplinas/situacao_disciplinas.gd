@@ -1,5 +1,5 @@
 extends ReferenceRect
-## Relacionado a ilustração da situação das disciplinas. Especialmente na determinação de  
+## Relacionado a ilustração da situação das disciplinas. Especialmente na determinação de
 ## horários livres para discentes em uma turma e choques de horários.
 ##
 ## Os principais empregos são: [br]
@@ -92,7 +92,7 @@ var _linha_selecionada1: int = 0
 # Linha selecionada em OptionListaDisciplinas2
 var _linha_selecionada2: int = 0
 
-## Impede que os signals de inicialização disparem [_rodar_análise] múltiplas vezes.
+## Impede que os signals de inicialização disparem [_rodar_analise] múltiplas vezes.
 var _pronto := false
 
 func _ready() -> void:
@@ -188,7 +188,7 @@ func _criar_listadisciplinas() -> Array:
 		}
 		s.atualizar_texto_padrao = true
 		# Remove asterisco dos separadores (preserva * para comportamento de selecao unica)
-		var popup = s.get_node("MenuButton").get_popup()
+		var popup: PopupMenu = s.get_node("MenuButton").get_popup()
 		for i in popup.get_item_count():
 			if popup.is_item_separator(i):
 				popup.set_item_text(i, popup.get_item_text(i).trim_suffix("*"))
@@ -226,20 +226,20 @@ func _remover_acentos(s: String) -> String:
 
 
 #region Controle principal do tipo de análise: Isolada
-# Analisa, para uma disciplina com código [param cod_disc] quais discentes se enquadram 
+# Analisa, para uma disciplina com código [param cod_disc] quais discentes se enquadram
 # nas condições como matriculado_agora, matriculável, etc.
 func _disciplina_isolada(cod_disc: String) -> void:
 	# Obtem a lista de matrículas de discentes em cada condição na disciplina de código [param cod_disc].
 	var discentes_disc_condicoes: Dictionary = _disc_disciplina(cod_disc)
 	# Envia o resultado da análise para o terminal.
 	_resultados_analise_isolada(discentes_disc_condicoes)
-	
+
 	# Matriz combinada de horários dos alunos.
 	var horarios_alunos: Array[Array] = []
 	# Obtem os horarios de todos discentes em [param condicao] com a disciplina e concatena em uma unica matriz.
 	for condicao in discentes_disc_condicoes.keys():
 		for a in discentes_disc_condicoes[condicao].size():
-			var matricula = discentes_disc_condicoes[condicao][a]
+			var matricula: String = discentes_disc_condicoes[condicao][a]
 			# Obtém, para a matrícula em questão, as disciplinas que se enquadrem nas [param condicoes].
 			var disc_cursaveis: Dictionary
 			disc_cursaveis = _condicoes_discentes.get(matricula, {})
@@ -267,8 +267,8 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 	$"%Terminal".titulo("A disciplina pertence ao grupo: " + nucleo, true)
 	$"%Terminal".espaco()
 	$"%Terminal".secao("Lista de discentes na disciplina")
-	$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (somando \
-	disciplinas equivalentes de outras grades).")
+	$"%Terminal".linha("Valores em parênteses indicam reprovações por nota e por faltas (somando " \
+		+ "disciplinas equivalentes de outras grades).")
 	for condicao in discentes_disc_condicoes.keys():
 		if discentes_disc_condicoes[condicao].size() > 0:
 			$"%Terminal".espaco()
@@ -277,7 +277,7 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 		for a in discentes_disc_condicoes[condicao].size():
 			for b in _lista_alunos.size():
 				if discentes_disc_condicoes[condicao][a] == _lista_alunos[b][0]:
-					var codigo = _lista_disciplinas[_linha_selecionada1][0]
+					var codigo: String = _lista_disciplinas[_linha_selecionada1][0]
 					# Soma as reprovações desta disciplina com as de suas equivalentes de outras
 					# grades (aproveitamento de reprovações entre PPCs).
 					var reprov: Dictionary = analise_grades.reprovacoes_aproveitadas(
@@ -293,7 +293,7 @@ func _resultados_analise_isolada(discentes_disc_condicoes: Dictionary) -> void:
 
 #region Controle principal do tipo de análise: Combinada
 func _analise_combinada(cod_disc1: String, cod_disc2: String) -> void:
-	var discentes_ambas = analise_historico.comparar_discentes_disciplina(cod_disc1, cod_disc2, \
+	var discentes_ambas: Dictionary = analise_historico.comparar_discentes_disciplina(cod_disc1, cod_disc2, \
 		_condicoes_discentes, condicoes, _matriculas_reais)
 	$"%Terminal".titulo("Discentes em ambas disciplinas", true)
 	$"%Terminal".linha("Disciplina 1 → Disciplina 2")
@@ -309,7 +309,7 @@ func _analise_combinada(cod_disc1: String, cod_disc2: String) -> void:
 #endregion
 
 #region Funções complementares específicas a este módulo
-func _rodar_análise() -> void:
+func _rodar_analise() -> void:
 	if _retorno == "isolada":
 		_disciplina_isolada(_lista_disciplinas[_linha_selecionada1][0])
 	elif _retorno == "comparacao":
@@ -331,48 +331,6 @@ func _obter_indice_disciplina(codigo: String) -> int:
 			return a
 	return 0
 
-func _on_seletor_lista_grades_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
-	_grade_ativa = retorno
-	_lista_disciplinas = _criar_listadisciplinas()
-	_linha_selecionada1 = 0
-	if _pronto:
-		_rodar_análise()
-
-func _on_seletor_lista_disciplinas_1_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
-	_linha_selecionada1 = _obter_indice_disciplina(retorno)
-	_rodar_análise()
-
-func _on_seletor_lista_disciplinas_2_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
-	_linha_selecionada2 = _obter_indice_disciplina(retorno)
-	_rodar_análise()
-
-func _on_horarios_listacondicoes_alterada() -> void:
-	if not _pronto:
-		return
-	_rodar_análise()
-
-func _on_horarios_listaopcoes_alterada(opcao: String) -> void:
-	_forma_de_apresentacao = opcao
-	if not _pronto:
-		return
-	_rodar_análise()
-
-func _on_seletor_tipo_analise_opcao_selecionada(retorno, lista_selecionada) -> void:
-	_retorno = retorno
-	if _retorno == "isolada":
-		$"%LabelDisciplina2".hide()
-		$"%SeletorListaDisciplinas2".hide()
-	elif _retorno == "comparacao":
-		$"%LabelDisciplina2".show()
-		$"%SeletorListaDisciplinas2".show()
-		
-	else:
-		print_debug("ERRO: Tipo de análise é inválida: ", _retorno)
-		return
-	if lista_selecionada.size() == 0:
-		print_debug("ERRO: Tamanho da lista selecionada é zero.")
-	_rodar_análise()
-
 # Mapa botao OnOff -> painel que ele controla. Base unica para alternar (Shift+clique isola/restaura)
 # e para o realce: o botao fica "afundado" (toggle_mode) quando seu painel esta visivel.
 func _mapa_toggles() -> Dictionary:
@@ -382,6 +340,48 @@ func _toggle(alvo: Control) -> void:
 	var mapa := _mapa_toggles()
 	TogglePaineis.aplicar(mapa.values(), alvo, Input.is_key_pressed(KEY_SHIFT))
 	TogglePaineis.sincronizar_botoes(mapa)
+
+func _on_seletor_lista_grades_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
+	_grade_ativa = retorno
+	_lista_disciplinas = _criar_listadisciplinas()
+	_linha_selecionada1 = 0
+	if _pronto:
+		_rodar_analise()
+
+func _on_seletor_lista_disciplinas_1_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
+	_linha_selecionada1 = _obter_indice_disciplina(retorno)
+	_rodar_analise()
+
+func _on_seletor_lista_disciplinas_2_opcao_selecionada(retorno: String, _lista_selecionada: Array) -> void:
+	_linha_selecionada2 = _obter_indice_disciplina(retorno)
+	_rodar_analise()
+
+func _on_horarios_listacondicoes_alterada() -> void:
+	if not _pronto:
+		return
+	_rodar_analise()
+
+func _on_horarios_listaopcoes_alterada(opcao: String) -> void:
+	_forma_de_apresentacao = opcao
+	if not _pronto:
+		return
+	_rodar_analise()
+
+func _on_seletor_tipo_analise_opcao_selecionada(retorno: String, lista_selecionada: Array) -> void:
+	_retorno = retorno
+	if _retorno == "isolada":
+		$"%LabelDisciplina2".hide()
+		$"%SeletorListaDisciplinas2".hide()
+	elif _retorno == "comparacao":
+		$"%LabelDisciplina2".show()
+		$"%SeletorListaDisciplinas2".show()
+
+	else:
+		print_debug("ERRO: Tipo de análise é inválida: ", _retorno)
+		return
+	if lista_selecionada.size() == 0:
+		print_debug("ERRO: Tamanho da lista selecionada é zero.")
+	_rodar_analise()
 
 func _on_on_off_terminal_button_up() -> void:
 	_toggle($"%Terminal")

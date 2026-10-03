@@ -182,8 +182,19 @@ def check_tree_rules(path, source, violations):
 	relpath = rel(path)
 	try:
 		tree = parse_tree(source)
-	except Exception:
-		return  # sintaxe invalida: o gdlint reporta com mensagem melhor
+	except ImportError:
+		_abortar_sem_gdtoolkit()
+	except Exception as erro:
+		# Falhar fechado: arquivo que o parser do gdtoolkit nao le fica fora do gdlint e
+		# de todas as regras daqui. Contar zero violacoes ali seria aprovar sem olhar
+		# (foi assim que um .gd passou "limpo" sem lint nenhum). A regra "ilegivel"
+		# nunca entra na baseline, entao reprova sempre.
+		primeira_linha = str(erro).strip().splitlines()[0] if str(erro).strip() else type(erro).__name__
+		violations.append(Violation(
+			relpath, getattr(erro, "line", 0) or 0, "ilegivel",
+			"o parser do gdtoolkit nao le o arquivo ({}). O Godot pode aceitar, mas o "
+			"lint fica cego para ele inteiro.".format(primeira_linha)))
+		return
 
 	class_members = []  # (linha, tipo, nome)
 	for node in tree.children:
@@ -393,11 +404,14 @@ def run_gdlint(files, violations):
 			command, cwd=str(REPO_ROOT), capture_output=True, text=True, encoding="utf-8",
 			errors="replace")
 	except FileNotFoundError:
-		print("guardrails: gdtoolkit nao encontrado. Instale com: "
-		      'python -m pip install --user "gdtoolkit==4.*"', file=sys.stderr)
-		sys.exit(2)
+		_abortar_sem_gdtoolkit()
 	if result.returncode == 0:
 		return
+	# O FileNotFoundError acima so cobre o executavel Python ausente. Com o Python
+	# presente e o modulo ausente, o processo sai com codigo 1 e nenhuma linha no
+	# formato "arquivo:linha: Error:" — contar zero ali aprovaria tudo sem lint.
+	if "No module named" in result.stdout + result.stderr:
+		_abortar_sem_gdtoolkit()
 	pattern = re.compile(r"^(.*?):(\d+): Error: (.*)$")
 	for line in (result.stdout + result.stderr).splitlines():
 		match = pattern.match(line.strip())
@@ -412,6 +426,12 @@ def run_gdlint(files, violations):
 			# e os hooks trabalham com caminho relativo ao repo — normalizar.
 			violations.append(Violation(
 				rel(Path(match.group(1))), int(match.group(2)), rule, message))
+
+
+def _abortar_sem_gdtoolkit():
+	print("guardrails: gdtoolkit nao encontrado. Instale com: "
+	      'python -m pip install --user "gdtoolkit==4.*"', file=sys.stderr)
+	sys.exit(2)
 
 
 def load_baseline():
@@ -475,6 +495,13 @@ def main(argv):
 		check_tree_rules(path, source, violations)
 
 	if update_baseline:
+		ilegiveis = sorted({v.path for v in violations if v.rule == "ilegivel"})
+		if ilegiveis:
+			sys.stderr.write(
+				"guardrails: --update-baseline recusado; o gdtoolkit nao le {}. Congelar "
+				"agora toleraria o arquivo sem lint. Corrija a sintaxe e rode de novo.\n".format(
+					", ".join(ilegiveis)))
+			return 2
 		save_baseline(violations)
 		return 0
 
