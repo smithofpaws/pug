@@ -1,13 +1,18 @@
 ---
 id: 0008-carga-horaria-lista-oficial-professores
 title: Verificar carga horária inclui a lista oficial de professores do curso
-status: in_progress
+status: done
 origin: novo (pedido do dev)
 layers: [standalone_scripts/analise, scenes/Modulos/PlanejamentoOferta, arquivos/dicas.json, MANUAL.md]
 interviewed: true
 ---
 
 # 0008 - Verificar carga horária inclui a lista oficial de professores do curso
+
+> **Fechado em 2026-10-03.** Os ACs manuais (12 e 13) foram confirmados pelo dev
+> num relato único ("Já testei [...] Está funcionando"), depois de receber a
+> lista com os roteiros. Não houve relato AC por AC. A nota abaixo descreve o
+> estado ao fim do pipeline, antes dessa confirmação.
 
 > Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`), em 3
 > rodadas: os 11 ACs `headless` estão provados e a suíte passa 107/107. O card
@@ -72,8 +77,8 @@ Testes com nomes fictícios.
 - [x] Status pelos limites de `config_oferta` (`ch_minimo`, `ch_ideal`, `ch_maximo`), sem mudança de regra: acima do máximo, acima do ideal, abaixo do mínimo, OK, testado nas fronteiras -- verify: `headless`
 - [x] Ordem: carga decrescente, empate pelo nome (determinística; hoje o empate fica em ordem indefinida, e os vários 0 cr tornariam isso visível) -- verify: `headless`
 - [x] Plano sem nenhuma alocação mantém a mensagem "Nenhum professor alocado.", mesmo com filtro e lista -- verify: `headless`
-- [ ] Com os dados reais e o filtro em Engenharia Civil, o relatório traz os 14 professores da lista, e os sem carga aparecem como "abaixo do mínimo" -- verify: `manual`
-- [ ] A dica da ação (`arquivos/dicas.json`, `planejamento_oferta_acoes.verificar_carga_horaria`) e o `MANUAL.md` (Planejamento de Oferta › Ações disponíveis) descrevem a regra nova -- verify: `manual`
+- [x] Com os dados reais e o filtro em Engenharia Civil, o relatório traz os 14 professores da lista, e os sem carga aparecem como "abaixo do mínimo" -- verify: `manual`
+- [x] A dica da ação (`arquivos/dicas.json`, `planejamento_oferta_acoes.verificar_carga_horaria`) e o `MANUAL.md` (Planejamento de Oferta › Ações disponíveis) descrevem a regra nova -- verify: `manual`
 
 ## Edge cases
 - **Grafia do nome:** `normalizar_nome` troca `_` por espaço e põe maiúscula

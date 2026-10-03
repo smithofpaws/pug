@@ -1,7 +1,7 @@
 ---
 id: 0007-aviso-turma-sem-correspondencia-horarios
 title: Aviso de turma do histórico sem correspondência no horarios.txt
-status: in_progress
+status: done
 origin: novo (non-goal do card 0006; casos AL0037, AL2126 e AL2129 em 2026/2)
 layers: [standalone_scripts/analise/analise_horarios.gd, scenes/Modulos/SituacaoAlunos]
 interviewed: true
@@ -9,8 +9,12 @@ interviewed: true
 
 # 0007 - Aviso de turma do histórico sem correspondência no horarios.txt
 
+> **Fechado em 2026-10-03.** Os ACs manuais (13 a 16) foram confirmados pelo dev
+> num relato único ("Já testei [...] Está funcionando"), depois de receber a
+> lista com os roteiros. Não houve relato AC por AC.
+
 > Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`): os 12 ACs
-> `headless` estão provados e a suíte passa 86/86. O card **não** é `done`
+> `headless` estão provados e a suíte passa 86/86. Na época, o card **não** era `done`
 > porque os ACs 13 a 16 são `manual` e só fecham por relato do dev. Roteiro em
 > `spec.md` (R1 a R4).
 >
@@ -80,10 +84,10 @@ devolve a lista de divergências agrupada por (disciplina, turma do histórico).
 - [x] Os itens saem ordenados por código da disciplina e depois por turma do histórico -- verify: `headless`
 - [x] **Coerência com a grade:** em todos os cenários acima, uma matrícula entra num item **se e somente se** `extrair_horarios_txt` não põe nenhuma linha daquela disciplina na condição de matrícula do discente. Os dois caminhos usam o mesmo critério de casamento, sem cópia da regra -- verify: `headless`
 - [x] Os testes existentes em `test/unit/test_analise_horarios.gd` seguem passando -- verify: `headless`
-- [ ] Com os dados reais de 2026/2, abrir Situação de Alunos mostra **um** diálogo (`Dialogos.escolha_lista`, lista rolável, **um** botão, **sem** Cancelar) com AL0037 `20/80` (2), AL2126 `20` (2) e AL2129 `20` (1), sem nome nem matrícula de discente -- verify: `manual`
-- [ ] Trocar de aluno não reabre o diálogo; fechar e reabrir o módulo reabre -- verify: `manual`
-- [ ] Com o `horarios.txt` ausente, o módulo abre sem diálogo e sem erro novo no log -- verify: `manual`
-- [ ] O `MANUAL.md` (seção 4.3, Situação de Alunos) descreve o aviso: quando aparece, o que significa e que a correção é na numeração do `horarios.txt` -- verify: `manual`
+- [x] Com os dados reais de 2026/2, abrir Situação de Alunos mostra **um** diálogo (`Dialogos.escolha_lista`, lista rolável, **um** botão, **sem** Cancelar) com AL0037 `20/80` (2), AL2126 `20` (2) e AL2129 `20` (1), sem nome nem matrícula de discente -- verify: `manual`
+- [x] Trocar de aluno não reabre o diálogo; fechar e reabrir o módulo reabre -- verify: `manual`
+- [x] Com o `horarios.txt` ausente, o módulo abre sem diálogo e sem erro novo no log -- verify: `manual`
+- [x] O `MANUAL.md` (seção 4.3, Situação de Alunos) descreve o aviso: quando aparece, o que significa e que a correção é na numeração do `horarios.txt` -- verify: `manual`
 
 ## Edge cases
 - **Quem entra na conta:** todos os discentes do `hist.csv` carregado, sem

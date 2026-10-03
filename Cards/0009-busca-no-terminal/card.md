@@ -1,13 +1,18 @@
 ---
 id: 0009-busca-no-terminal
 title: Busca com Ctrl+F no Terminal
-status: in_progress
+status: done
 origin: novo (pedido do dev)
 layers: [standalone_scripts/utils, scenes/Complementares/Terminal, MANUAL.md]
 interviewed: true
 ---
 
 # 0009 - Busca com Ctrl+F no Terminal
+
+> **Fechado em 2026-10-03.** Os ACs manuais (9 a 16) foram confirmados pelo dev
+> num relato único ("Já testei [...] Está funcionando"), depois de receber a
+> lista com os roteiros. Não houve relato AC por AC. A nota abaixo descreve o
+> estado ao fim do pipeline, antes dessa confirmação.
 
 > Pipeline concluído em 2026-10-02 (fila, branch `cards/2026-10-02`), em 1
 > rodada: os 8 ACs `headless` estão provados e a suíte passa 137/137. O card
@@ -80,14 +85,14 @@ teclado, faixa e rolagem.
 - [x] A ocorrência atual recebe realce diferente das demais, e trocar a atual só move o realce forte -- verify: `headless`
 - [x] Navegação circular: depois da última vem a primeira, antes da primeira vem a última; com zero ocorrências não há atual -- verify: `headless`
 - [x] Os testes existentes seguem passando -- verify: `headless`
-- [ ] Clicar no Terminal e apertar Ctrl+F abre a faixa no topo com o campo focado, e o texto desce; Ctrl+F com o foco fora do Terminal não abre nada. Conferido em pelo menos dois módulos (ex.: Situação de Alunos e Planejamento de Oferta) -- verify: `manual`
-- [ ] Ao digitar, todas as ocorrências ficam realçadas, a primeira com destaque forte, a tela rola até ela e o contador mostra `1 de N`; sem ocorrências, o contador indica zero e Enter não faz nada -- verify: `manual`
-- [ ] Enter e ↓ vão para a próxima, Shift+Enter e ↑ para a anterior, em ciclo, e a rolagem acompanha -- verify: `manual`
-- [ ] Esc ou ✕ fecham a faixa, removem o realce e devolvem o foco ao Terminal; a rolagem fica onde estava, sem pular para o início nem para o fim -- verify: `manual`
-- [ ] Com a faixa aberta, uma mudança de conteúdo (ex.: trocar de aluno) fecha a faixa e remove o realce; trocar o **tema** não fecha e mantém o realce nas cores do tema novo -- verify: `manual`
-- [ ] Copiar (Ctrl+C) um trecho com realce ativo dá o mesmo texto que sem realce -- verify: `manual`
-- [ ] Os botões ↑ ↓ ✕ têm dica via `DicaFlutuante`, citando o atalho (Shift+Enter, Enter, Esc) -- verify: `manual`
-- [ ] O `MANUAL.md` (seção 3.2, Terminal) descreve a busca e os atalhos -- verify: `manual`
+- [x] Clicar no Terminal e apertar Ctrl+F abre a faixa no topo com o campo focado, e o texto desce; Ctrl+F com o foco fora do Terminal não abre nada. Conferido em pelo menos dois módulos (ex.: Situação de Alunos e Planejamento de Oferta) -- verify: `manual`
+- [x] Ao digitar, todas as ocorrências ficam realçadas, a primeira com destaque forte, a tela rola até ela e o contador mostra `1 de N`; sem ocorrências, o contador indica zero e Enter não faz nada -- verify: `manual`
+- [x] Enter e ↓ vão para a próxima, Shift+Enter e ↑ para a anterior, em ciclo, e a rolagem acompanha -- verify: `manual`
+- [x] Esc ou ✕ fecham a faixa, removem o realce e devolvem o foco ao Terminal; a rolagem fica onde estava, sem pular para o início nem para o fim -- verify: `manual`
+- [x] Com a faixa aberta, uma mudança de conteúdo (ex.: trocar de aluno) fecha a faixa e remove o realce; trocar o **tema** não fecha e mantém o realce nas cores do tema novo -- verify: `manual`
+- [x] Copiar (Ctrl+C) um trecho com realce ativo dá o mesmo texto que sem realce -- verify: `manual`
+- [x] Os botões ↑ ↓ ✕ têm dica via `DicaFlutuante`, citando o atalho (Shift+Enter, Enter, Esc) -- verify: `manual`
+- [x] O `MANUAL.md` (seção 3.2, Terminal) descreve a busca e os atalhos -- verify: `manual`
 
 ## Edge cases
 - **Desempenho:** realçar re-renderiza o Terminal inteiro a cada tecla. Um
