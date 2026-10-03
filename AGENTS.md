@@ -291,9 +291,10 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
   ACs falsificáveis, migra ideias do `IDEAS.md` e roda a fila de cards `ready`.
   **O card vem antes do código** — mesmo quando o pedido chega como "implementa X".
 - **Execução de um card:** `.claude/workflows/godot-feature-pipeline.js`
-  (`args: {cardId}`), que encadeia as skills `godot-feature-design` (spec),
+  (`args: {cardId, root}`), que encadeia as skills `godot-feature-design` (spec),
   `godot-gdscript-dev` (TDD), `godot-code-review` (findings com `blocking`) e
-  `godot-smoke-test` (PNG por AC + diff de log). Só aceita card `ready`.
+  `godot-smoke-test` (PNG por AC + diff de log). Só aceita card `ready`. O `root`
+  (caminho absoluto do checkout) é obrigatório, porque muda de máquina para máquina.
 - **Portões:** `python .tools/guardrails.py` (gdlint + regras do projeto),
   `python .tools/run_tests.py` (suíte GUT em `test/`) e o parser do Godot
   (`--headless --path . --editor --quit`). O pre-commit do Lefthook

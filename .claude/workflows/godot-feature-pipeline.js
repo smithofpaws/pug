@@ -1,7 +1,7 @@
 export const meta = {
   name: 'godot-feature-pipeline',
   description: 'Entrega um card do PUG: design, TDD, portao automatizado, review em laco e smoke test com PNG.',
-  whenToUse: 'Quando um card em Cards/ esta com status ready e o dev pediu para executa-lo. Passe args: { cardId: "0001-slug" }. Para rodar numa worktree, passe tambem root: o caminho absoluto dela — sem isso a execucao grava no checkout principal.',
+  whenToUse: 'Quando um card em Cards/ esta com status ready e o dev pediu para executa-lo. Passe args: { cardId: "0001-slug", root: "<caminho absoluto do checkout, ou da worktree>" }. O root e obrigatorio: o caminho do projeto muda de maquina para maquina.',
   phases: [
     { title: 'Design', detail: 'le o card e escreve spec.md com contrato tipado e mapeamento AC-prova' },
     { title: 'Implement', detail: 'TDD: teste vermelho, implementacao minima, verde' },
@@ -19,7 +19,7 @@ export const meta = {
 // script poder confiar no que le.
 //
 // Tres formas aceitas: objeto (o caso normal), string JSON (o bug) e o id cru
-// como string, que e a forma antiga documentada no whenToUse.
+// como string (forma antiga; sem root, hoje para no teste da raiz logo abaixo).
 const input = (() => {
   if (args && typeof args === 'object') return args
   if (typeof args !== 'string') return {}
@@ -35,11 +35,21 @@ const input = (() => {
 // disparo automatico. Skill dispara por casamento de descricao, e num pipeline
 // deterministico isso seria cara ou coroa.
 //
-// A raiz vem de input.root quando informada, e so entao dois cards podem rodar
-// em paralelo em worktrees diferentes: e ela que decide onde o spec.md, o codigo
-// e os PNGs de smoke sao gravados. O default preserva quem chama sem args.
+// A raiz e obrigatoria. O projeto vive em caminhos diferentes em cada maquina
+// (O:/OneDrive/... num PC, C:/Users/<usuario>/OneDrive/... em outro), e o antigo
+// padrao fixo fazia os agentes procurarem as skills e gravarem num caminho que
+// nao existe. Falhar aqui, antes do primeiro agente, e o mais barato. E tambem a
+// raiz que permite rodar dois cards em paralelo em worktrees diferentes: ela
+// decide onde o spec.md, o codigo e os PNGs de smoke sao gravados.
 // Nao ha process.cwd() aqui — o script roda sem acesso a API do Node.
-const ROOT = input.root || 'O:/OneDrive/Unipampa/Coordenacao/Programas/Auxiliar de Coordenacao GD4'
+if (!input.root || typeof input.root !== 'string') {
+  throw new Error('godot-feature-pipeline: passe args: { cardId: "NNNN-slug", root: "<caminho absoluto do checkout>" }. ' +
+    'O caminho do projeto muda de maquina para maquina, por isso nao ha padrao.')
+}
+// Barras normais e sem barra final: a raiz vira prefixo de todos os caminhos.
+let raiz = input.root.split(String.fromCharCode(92)).join('/')
+while (raiz.endsWith('/')) raiz = raiz.slice(0, -1)
+const ROOT = raiz
 const SKILLS = ROOT + '/.claude/skills'
 const SKILL_DESIGN = SKILLS + '/godot-feature-design/SKILL.md'
 const SKILL_DEV = SKILLS + '/godot-gdscript-dev/SKILL.md'

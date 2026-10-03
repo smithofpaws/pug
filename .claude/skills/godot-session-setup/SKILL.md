@@ -273,7 +273,9 @@ id. Não commite direto em `master` sem o dev pedir.
 Para cada card `ready`, na ordem do índice:
 
 1. `status: in_progress` no `card.md` e no índice.
-2. Rode `.claude/workflows/godot-feature-pipeline.js` com `args: {cardId}`.
+2. Rode `.claude/workflows/godot-feature-pipeline.js` com `args: {cardId, root}`, onde
+   `root` é o caminho absoluto do checkout **nesta máquina** (muda entre os 3 PCs; sem ele o
+   workflow para antes do primeiro agente).
 3. Leia o resultado estruturado.
 4. **Se passou:** `status: done`, marque os ACs provados (confira as caixas contra
    a coluna de veredito do `smoke.md`, nunca contra a narrativa), atualize o
