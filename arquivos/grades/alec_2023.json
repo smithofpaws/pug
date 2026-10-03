@@ -1022,6 +1022,9 @@
 		"nome": "Concreto Protendido",
 		"semestre": "0",
 		"ch": "60",
+		"ch_teorica": "30",
+		"ch_pratica": "30",
+		"ch_extensao": "0",
 		"nucleo": "cccg"
 	},
 	"al5018": {
@@ -1096,6 +1099,9 @@
 		"prerequisito0": "al0383",
 		"semestre": "0",
 		"ch": "60",
+		"ch_teorica": "45",
+		"ch_pratica": "15",
+		"ch_extensao": "0",
 		"nucleo": "cccg"
 	},
 	"al2087": {
@@ -1110,6 +1116,9 @@
 		"prerequisito0": "al0386",
 		"semestre": "0",
 		"ch": "60",
+		"ch_teorica": "45",
+		"ch_pratica": "15",
+		"ch_extensao": "0",
 		"nucleo": "cccg"
 	},
 	"al5152": {
@@ -1132,6 +1141,9 @@
 		"prerequisito1": "al0037",
 		"semestre": "0",
 		"ch": "60",
+		"ch_teorica": "30",
+		"ch_pratica": "30",
+		"ch_extensao": "0",
 		"nucleo": "cccg"
 	},
 	"al5069": {
@@ -1139,6 +1151,9 @@
 		"prerequisito0": "al0382",
 		"semestre": "0",
 		"ch": "30",
+		"ch_teorica": "30",
+		"ch_pratica": "0",
+		"ch_extensao": "0",
 		"nucleo": "cccg"
 	}
 }
