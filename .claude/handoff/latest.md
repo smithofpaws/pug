@@ -3,9 +3,9 @@
 ## Onde parei
 Resolvidas três pendências do dev (guardrails falha fechado, `root` obrigatório
 no workflow, manual da Sugestão de oferta), todas commitadas na branch
-**`cards/2026-10-02`**. A quarta (`agc` → `acg`) depende do repositório
-alec-data, ao qual o dev não liberou acesso nesta sessão. Os ACs manuais dos
-cards 0007, 0008 e 0009 continuam esperando o dev.
+**`cards/2026-10-02`**. Depois o dev corrigiu o alec-data, a sincronização
+trouxe o `acg` (`c918e73`), e a branch foi mesclada na `master` (fast-forward) e
+**pushada**. Os ACs manuais dos cards 0007, 0008 e 0009 continuam esperando o dev.
 
 ## Card ativo
 Nenhum em execução.
@@ -40,12 +40,11 @@ do dev, um a um.
 - AGENTS.md: parágrafo do guardrails reescrito para o comportamento novo.
 
 ## Pela metade / não verificado
-- **`agc` → `acg` não feito.** O dev decidiu que o nome correto é só `acg`. A
-  chave errada está em `cargaexigida/alec_2010.json` (`"agc": "105"`), que
-  pertence ao **alec-data** (prefixo `alec_`). Nenhum código do pug lê a chave
-  pelo nome. Não foi conferido se outro consumidor (ex.: `ppc2023`) lê `agc`.
-  Caminho: corrigir no alec-data, push, rodar `ferramentas/sincronizar_dados_curso`
-  e commitar a cópia no pug. **Não editar a cópia em `arquivos/` direto.**
+- `c918e73` **Sincronização com o alec-data:** `agc` → `acg` na carga da
+  `alec_2010`; na `alec_2023`, `unipampa_comunidade` (15 h) incorporada a
+  `outras_extensoes` (205 → 220 h) e `ch_teorica`/`ch_pratica`/`ch_extensao` em 5
+  disciplinas. Suíte e snapshot da validação seguem iguais. Não foi conferido se
+  o `ppc2023` lia `agc` ou `unipampa_comunidade`.
 - **`situacao_disciplinas.gd` mudou sem teste** (módulo de cena): o parser do
   Godot compilou sem erro de tipo, mas ninguém abriu a Situação de Disciplinas
   depois. Vale uma conferência rápida (análise isolada e comparação).
@@ -58,8 +57,9 @@ guardrails: ok (370 toleradas) · testes: ok (137/137) · parser: ok · rodados 
 2026-10-03, na branch `cards/2026-10-02`. O guardrails agora falha fechado.
 
 ## Estado do git
-Branch `cards/2026-10-02`, working tree limpo (fora este handoff). Nada pushado:
-`master` 4 commits à frente de `origin/master`; a branch, mais 9 (+ este).
+`master` sincronizada com `origin/master` em `c918e73` (mais o commit deste
+handoff). A branch `cards/2026-10-02` foi mesclada (fast-forward) e pode ser
+apagada com `git branch -d cards/2026-10-02`.
 
 ## Decisões tomadas que não estão em card nenhum
 - O nome da categoria de carga é só `acg` (decisão do dev, 2026-10-03).
@@ -68,10 +68,9 @@ Branch `cards/2026-10-02`, working tree limpo (fora este handoff). Nada pushado:
   (gdlint lê cada `.gd` tocado, sem tabs no meio de linha, sem string aberta).
 
 ## Próximo passo concreto
-O dev roda os roteiros manuais (começar pelo 0009) e relata AC por AC; depois
-mesclar `cards/2026-10-02` na `master` e `git push`.
+O dev roda os roteiros manuais (começar pelo 0009) e relata AC por AC; cada AC
+confirmado fecha a caixa no card, e o card vira `done` quando não sobrar nenhum.
 
 ## Em aberto para o dev
-- Quem corrige o `agc` no alec-data: o dev, ou liberar o acesso ao repositório?
 - Cards possíveis: chave `al0367` duplicada em `alec_2023-alec_2010.json`; os
   `avisos_leitura` da Situação de Alunos possivelmente apagados no `_ready`.
