@@ -203,22 +203,30 @@ function Conferir-Templates($arqs) {
 # linha "Storing File: res://<caminho>" por arquivo empacotado, que e exatamente a pergunta certa.
 function Conferir-Pck($log, $variante) {
     $proibidos = @("res://config_usuario.json", "res://arquivos/limesurvey/survey_tokens.lst")
-    $linhas = @(Select-String -Path $log -SimpleMatch "Storing File: res://" -ErrorAction SilentlyContinue)
+    # O Godot traduz a linha conforme o idioma do editor: "Storing File:" em ingles e
+    # "Armazenando Arquivo:" em portugues (a 1.1.0 abortou aqui num PC com o editor em portugues).
+    # O codigo de cor ANSI vem colado depois do caminho, entao o caminho termina no primeiro espaco
+    # ou ESC. Qualquer outro idioma continua caindo no "nenhuma linha" abaixo, de proposito.
+    $esc = [char]27
+    $padrao = "(Storing File|Armazenando Arquivo): (res://[^ $esc]+)"
+    $arquivos = @(Select-String -Path $log -Pattern $padrao -ErrorAction SilentlyContinue |
+                  ForEach-Object { $_.Matches[0].Groups[2].Value })
     # Nenhuma linha significa que o formato do log mudou e a guarda deixou de enxergar o PCK.
     # Silenciosamente aprovar seria pior que falhar: o ponto cego voltaria sem aviso nenhum.
-    if ($linhas.Count -eq 0) {
+    if ($arquivos.Count -eq 0) {
         throw ("Nao consegui conferir o conteudo do PCK ($variante): o log da exportacao nao tem " +
-               "nenhuma linha 'Storing File:'. Confira o formato do log do Godot antes de publicar.")
+               "nenhuma linha 'Storing File:' nem 'Armazenando Arquivo:'. Confira o formato do " +
+               "log do Godot (idioma do editor?) antes de publicar.")
     }
     foreach ($proibido in $proibidos) {
-        foreach ($linha in $linhas) {
-            if ($linha.Line.Contains("Storing File: " + $proibido)) {
+        foreach ($arquivo in $arquivos) {
+            if ($arquivo.StartsWith($proibido)) {
                 throw ("'" + $proibido + "' foi embutido no PCK ($variante). Confira o " +
                        "exclude_filter em export_presets.cfg. NAO publique este build.")
             }
         }
     }
-    Write-Host ("   PCK conferido: " + $linhas.Count + " arquivos, nenhum proibido.")
+    Write-Host ("   PCK conferido: " + $arquivos.Count + " arquivos, nenhum proibido.")
 }
 
 # Exporta, monta, compacta e CONFERE o pacote de uma arquitetura. Devolve
