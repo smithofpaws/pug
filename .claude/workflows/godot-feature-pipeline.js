@@ -171,7 +171,9 @@ const CONTEXT = [
   'Portoes (comandos exatos, nao improvise variantes):',
   '  python .tools/guardrails.py            # gdlint + regras do projeto (baseline/catraca)',
   '  python .tools/run_tests.py             # suite GUT headless',
-  '  "C:/Program Files/Godot/Godot_console.exe" --headless --path . --editor --quit',
+  '  parser do Godot, conforme o sistema desta maquina:',
+  '    Windows: "C:/Program Files/Godot/Godot_console.exe" --headless --path . --editor --quit',
+  '    Linux:   godot --headless --path . --editor --quit',
   'O --check-only isolado gera falso positivo (autoloads nao resolvem). Nao use.',
 ].join('\n')
 
@@ -231,7 +233,8 @@ while (round < MAX_ROUNDS) {
       'Tarefa: rodar os tres portoes, nesta ordem, e reportar o resultado literal.',
       '  1. python .tools/guardrails.py',
       '  2. python .tools/run_tests.py',
-      '  3. "C:/Program Files/Godot/Godot_console.exe" --headless --path . --editor --quit',
+      '  3. parser do Godot (Windows: "C:/Program Files/Godot/Godot_console.exe";',
+      '     Linux: godot) com --headless --path . --editor --quit',
       'Nao conserte nada. Voce e o medidor, nao o consertador.',
       'Em caso de falha, inclua em `output` o trecho da saida que mostra a causa.',
     ].join('\n'),

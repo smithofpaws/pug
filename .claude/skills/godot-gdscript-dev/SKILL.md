@@ -53,8 +53,9 @@ Testes ficam em `test/unit/`, prefixo `test_`, `extends GutTest`. Configuração
 ### Validar sintaxe: a armadilha
 
 ```bash
-# CONFIÁVEL
+# CONFIÁVEL (Windows; no Linux, o binário é `godot`, no PATH)
 "C:/Program Files/Godot/Godot_console.exe" --headless --path . --editor --quit
+godot --headless --path . --editor --quit
 
 # FALSO POSITIVO — não use isolado
 Godot_console.exe --headless --check-only --script arquivo.gd

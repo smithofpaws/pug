@@ -335,7 +335,31 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
     descartável com `var x = 1`, faça `git add`, rode `lefthook run pre-commit` e exija
     **exit ≠ 0**. Depois `git reset` no arquivo e apague-o. Sinal de alerta no dia a dia: o
     guardrails tolerar bem menos violações do que as entradas de `.tools/guardrails_baseline.json`
-    significa linter cego, não código melhor.
+    significa linter cego, não código melhor. Ao apagar o descartável, apague também o `.uid`
+    que o parser do Godot gera ao lado dele.
+  - **O conteúdo do hook depende da máquina, e o OneDrive o leva para as outras.** O
+    `lefthook install` grava no `.git/hooks/pre-commit` o caminho do próprio executável
+    (`lefthook.exe` e o caminho do WinGet no Windows, `~/.local/bin/lefthook` no Linux), e o último
+    PC a instalar define o arquivo dos três. Por isso, depois de um `lefthook install` em
+    qualquer máquina, refaça o teste de recusa nas outras.
+  - **Máquina Linux (CachyOS): tudo no host, sem sudo e sem distrobox.**
+    - **Godot:** a versão portátil fica em `~/Applications/Godot/` e se atualiza pelo `abrir.sh`.
+      O `~/.local/bin/godot` é um wrapper que roda o `Godot-4.7.*` mais novo de lá. É por ele que o
+      `run_tests.py` acha a engine, e o parser do projeto é
+      `godot --headless --path . --editor --quit`. O wrapper fica preso à série 4.7 para uma
+      atualização automática para a 4.8 não trocar a engine dos portões sem ninguém ver.
+    - **gdtoolkit:** o Arch bloqueia `pip install` no Python do sistema (PEP 668), e o
+      `ensurepip --user` também é barrado. Instale pelo wheel do pip que vem embutido no Python:
+      `python /usr/lib/python3.X/ensurepip/_bundled/pip-*.whl/pip install --user --break-system-packages pip "gdtoolkit==4.*"`.
+      Isso só grava em `~/.local`. Refaça quando o Arch trocar a versão do Python.
+    - **lefthook:** binário da release do GitHub (`evilmartians/lefthook`, asset
+      `Linux_x86_64`) em `~/.local/bin/lefthook`, com o SHA-256 conferido contra o
+      `lefthook_checksums.txt`.
+    - **O hook chega pelo OneDrive sem bit de execução.** Nesse caso o git ignora o hook (só
+      mostra um `hint: ... hook was ignored`) e **o commit passa sem portão nenhum**. O
+      `lefthook install` local devolve o `+x`.
+    - Os executáveis de `externo/bin/` são do Windows e não rodam no Linux. O
+      `ansi_to_utf8.exe` está sendo trocado pelo card 0010; os demais estão no `IDEAS.md`.
   - Ao concluir a migração para fora do OneDrive, o hook deixa de se replicar: cada clone passa a
     precisar do próprio `lefthook install`. **Atualizar este item nessa hora.**
 

@@ -37,39 +37,52 @@ ainda não tem ambiente para os portões.
   Windows-1252. É provável: é nessa codificação que o próprio Auxiliar grava o
   arquivo que exporta para o programa de horários. A cópia em `dados/saida/` já
   estava convertida.
-- **Os portões não rodam nesta máquina.** Faltam Godot, `gdtoolkit` e `lefthook`,
-  e o `.git/hooks/pre-commit` chegou pelo OneDrive **sem bit de execução**: um
-  commit feito daqui passa sem verificação nenhuma e sem aviso.
-- O dev decidiu rodar o PUG **direto nesta máquina, sem distrobox**, com o Godot
-  já instalado em `~/Applications/Godot/` (4.7.2). Ainda faltam o `gdtoolkit` e
-  o `lefthook` no host, e o plano de instalação precisa ser aprovado pelo dev
-  antes.
-- O pipeline e as skills citam caminhos do Windows
-  (`C:/Program Files/Godot/...`). Rodar a fila no Linux exige passar aos agentes
-  o caminho do Godot daqui. Ninguém testou isso.
+- **Setup do Linux feito (host, sem distrobox, sem sudo; Opção A aprovada pelo
+  dev):**
+  - `~/.local/bin/godot`: wrapper que roda o `Godot-4.7.*` mais novo de
+    `~/Applications/Godot/sistema/app/`.
+  - `gdtoolkit` 4.5.0 e pip 26.3 em `~/.local`, instalados pelo wheel embutido
+    do `ensurepip` com `--break-system-packages`. O `ensurepip --user` direto
+    é recusado pelo PEP 668.
+  - `lefthook` 2.2.2 em `~/.local/bin`, com o SHA-256 conferido contra a release.
+  - `lefthook install` e **teste de recusa ok** (`EXIT=1`, `[static-typing]`).
+    Parser do Godot `EXIT=0`, testes 137/137.
+- **O arquivo descartável do teste de recusa,
+  `standalone_scripts/_teste_recusa.gd`, ainda pode existir** (untracked). O
+  `rm` foi negado ao assistente; o dev precisa apagar. Até lá, o guardrails
+  completo acusa esse arquivo.
+- **O `.git/hooks/pre-commit` agora é a versão Linux** (procura `lefthook` e
+  `/home/diego/.local/bin/lefthook`; antes procurava `lefthook.exe`/WinGet). O
+  OneDrive replica esse arquivo para os PCs Windows. Lá o Git Bash deve achar o
+  `lefthook.exe` pelo PATH, mas **refaça o teste de recusa em cada PC Windows**
+  (ou rode `lefthook install` lá, o que devolve a versão Windows ao Linux).
+- O pipeline (`godot-feature-pipeline.js`, linhas 174 e 234) e as skills
+  `godot-gdscript-dev`, `godot-smoke-test` e `godot-session-setup` citam
+  `C:/Program Files/Godot/Godot_console.exe`. Rodar a fila no Linux exige
+  ajustar isso.
 - Continuam abertos os itens do handoff anterior: ninguém viu o atualizador
   instalar a 1.1.0 do começo ao fim, nem conferiu se o `ppc2023` lia
   `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-Não rodados nesta sessão: a máquina não tem as ferramentas. Último estado
-conhecido (2026-10-03, Windows): guardrails ok · testes 137/137 · parser ok.
+Linux, 2026-11-17: testes 137/137 · parser ok · guardrails acusou só o arquivo
+do teste de recusa (o guardrails completo, com ele apagado, **não foi rodado**).
 
 ## Estado do git
 `master`, com o commit do card 0010 enviado ao GitHub. Working tree limpo depois
 dele.
 
 ## Decisões tomadas que não estão em card nenhum
-- Máquina Linux: o PUG roda direto no host, com o Godot de
-  `~/Applications/Godot/` (está na memória local do assistente, não no
-  repositório). O AGENTS.md precisa de uma seção "Linux": caminho do Godot,
-  instalação do gdtoolkit/lefthook e o hook sem `+x` vindo do OneDrive.
+- O setup do Linux e o "hook é por máquina, mas o OneDrive compartilha" já foram
+  migrados para o AGENTS.md (Setup por máquina). O pipeline e as skills agora
+  listam o comando do parser para Windows e para Linux.
 
 ## Próximo passo concreto
-Aprovar o plano de instalação do `gdtoolkit` e do `lefthook` no host, dar
-`chmod +x` no hook e fazer o teste de recusa do pre-commit. Depois rodar os três
-portões com o Godot de `~/Applications/Godot/`, e só então a fila com o card
-0010.
+Apagar `standalone_scripts/_teste_recusa.gd`, rodar
+`python .tools/guardrails.py` (precisa sair 0), ajustar o caminho do Godot no
+pipeline para funcionar também no Linux e rodar a fila com o card 0010.
 
 ## Em aberto para o dev
-- Como instalar o `gdtoolkit` e o `lefthook` no CachyOS (proposta pendente).
+- Apagar `standalone_scripts/_teste_recusa.gd` e o `.uid` dele (o `rm` é negado
+  ao assistente).
+- Refazer o teste de recusa nos PCs Windows (o hook agora é a versão Linux).

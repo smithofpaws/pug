@@ -372,7 +372,8 @@ Perguntas que travam o próximo passo.
 - Portões: `python .tools/guardrails.py` (com baseline/catraca — ver
   `Cards/README.md`) e `python .tools/run_tests.py`.
 - Parser do projeto: `"C:/Program Files/Godot/Godot_console.exe" --headless
-  --path . --editor --quit`. O `--check-only` isolado dá falso positivo
+  --path . --editor --quit` no Windows; no Linux, `godot --headless --path .
+  --editor --quit`. O `--check-only` isolado dá falso positivo
   (autoloads não resolvem).
 - git: começar a sessão com `git pull`, terminar com push; o dev está aprendendo
   git — explique o porquê antes de rodar comandos incomuns.

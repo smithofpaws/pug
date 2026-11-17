@@ -48,7 +48,10 @@ em vez do `get_debug_output`.
 ## Captura de PNG
 
 ```bash
+# Windows
 "C:/Program Files/Godot/Godot_console.exe" --path . --write-movie Cards/<id>/smoke/frame.png --fixed-fps 10 --quit-after 12
+# Linux (wrapper `godot` no PATH, ver AGENTS.md)
+godot --path . --write-movie Cards/<id>/smoke/frame.png --fixed-fps 10 --quit-after 12
 ```
 
 Comportamento (verificado no 3d World, mesma engine): `--quit-after N` grava
