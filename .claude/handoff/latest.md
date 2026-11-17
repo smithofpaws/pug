@@ -1,64 +1,75 @@
-# Handoff — 2026-10-03 09:05
+# Handoff — 2026-11-17 (tarde)
 
 ## Onde parei
-**Release v1.1.0 publicada** (`6522719`, tag `v1.1.0`), com os cards 0005 a 0009
-dentro. É a release `latest` do GitHub, então as instalações recebem o aviso de
-atualização no próximo início. `master` sincronizada com o GitHub.
+O defeito "o `horarios.txt` novo não importa" foi diagnosticado e virou o card
+**0010**, aprovado pelo dev e com status `ready`. Nenhum código foi escrito. A
+fila não foi disparada. Esta sessão foi feita na **máquina Linux (CachyOS)**, que
+ainda não tem ambiente para os portões.
 
 ## Card ativo
-Nenhum. Os cards 0005 a 0009 estão `done`. Não há card `ready` na fila.
+0010-conversao-cp1252-nativa, status `ready` (ainda não executado).
 
-## Feito nesta sessão (2026-10-03)
-- `4028277` guardrails falha fechado (arquivo ilegível vira `ilegivel`; sem
-  gdtoolkit aborta) + `situacao_disciplinas.gd` legível de novo, com as 12
-  violações escondidas corrigidas (não congeladas).
-- `45c6de8` `root` obrigatório no `godot-feature-pipeline.js`.
-- `d1e6f78` manual da Sugestão de oferta.
-- `c918e73` sincronização com o alec-data: `agc` → `acg` (decisão do dev),
-  `unipampa_comunidade` incorporada a `outras_extensoes` na `alec_2023`, campos
-  de CH em 5 disciplinas da grade 2023.
-- Branch `cards/2026-10-02` mesclada na `master` (fast-forward) e apagada.
-- `5113f9d` cards 0007, 0008 e 0009 fechados: o dev testou os 14 ACs manuais e
-  confirmou todos num relato único ("Já testei [...] Está funcionando").
-- `1e0c9ff` guarda do PCK do `publicar_release.ps1` aceita o log do Godot em
-  português ("Armazenando Arquivo:"); a primeira tentativa da 1.1.0 abortou ali,
-  sem publicar nada. Testada contra o log real e contra injeção de arquivo
-  proibido nos dois idiomas.
-- `6522719` + tag `v1.1.0` + release: dois pacotes (x64 146,8 MB, ARM64
-  134,7 MB) com `.sha256`; as quatro exportações conferidas (258 arquivos no PCK,
-  nenhum proibido). Notas em português, uma linha por novidade (o diálogo de
-  atualização mostra o corpo da release linha a linha, sem markdown).
+## Feito nesta sessão (2026-11-17)
+- **Diagnóstico, pelo log do Godot no Linux** (`user://logs/`):
+  - O programa de horários da universidade mudou o formato: coluna 0 vazia,
+    `tipo`/`sala` = `EaD`, turma `T100`. O arquivo vem em Windows-1252.
+  - **Não foi isso que quebrou.** O `convertto_utf8` chama o
+    `externo/bin/ansi_to_utf8.exe`, que no Linux falha com `Permission denied`.
+  - O verificador imprime `Arquivo convertido!` mesmo assim. O arquivo novo nunca
+    chega em `dados/saida/`, e o programa segue com o `horarios.txt` de
+    2026-08-04.
+  - Os `Unicode parsing error` (1574 por importação, um por byte acentuado) vêm
+    da própria detecção (`_precisa_conversao_utf8` usa `get_string_from_utf8()`).
+    Esse ruído também acontece no Windows.
+- Card 0010 escrito e aprovado ("Aprovar como está"). O escopo cobre os 7 pontos
+  que chamam `convertto_utf8`; o `.exe` e a fonte em `externo/src/ansi_to_utf/`
+  saem do git.
+- `IDEAS.md` (GERAL › A IMPLEMENTAR): três itens sobre o Linux, a pedido do dev
+  (`xlsx_to_csv.exe`, `typst.exe`, atualizador).
+- Handoff anterior arquivado em
+  `archive/2026-10-03-0905-release-v1-1-0.md`.
+- Tudo isso commitado num commit só ("Card 0010...") e enviado ao GitHub.
 
 ## Pela metade / não verificado
-- **Ninguém instalou a 1.1.0 pelo atualizador ainda.** O ciclo (aviso → download
-  → SHA-256 → troca do executável → relançamento) não foi observado com esta
-  versão. Primeiro PC que abrir o programa na 1.0.2 é o teste real.
-- Não foi conferido se o `ppc2023` lia as chaves `agc` ou `unipampa_comunidade`.
-- `situacao_disciplinas.gd` foi corrigido sem teste automático; o dev testou os
-  cards, mas não relatou especificamente a Situação de Disciplinas.
-- Teste de recusa do pre-commit nos outros dois PCs (setup por máquina, ver
-  AGENTS.md).
+- **Ninguém confirmou que o mesmo arquivo funciona no Windows.** É a suposição
+  do diagnóstico, e por isso existe o AC 12 (manual).
+- Não foi confirmado se o `horarios.txt` antigo da universidade também vinha em
+  Windows-1252. É provável: é nessa codificação que o próprio Auxiliar grava o
+  arquivo que exporta para o programa de horários. A cópia em `dados/saida/` já
+  estava convertida.
+- **Os portões não rodam nesta máquina.** Faltam Godot, `gdtoolkit` e `lefthook`,
+  e o `.git/hooks/pre-commit` chegou pelo OneDrive **sem bit de execução**: um
+  commit feito daqui passa sem verificação nenhuma e sem aviso.
+- O dev decidiu rodar o PUG **direto nesta máquina, sem distrobox**, com o Godot
+  já instalado em `~/Applications/Godot/` (4.7.2). Ainda faltam o `gdtoolkit` e
+  o `lefthook` no host, e o plano de instalação precisa ser aprovado pelo dev
+  antes.
+- O pipeline e as skills citam caminhos do Windows
+  (`C:/Program Files/Godot/...`). Rodar a fila no Linux exige passar aos agentes
+  o caminho do Godot daqui. Ninguém testou isso.
+- Continuam abertos os itens do handoff anterior: ninguém viu o atualizador
+  instalar a 1.1.0 do começo ao fim, nem conferiu se o `ppc2023` lia
+  `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-guardrails: ok (370 toleradas; agora falha fechado) · testes: ok (137/137) ·
-parser: ok · rodados em 2026-10-03.
+Não rodados nesta sessão: a máquina não tem as ferramentas. Último estado
+conhecido (2026-10-03, Windows): guardrails ok · testes 137/137 · parser ok.
 
 ## Estado do git
-`master` = `origin/master` em `6522719` (mais o commit deste handoff). Tag
-`v1.1.0` no GitHub. Sem branches extras.
+`master`, com o commit do card 0010 enviado ao GitHub. Working tree limpo depois
+dele.
 
 ## Decisões tomadas que não estão em card nenhum
-- Migrar para o AGENTS.md (Troubleshooting): o colapso da barra dupla nas
-  edições dos agentes neste ambiente e a checagem pós-card que o pega (gdlint lê
-  cada `.gd` tocado, sem tabs no meio de linha, sem string aberta no fim da
-  linha).
-- Notas de release: texto puro, uma novidade por linha, em português para o
-  usuário final (o `--generate-notes` produzia só um link "Full Changelog" cru).
+- Máquina Linux: o PUG roda direto no host, com o Godot de
+  `~/Applications/Godot/` (está na memória local do assistente, não no
+  repositório). O AGENTS.md precisa de uma seção "Linux": caminho do Godot,
+  instalação do gdtoolkit/lefthook e o hook sem `+x` vindo do OneDrive.
 
 ## Próximo passo concreto
-Nos outros dois PCs: `git pull`, conferir o setup (gdtoolkit + lefthook, teste de
-recusa) e abrir o programa instalado para ver o aviso da 1.1.0.
+Aprovar o plano de instalação do `gdtoolkit` e do `lefthook` no host, dar
+`chmod +x` no hook e fazer o teste de recusa do pre-commit. Depois rodar os três
+portões com o Godot de `~/Applications/Godot/`, e só então a fila com o card
+0010.
 
 ## Em aberto para o dev
-- Cards possíveis: chave `al0367` duplicada em `alec_2023-alec_2010.json`; os
-  `avisos_leitura` da Situação de Alunos possivelmente apagados no `_ready`.
+- Como instalar o `gdtoolkit` e o `lefthook` no CachyOS (proposta pendente).

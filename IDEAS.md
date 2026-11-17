@@ -34,6 +34,9 @@ Apagar uma linha não exige justificativa.
 - [ ] Chamar o claude pelo programa pra analisar os textos dos professores nas preferencias de horarios
 - [ ] **Importar planilha CSV local no Modo Ajuste** O Modo Ajuste do SituaçãoAlunos já existe, mas só baixa a planilha do Google publicada, por URL (`PlanilhaAjuste.baixar`; endereço em `config_usuario.json:modo_ajuste.url_planilha`). Falta o caminho de abrir um `.csv` do disco — útil sem rede ou com a planilha exportada à mão.
 - [ ] Nos exportadores de disciplinas falta indicar quais são corequisitos (os corequisitos aparecem apenas como pre)
+- [ ] **Linux: `xlsx_to_csv.exe`** A conversão de XLSX para CSV (`FileHandling`, preferências de horário em `.xlsx` no Planejamento de horário) chama um executável Windows de `externo/bin/`; no Linux o `OS.execute` falha ("Permission denied"). Fonte em `externo/src/xlsx_to_csv/`. Mesmo caminho que o card 0010 resolveu para o `ansi_to_utf8.exe`.
+- [ ] **Linux: `typst.exe`** Os Exportadores compilam os PDFs com o `typst.exe` de `externo/bin/`; no Linux ele não roda (os `.typ` são gerados, os PDFs não). Avaliar o `typst` do sistema quando existir no PATH.
+- [ ] **Linux: atualizador** O `Atualizador` baixa o pacote `PUG_WIN_*.zip` e troca o executável com `aplicar_atualizacao.ps1` (PowerShell + robocopy). No Linux não há pacote nem script de troca; o preset Linux existe em `export_presets.cfg`, mas não é publicado.
 
 ## Divergências de CH entre grades `alec_2010` e `alec_2023`
 
