@@ -1,88 +1,80 @@
-# Handoff — 2026-11-17 (tarde)
+# Handoff — 2026-11-17 (fim da fila do card 0010)
 
 ## Onde parei
-O defeito "o `horarios.txt` novo não importa" foi diagnosticado e virou o card
-**0010**, aprovado pelo dev e com status `ready`. Nenhum código foi escrito. A
-fila não foi disparada. Esta sessão foi feita na **máquina Linux (CachyOS)**, que
-ainda não tem ambiente para os portões.
+A fila rodou o card 0010 na máquina Linux e **passou** numa rodada, com review
+sem findings. Os ACs 1 a 8 (`headless`) estão provados e commitados na branch
+`cards/2026-11-17`. O card continua `in_progress` porque os ACs 9 a 12 são
+`manual` e esperam o relato do dev. A branch **não** foi mesclada na `master` nem
+enviada ao GitHub.
 
 ## Card ativo
-0010-conversao-cp1252-nativa, status `ready` (ainda não executado).
+0010-conversao-cp1252-nativa, `in_progress`. Faltam os ACs manuais 9 a 12
+(roteiros R9 a R12 em `Cards/0010-conversao-cp1252-nativa/spec.md`).
 
 ## Feito nesta sessão (2026-11-17)
-- **Diagnóstico, pelo log do Godot no Linux** (`user://logs/`):
-  - O programa de horários da universidade mudou o formato: coluna 0 vazia,
-    `tipo`/`sala` = `EaD`, turma `T100`. O arquivo vem em Windows-1252.
-  - **Não foi isso que quebrou.** O `convertto_utf8` chama o
-    `externo/bin/ansi_to_utf8.exe`, que no Linux falha com `Permission denied`.
-  - O verificador imprime `Arquivo convertido!` mesmo assim. O arquivo novo nunca
-    chega em `dados/saida/`, e o programa segue com o `horarios.txt` de
-    2026-08-04.
-  - Os `Unicode parsing error` (1574 por importação, um por byte acentuado) vêm
-    da própria detecção (`_precisa_conversao_utf8` usa `get_string_from_utf8()`).
-    Esse ruído também acontece no Windows.
-- Card 0010 escrito e aprovado ("Aprovar como está"). O escopo cobre os 7 pontos
-  que chamam `convertto_utf8`; o `.exe` e a fonte em `externo/src/ansi_to_utf/`
-  saem do git.
-- `IDEAS.md` (GERAL › A IMPLEMENTAR): três itens sobre o Linux, a pedido do dev
-  (`xlsx_to_csv.exe`, `typst.exe`, atualizador).
-- Handoff anterior arquivado em
-  `archive/2026-10-03-0905-release-v1-1-0.md`.
-- Tudo isso commitado num commit só ("Card 0010...") e enviado ao GitHub.
+- Diagnóstico do `horarios.txt` novo. O que quebrava era o `ansi_to_utf8.exe`,
+  um executável Windows, falhando no Linux, e não a mudança de formato. Ver o
+  "Contexto" do card 0010.
+- Setup do Linux no host, sem sudo (Godot wrapper, gdtoolkit 4.5.0, lefthook
+  2.2.2) e teste de recusa ok. Documentado no AGENTS.md (Setup por máquina).
+- Commits, em ordem:
+  - `ae3cd02` (master, no GitHub): card 0010 e três itens de Linux no
+    IDEAS.md.
+  - `8fb23c6` (master, **não enviado**): caminho do Godot do Linux no pipeline e
+    nas skills; seção Linux no AGENTS.md.
+  - `c0230b5` (branch): card `in_progress`.
+  - `9ebab01` (branch): a implementação. `CodificacaoTexto` em
+    `standalone_scripts/utils/` (funções puras: detecção UTF-8 estrita e tabela
+    Windows-1252 nos dois sentidos). `convertto_utf8` agora devolve `bool`. Saem
+    as três heurísticas duplicadas, o `.exe` e a fonte dele. Entram 26 testes.
+- O orquestrador refez os portões com código de saída, porque o agente dos
+  portões não os capturou (zsh). Conferiu também que os testes de cada AC
+  existem e que o diff não traz nenhum dos nomes reais de docentes do
+  `horarios.txt` recebido.
 
 ## Pela metade / não verificado
-- **Ninguém confirmou que o mesmo arquivo funciona no Windows.** É a suposição
-  do diagnóstico, e por isso existe o AC 12 (manual).
-- Não foi confirmado se o `horarios.txt` antigo da universidade também vinha em
-  Windows-1252. É provável: é nessa codificação que o próprio Auxiliar grava o
-  arquivo que exporta para o programa de horários. A cópia em `dados/saida/` já
-  estava convertida.
-- **Setup do Linux feito (host, sem distrobox, sem sudo; Opção A aprovada pelo
-  dev):**
-  - `~/.local/bin/godot`: wrapper que roda o `Godot-4.7.*` mais novo de
-    `~/Applications/Godot/sistema/app/`.
-  - `gdtoolkit` 4.5.0 e pip 26.3 em `~/.local`, instalados pelo wheel embutido
-    do `ensurepip` com `--break-system-packages`. O `ensurepip --user` direto
-    é recusado pelo PEP 668.
-  - `lefthook` 2.2.2 em `~/.local/bin`, com o SHA-256 conferido contra a release.
-  - `lefthook install` e **teste de recusa ok** (`EXIT=1`, `[static-typing]`).
-    Parser do Godot `EXIT=0`, testes 137/137.
-- **O arquivo descartável do teste de recusa,
-  `standalone_scripts/_teste_recusa.gd`, ainda pode existir** (untracked). O
-  `rm` foi negado ao assistente; o dev precisa apagar. Até lá, o guardrails
-  completo acusa esse arquivo.
-- **O `.git/hooks/pre-commit` agora é a versão Linux** (procura `lefthook` e
-  `/home/diego/.local/bin/lefthook`; antes procurava `lefthook.exe`/WinGet). O
-  OneDrive replica esse arquivo para os PCs Windows. Lá o Git Bash deve achar o
-  `lefthook.exe` pelo PATH, mas **refaça o teste de recusa em cada PC Windows**
-  (ou rode `lefthook install` lá, o que devolve a versão Windows ao Linux).
-- O pipeline (`godot-feature-pipeline.js`, linhas 174 e 234) e as skills
-  `godot-gdscript-dev`, `godot-smoke-test` e `godot-session-setup` citam
-  `C:/Program Files/Godot/Godot_console.exe`. Rodar a fila no Linux exige
-  ajustar isso.
-- Continuam abertos os itens do handoff anterior: ninguém viu o atualizador
-  instalar a 1.1.0 do começo ao fim, nem conferiu se o `ppc2023` lia
+- **Os ACs 9 a 12 não foram verificados pelo dev.**
+  - O AC 10, o caso real, nunca rodou: ninguém importou o `horarios.txt` real
+    pelo verificador com o código novo.
+  - O AC 9 tem evidência automática (o `git grep` sai vazio e os arquivos
+    saíram do git), mas fecha por relato.
+- O smoke não montou o baseline de log (foi negada a criação de worktree), então
+  o `log_clean` veio de inspeção do log de um boot headless, sem diff contra o
+  baseline. O card não tem AC visual.
+- O `convertto_utf8` mudou de comportamento em três pontos, aceitos no spec
+  ("Riscos de contrato de dados"):
+  - a quebra de linha é preservada byte a byte;
+  - a codificação é sempre Windows-1252, em vez da página ANSI do sistema;
+  - um UTF-8 que contém U+FFFD deixa de ser reconvertido.
+
+  O `hist.csv` e os outros CSVs do GURI só serão exercitados de verdade no uso
+  normal.
+- **O hook nos PCs Windows é agora a versão Linux** (replicado pelo OneDrive).
+  É preciso refazer o teste de recusa lá.
+- Continuam abertos do handoff de 2026-10-03: ninguém viu o atualizador instalar
+  a 1.1.0 do começo ao fim, nem conferiu se o `ppc2023` lia
   `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-Linux, 2026-11-17: testes 137/137 · parser ok · guardrails acusou só o arquivo
-do teste de recusa (o guardrails completo, com ele apagado, **não foi rodado**).
+Linux, 2026-11-17, depois do card: guardrails `EXIT=0` (365 toleradas; a
+baseline apertou de 370) · testes 163/163 · parser `EXIT=0`. O pre-commit do
+`9ebab01` também passou.
 
 ## Estado do git
-`master`, com o commit do card 0010 enviado ao GitHub. Working tree limpo depois
-dele.
+Branch `cards/2026-11-17` (3 commits à frente de `origin/master`: `8fb23c6`,
+`c0230b5`, `9ebab01`, mais este handoff). `master` local está em `8fb23c6`, à
+frente da `origin/master` (`ae3cd02`). Working tree limpo depois do commit
+deste handoff.
 
 ## Decisões tomadas que não estão em card nenhum
-- O setup do Linux e o "hook é por máquina, mas o OneDrive compartilha" já foram
-  migrados para o AGENTS.md (Setup por máquina). O pipeline e as skills agora
-  listam o comando do parser para Windows e para Linux.
+Nenhuma pendente. O setup do Linux já está no AGENTS.md.
 
 ## Próximo passo concreto
-Apagar `standalone_scripts/_teste_recusa.gd`, rodar
-`python .tools/guardrails.py` (precisa sair 0), ajustar o caminho do Godot no
-pipeline para funcionar também no Linux e rodar a fila com o card 0010.
+O dev roda o R10 (`spec.md` do card 0010): importa o `horarios.txt` real pelo
+verificador no Linux e confere a data, o UTF-8, `Terça`/`Sábado` e zero
+`Unicode parsing error` no `godot.log`.
 
 ## Em aberto para o dev
-- Apagar `standalone_scripts/_teste_recusa.gd` e o `.uid` dele (o `rm` é negado
-  ao assistente).
-- Refazer o teste de recusa nos PCs Windows (o hook agora é a versão Linux).
+- Relatar os ACs 9 a 12, um a um. O 12 exige um PC Windows.
+- Mesclar `cards/2026-11-17` na `master` e enviar ao GitHub: agora ou depois
+  dos ACs manuais?
