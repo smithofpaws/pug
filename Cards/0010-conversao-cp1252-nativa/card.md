@@ -1,7 +1,7 @@
 ---
 id: 0010-conversao-cp1252-nativa
 title: Conversão de Windows-1252 para UTF-8 em GDScript, sem o ansi_to_utf8.exe
-status: ready
+status: in_progress
 origin: novo (defeito relatado: horarios.txt novo não importa no Linux)
 layers: [standalone_scripts/utils, standalone_scripts/io/file_handling.gd, standalone_scripts/io/arquivos_planejamento.gd, scenes/TelaPrincipal/VerificadorArquivos, scenes/Modulos/PlanejamentoHorario/Complementos/importador_preferencias.gd, externo/]
 interviewed: true
