@@ -522,13 +522,16 @@ func _converter_planejamento_csv() -> void:
 	fd.file_selected.connect(func(path: String):
 		var dir_in: String = path.get_base_dir() + "/"
 		var file_name: String = path.get_file()
-		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, "planejamento.csv")
-		_log("%s convertido e salvo como planejamento.csv em %s." % [file_name, GV.dir_saida], "sucesso", true, true)
+		var convertido: bool = file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, \
+			"planejamento.csv")
 		fd.queue_free()
+		if not convertido:
+			_log("Falha ao converter %s; nada foi importado." % file_name, "aviso", true, true)
+			return
+		_log("%s convertido e salvo como planejamento.csv em %s." % [file_name, GV.dir_saida], "sucesso", true, true)
 		# Encadeia direto na selecao de cursos para importar o arquivo recem-convertido,
 		# poupando o usuario de abrir manualmente "Arquivo > Abrir planejamento.csv".
-		if FileAccess.file_exists(GV.dir_saida + "planejamento.csv"):
-			_abrir_janela_selecao_cursos())
+		_abrir_janela_selecao_cursos())
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered()

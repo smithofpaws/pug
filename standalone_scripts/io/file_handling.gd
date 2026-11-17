@@ -593,58 +593,55 @@ func string_to_validfilename(string: String, optional_charset: Array[String] = [
 			break
 	return valid_filename
 
-## Converte um arquivo para utf8 e salva em um novo arquivo chamado out.csv. [br]
+## Converte um arquivo para UTF-8 e salva em um novo arquivo chamado out.csv. A conversão é
+## nativa ([CodificacaoTexto]), sem executável externo. [br]
 ## [param directory] formato deve ser como [code]c:/example_folder/[/code]. [br]
 ## [param filename] formato deve ser como [code]filename.txt[/code]. [br]
-## Arquivo que [b]já[/b] está em UTF-8 é apenas copiado para o destino: o
-## [code]ansi_to_utf8.exe[/code] assume Windows-1252 na entrada, e reconverter duplicaria a
-## codificação (ex.: [code]á[/code] → [code]Ã¡[/code]). Em qualquer dos casos o arquivo de saída
-## existe ao retornar — os chamadores contam com isso.
+## Arquivo que [b]já[/b] está em UTF-8 é copiado byte a byte (BOM incluído); o resto é tratado
+## como Windows-1252. [br]
+## Retorna [code]true[/code] se, ao retornar, o destino contém o texto da origem em UTF-8.
+## Retorna [code]false[/code] (com [code]push_error[/code]) se não conseguiu ler a origem ou
+## gravar o destino; na falha de leitura o destino existente fica intacto, e na de escrita o
+## destino parcial é removido. Origem igual ao destino não grava nada: devolve se já está em UTF-8.
 func convertto_utf8(directory: String, filename: String, \
-  output_directory: String = GV.dir_saida, output_filename: String = "out.csv") -> void:
+		output_directory: String = GV.dir_saida, output_filename: String = "out.csv") -> bool:
 	var origem: String = directory + filename
 	var destino: String = output_directory + output_filename
+	var arquivo_origem := FileAccess.open(origem, FileAccess.READ)
+	if arquivo_origem == null:
+		push_error("Conversao para UTF-8: nao foi possivel ler '%s' (%s)." % \
+			[origem, error_string(FileAccess.get_open_error())])
+		return false
+	var bytes: PackedByteArray = arquivo_origem.get_buffer(arquivo_origem.get_length())
+	arquivo_origem.close()
+	var ja_utf8: bool = CodificacaoTexto.eh_utf8_valido(bytes)
+
 	# Converter o arquivo sobre ele mesmo truncaria a origem antes da leitura.
 	if origem.simplify_path().to_lower() == destino.simplify_path().to_lower():
-		print_debug("Conversao utf8 ignorada: origem e destino sao o mesmo arquivo: ", origem)
-		return
+		if not ja_utf8:
+			push_error(("Conversao para UTF-8: '%s' e origem e destino ao mesmo tempo e nao esta " + \
+				"em UTF-8; nada foi gravado.") % origem)
+		return ja_utf8
+
+	var saida: PackedByteArray = bytes if ja_utf8 else CodificacaoTexto.cp1252_para_utf8(bytes)
 	DirAccess.make_dir_recursive_absolute(output_directory)
-	if not _precisa_conversao_utf8(origem):
-		var err_copia := DirAccess.copy_absolute(origem, destino)
-		if err_copia != OK:
-			print_debug("Falha ao copiar arquivo ja em utf8: ", origem, " -> ", destino, \
-				" (erro ", err_copia, ")")
-		return
-
-	var output: Array[String] = []
-#	OS.execute("powershell.exe", \
-#	  ["-Command", "& {set-location '"+directory+"'; Get-Content '"+filename+"' -Encoding Oem | Out-File '"+\
-#	  output_directory+"//"+output_filename+"' -Encoding utf8;}"], \
-#	  output, true, false)
-	#OS.execute("powershell.exe", \
-	  #["-Command", "& {set-location '"+directory+"'; Get-Content '"+filename+"' | Out-File '"+\
-	  #output_directory+"//"+output_filename+"' -Encoding utf8;}"], \
-	  #output, true, false)
-	#  Employs an external executable compiled from a python code to do the conversion.
-	var external_script: String = GV.dir_principal + "externo/bin/ansi_to_utf8.exe"
-	external_script = ProjectSettings.globalize_path(external_script)
-	OS.execute(external_script, \
-		[directory+filename, output_directory+output_filename], \
-		output, true, false)
-	print_debug("utf8 conversion output: ", output)
-
-
-# Detecta se o arquivo em [param caminho] ainda precisa ser convertido para UTF-8: decodifica os
-# bytes como UTF-8 e procura o caractere de substituicao (U+FFFD), que so aparece quando ha byte
-# invalido — sinal de Windows-1252. Mesma heuristica ja usada em ArquivosPlanejamento e
-# ImportadorPreferencias. Arquivo ilegivel devolve true, preservando o comportamento anterior.
-func _precisa_conversao_utf8(caminho: String) -> bool:
-	var f := FileAccess.open(caminho, FileAccess.READ)
-	if f == null:
-		return true
-	var raw: PackedByteArray = f.get_buffer(f.get_length())
-	f.close()
-	return "�" in raw.get_string_from_utf8()
+	var arquivo_destino := FileAccess.open(destino, FileAccess.WRITE)
+	if arquivo_destino == null:
+		push_error("Conversao para UTF-8: nao foi possivel gravar '%s' (%s)." % \
+			[destino, error_string(FileAccess.get_open_error())])
+		return false
+	var gravou: bool = arquivo_destino.store_buffer(saida)
+	arquivo_destino.close()
+	if not gravou:
+		DirAccess.remove_absolute(destino)
+		push_error("Conversao para UTF-8: nao foi possivel gravar '%s' (escrita incompleta)." % \
+			destino)
+		return false
+	if ja_utf8:
+		print_debug("Ja em UTF-8, copiado: ", origem, " -> ", destino)
+	else:
+		print_debug("Convertido de Windows-1252 para UTF-8: ", origem, " -> ", destino)
+	return true
 
 ## Converte um arquivo XLSX para CSV utilizando o executavel externo
 ## [code]externo/bin/xlsx_to_csv.exe[/code]. Retorna [code]true[/code] se a

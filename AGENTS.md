@@ -358,8 +358,9 @@ uma ideia vira card pela entrevista da skill `godot-session-setup`.
     - **O hook chega pelo OneDrive sem bit de execução.** Nesse caso o git ignora o hook (só
       mostra um `hint: ... hook was ignored`) e **o commit passa sem portão nenhum**. O
       `lefthook install` local devolve o `+x`.
-    - Os executáveis de `externo/bin/` são do Windows e não rodam no Linux. O
-      `ansi_to_utf8.exe` está sendo trocado pelo card 0010; os demais estão no `IDEAS.md`.
+    - Os executáveis de `externo/bin/` são do Windows e não rodam no Linux.
+      A conversão Windows-1252 → UTF-8 deixou de depender deles no card 0010; os demais estão no
+      `IDEAS.md`.
   - Ao concluir a migração para fora do OneDrive, o hook deixa de se replicar: cada clone passa a
     precisar do próprio `lefthook install`. **Atualizar este item nessa hora.**
 

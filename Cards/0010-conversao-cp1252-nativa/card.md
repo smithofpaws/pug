@@ -9,6 +9,16 @@ interviewed: true
 
 # 0010 - Conversão de Windows-1252 para UTF-8 em GDScript
 
+> Pipeline concluído em 2026-11-17 na máquina Linux (fila, branch
+> `cards/2026-11-17`, uma rodada, review sem findings). Os ACs 1 a 8 (`headless`)
+> estão provados: o orquestrador refez os portões com código de saída
+> (guardrails `EXIT=0`, 365 toleradas, eram 370; suíte 163/163; parser
+> `EXIT=0`). O card **não** é `done` porque os ACs 9 a 12 são `manual` e só
+> fecham por relato do dev, um a um. Os roteiros estão em `spec.md`, de R9 a
+> R12. O AC 9 já tem evidência para o dev conferir: o `git grep ansi_to_utf8`
+> fora de `Cards/` e `.claude/handoff/` sai vazio, e os dois arquivos saíram do
+> git.
+
 ## Contexto
 
 Em 2026-11-17 o dev importou pelo verificador de arquivos, com o programa rodando
@@ -53,31 +63,31 @@ que converteu.
 
 ## Acceptance criteria
 
-- [ ] 1. Bytes em Windows-1252 viram o texto equivalente: ASCII fica intacto;
+- [x] 1. Bytes em Windows-1252 viram o texto equivalente: ASCII fica intacto;
   `0xA0`–`0xFF` viram U+00A0–U+00FF (ex.: `0xE7 0xE3 0x6F` → `ção`); os bytes
   definidos de `0x80`–`0x9F` viram seus caracteres (ex.: `0x80` → `€`,
   `0x96` → `–`, `0x93`/`0x94` → aspas curvas). -- verify: `headless`
-- [ ] 2. Os cinco bytes sem caractere no Windows-1252 (`0x81`, `0x8D`, `0x8F`,
+- [x] 2. Os cinco bytes sem caractere no Windows-1252 (`0x81`, `0x8D`, `0x8F`,
   `0x90`, `0x9D`) viram U+FFFD sem interromper a conversão. É o mesmo resultado
   do `ansi_to_utf8.py` (`errors="replace"`). -- verify: `headless`
-- [ ] 3. A detecção responde "já é UTF-8" para ASCII puro, arquivo vazio, UTF-8
+- [x] 3. A detecção responde "já é UTF-8" para ASCII puro, arquivo vazio, UTF-8
   acentuado e UTF-8 com BOM, e "precisa converter" para Windows-1252 acentuado.
   Ela não usa `get_string_from_utf8()`, que é o que registra um erro por byte
   inválido. -- verify: `headless`
-- [ ] 4. `convertto_utf8` com origem em Windows-1252 grava um destino UTF-8 com o
+- [x] 4. `convertto_utf8` com origem em Windows-1252 grava um destino UTF-8 com o
   mesmo texto e as mesmas quebras de linha (CRLF continua CRLF) e devolve
   sucesso. -- verify: `headless` (fixture fictícia gravada em `user://`)
-- [ ] 5. `convertto_utf8` com origem já em UTF-8 copia o arquivo byte a byte e
+- [x] 5. `convertto_utf8` com origem já em UTF-8 copia o arquivo byte a byte e
   devolve sucesso, sem conversão dupla (`á` não vira `Ã¡`). -- verify: `headless`
-- [ ] 6. `convertto_utf8` com origem inexistente devolve falha e não cria o
+- [x] 6. `convertto_utf8` com origem inexistente devolve falha e não cria o
   destino. Com origem igual ao destino, não toca no arquivo (comportamento
   atual). -- verify: `headless`
-- [ ] 7. Um `horarios.txt` fictício no formato novo (coluna 0 vazia,
+- [x] 7. Um `horarios.txt` fictício no formato novo (coluna 0 vazia,
   Windows-1252, CRLF, `tipo` = `EaD`, turma `T100`, dias `Terça` e `Sábado`)
   passa por `convertto_utf8` e depois por `HorariosExe.carregar_horarios_txt`
   com `dia` = `terça`/`sábado`, `linha` = `""` e código de disciplina extraível
   (`al0171`). -- verify: `headless`
-- [ ] 8. Converter 5 MB sintéticos em Windows-1252 leva menos de 3 s no teste
+- [x] 8. Converter 5 MB sintéticos em Windows-1252 leva menos de 3 s no teste
   headless. O `hist.csv` real tem cerca de 4,7 MB, e o `.exe` fazia isso em
   cerca de 1 s. -- verify: `headless`
 - [ ] 9. O `ansi_to_utf8.exe` sai do projeto: `externo/bin/ansi_to_utf8.exe` e

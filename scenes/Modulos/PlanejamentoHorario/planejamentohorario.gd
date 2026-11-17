@@ -2367,8 +2367,7 @@ func _aplicar_referencia_txt(caminhos: PackedStringArray) -> void:
 	for path in caminhos:
 		var dir_in: String = path.get_base_dir() + "/"
 		var nome_arq: String = path.get_file()
-		file_handling.convertto_utf8(dir_in, nome_arq, GV.dir_saida, tmp_nome)
-		if not FileAccess.file_exists(tmp_caminho):
+		if not file_handling.convertto_utf8(dir_in, nome_arq, GV.dir_saida, tmp_nome):
 			$"%Terminal".text_edit("Falha ao converter %s — ignorado." % nome_arq, "aviso", true, false)
 			continue
 		var plano: Dictionary = _dados.preparar_alocacoes_do_txt(tmp_caminho, dias, horas, \
@@ -2559,12 +2558,16 @@ func _abrir_dialogo_conversao(titulo: String, filtro: String, descricao_filtro: 
 	fd.file_selected.connect(func(path: String):
 		var dir_in: String = path.get_base_dir() + "/"
 		var file_name: String = path.get_file()
-		file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, nome_destino)
+		var convertido: bool = file_handling.convertto_utf8(dir_in, file_name, GV.dir_saida, \
+			nome_destino)
+		fd.queue_free()
+		if not convertido:
+			$"%Terminal".text_edit("Falha ao converter %s; nada foi importado." % file_name, \
+				"aviso", true, false)
+			return
 		$"%Terminal".text_edit("%s convertido e salvo como %s em %s." \
 			% [file_name, nome_destino, GV.dir_saida], "sucesso", true, true)
-		fd.queue_free()
-		if FileAccess.file_exists(GV.dir_saida + nome_destino):
-			ao_concluir.call())
+		ao_concluir.call())
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered()
@@ -2582,8 +2585,8 @@ func _converter_horarios_txt() -> void:
 
 
 ## Abre um [FileDialog] para o usuario selecionar arquivos CSV ou XLSX de preferencias
-## de horarios de professores. Converte de Windows-1252 para UTF-8 se necessario (via
-## [code]ansi_to_utf8.exe[/code]) e, para arquivos XLSX, converte para CSV antes (via
+## de horarios de professores. Converte de Windows-1252 para UTF-8 se necessario (conversao
+## nativa, [method FileHandling.convertto_utf8]) e, para arquivos XLSX, converte para CSV antes (via
 ## [code]xlsx_to_csv.exe[/code] em [code]externo/bin/[/code]). O arquivo final e salvo
 ## em [member diretorio_regras] com o nome original.
 func _importar_preferencias_professor() -> void:

@@ -438,47 +438,6 @@ func _formatar_campo_cp1252(valor: String) -> String:
 		return '"' + valor + '"'
 	return valor
 
-# Converte uma string UTF-8 para bytes CP1252 (Windows-1252).
+# Converte para bytes Windows-1252; a tabela vive em [CodificacaoTexto].
 func _para_cp1252(texto: String) -> PackedByteArray:
-	var bytes: PackedByteArray = PackedByteArray()
-	for c in texto:
-		var cp: int = c.unicode_at(0)
-		if cp <= 0x7F:
-			bytes.append(cp)
-		elif cp >= 0xA0 and cp <= 0xFF:
-			bytes.append(cp)
-		else:
-			bytes.append(_unicode_para_cp1252(cp))
-	return bytes
-
-# Mapeia caracteres Unicode para CP1252.
-func _unicode_para_cp1252(cp: int) -> int:
-	match cp:
-		0x20AC: return 0x80   # €
-		0x201A: return 0x82   # ‚
-		0x0192: return 0x83   # ƒ
-		0x201E: return 0x84   # „
-		0x2026: return 0x85   # …
-		0x2020: return 0x86   # †
-		0x2021: return 0x87   # ‡
-		0x02C6: return 0x88   # ˆ
-		0x2030: return 0x89   # ‰
-		0x0160: return 0x8A   # Š
-		0x2039: return 0x8B   # ‹
-		0x0152: return 0x8C   # Œ
-		0x017D: return 0x8E   # Ž
-		0x2018: return 0x91   # '
-		0x2019: return 0x92   # '
-		0x201C: return 0x93   # "
-		0x201D: return 0x94   # "
-		0x2022: return 0x95   # •
-		0x2013: return 0x96   # –
-		0x2014: return 0x97   # —
-		0x02DC: return 0x98   # ˜
-		0x2122: return 0x99   # ™
-		0x0161: return 0x9A   # š
-		0x203A: return 0x9B   # ›
-		0x0153: return 0x9C   # œ
-		0x017E: return 0x9E   # ž
-		0x0178: return 0x9F   # Ÿ
-		_:  return 0x3F       # ?
+	return CodificacaoTexto.texto_para_cp1252(texto)

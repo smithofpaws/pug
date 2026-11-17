@@ -92,9 +92,8 @@ func ler_regras_professores(arquivo_selecionado: String) -> Array[Array]:
 ## Lê apenas os comentários textuais (linhas 24–28, coluna 1) do CSV de preferências
 ## do professor [param arquivo_selecionado]. [br]
 ## Diferente dos demais métodos, [b]não[/b] usa [method FileHandling.read_csvfile] —
-## lê o arquivo como bytes, detecta se está em Windows-1252 e, se necessário, converte
-## via [code]ansi_to_utf8.exe[/code] ([method FileHandling.convertto_utf8]) para um
-## arquivo temporário em [code]GV.dir_temp[/code]. [br]
+## lê o arquivo como bytes, detecta se está em Windows-1252 e, se necessário, converte em
+## memória (conversão nativa, [CodificacaoTexto]; sem arquivo temporário). [br]
 ## Retorna [Array[String]] com cada comentário não-vazio, ou array vazia se o arquivo
 ## não existir ou não houver comentários.
 func ler_comentarios_professor(arquivo_selecionado: String) -> Array[String]:
@@ -106,14 +105,10 @@ func ler_comentarios_professor(arquivo_selecionado: String) -> Array[String]:
 	f.close()
 
 	var texto_utf8: String
-	if _verifica_se_windows1252(raw):
-		var temp_nome: String = "_comentarios_" + arquivo_selecionado
-		_file_handling.convertto_utf8(_diretorio_regras + "/", arquivo_selecionado, GV.dir_temp, temp_nome)
-		var temp_path: String = GV.dir_temp + temp_nome
-		texto_utf8 = FileAccess.get_file_as_string(temp_path)
-		DirAccess.remove_absolute(temp_path)
-	else:
+	if CodificacaoTexto.eh_utf8_valido(raw):
 		texto_utf8 = raw.get_string_from_utf8()
+	else:
+		texto_utf8 = CodificacaoTexto.cp1252_para_utf8(raw).get_string_from_utf8()
 
 	var linhas: PackedStringArray = texto_utf8.split("\n")
 	var resultado: Array[String] = []
@@ -125,13 +120,6 @@ func ler_comentarios_professor(arquivo_selecionado: String) -> Array[String]:
 		if not comentario.is_empty() and comentario.to_lower() != "condições adicionais":
 			resultado.append(comentario)
 	return resultado
-
-
-# Detecta se [param raw] está em Windows-1252: decodifica como UTF-8 e verifica se
-# há caracteres de substituição (U+FFFD), que indicam bytes inválidos em UTF-8.
-func _verifica_se_windows1252(raw: PackedByteArray) -> bool:
-	var texto: String = raw.get_string_from_utf8()
-	return "\uFFFD" in texto
 
 
 # Extrai a primeira coluna de uma linha CSV, respeitando aspas duplas.

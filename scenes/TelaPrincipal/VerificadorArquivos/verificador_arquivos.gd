@@ -125,8 +125,8 @@ func _converter_utf8(dir_in: String, dir_out: String, files: Array) -> void:
 	for a in files.size():
 		var arquivo_saida: String = files[a]
 		print_debug("Convertendo arquivo de entrada ", files[a], " para formato utf-8...")
-		file_handling.convertto_utf8(dir_in, files[a], dir_out, arquivo_saida)
-		print_debug("Arquivo convertido!")
+		if file_handling.convertto_utf8(dir_in, files[a], dir_out, arquivo_saida):
+			print_debug("Arquivo convertido!")
 
 # Converte o nome dos arquivos para enquadrarem-se nos padrões usados pelo programa e move para a pasta de saida
 func _renomear_mover() -> void:
