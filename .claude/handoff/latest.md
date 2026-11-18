@@ -67,9 +67,8 @@ card, a versão, o AGENTS.md e este handoff.
 ## Estado do git
 - `master` em `8564f55`, mais o commit deste handoff/AGENTS.md. Sincronizada
   com `origin/master` depois do push. Tag `v1.1.2` no GitHub.
-- As branches locais `cards/2026-11-17` e `cards/2026-11-18` já estão contidas
-  na `master` e nunca foram enviadas. Podem ser apagadas com
-  `git branch -d <nome>`.
+- As branches locais `cards/2026-11-17` e `cards/2026-11-18` foram apagadas
+  pelo dev (já estavam contidas na `master`). Só existe a `master`.
 
 ## Decisões tomadas que não estão em card nenhum
 Nenhuma. A regra do redirecionamento já foi para o `AGENTS.md`.
@@ -81,4 +80,3 @@ Com os dois aprovados, o 0010 vira `done`.
 ## Em aberto para o dev
 - Decidir se os dois findings baixos do 0011 viram ajuste.
 - Relatar os ACs 10 e 11 do card 0010.
-- Apagar as branches locais já mescladas (opcional).
