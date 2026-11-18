@@ -13,11 +13,11 @@ interviewed: true
 > `cards/2026-11-17`, uma rodada, review sem findings). Os ACs 1 a 8 (`headless`)
 > estão provados: o orquestrador refez os portões com código de saída
 > (guardrails `EXIT=0`, 365 toleradas, eram 370; suíte 163/163; parser
-> `EXIT=0`). O card **não** é `done` porque os ACs 9 a 12 são `manual` e só
-> fecham por relato do dev, um a um. Os roteiros estão em `spec.md`, de R9 a
-> R12. O AC 9 já tem evidência para o dev conferir: o `git grep ansi_to_utf8`
-> fora de `Cards/` e `.claude/handoff/` sai vazio, e os dois arquivos saíram do
-> git.
+> `EXIT=0`). Os ACs 9 a 12 são `manual` e só fecham por relato do dev, um a um
+> (roteiros R9 a R12 em `spec.md`). Em 2026-11-18, num PC Windows, o dev aprovou
+> o 9 e o 12, e os portões passaram também no Windows (guardrails `EXIT=0`,
+> 163/163, parser `EXIT=0`). O código seguiu na release 1.1.1. O card **não** é
+> `done`: faltam o 10 e o 11, que pedem a máquina Linux.
 
 ## Contexto
 
@@ -90,9 +90,11 @@ que converteu.
 - [x] 8. Converter 5 MB sintéticos em Windows-1252 leva menos de 3 s no teste
   headless. O `hist.csv` real tem cerca de 4,7 MB, e o `.exe` fazia isso em
   cerca de 1 s. -- verify: `headless`
-- [ ] 9. O `ansi_to_utf8.exe` sai do projeto: `externo/bin/ansi_to_utf8.exe` e
+- [x] 9. O `ansi_to_utf8.exe` sai do projeto: `externo/bin/ansi_to_utf8.exe` e
   `externo/src/ansi_to_utf/` deixam o git, e `git grep ansi_to_utf8` não
   encontra mais nada fora de `Cards/` e `.claude/handoff/`. -- verify: `manual`
+  *(aprovado pelo dev em 2026-11-18, PC Windows, sobre a saída do R9: `git grep`
+  vazio, exit 1, e os dois caminhos ausentes do checkout)*
 - [ ] 10. No Linux, importar pelo verificador o `horarios.txt` real recebido em
   2026-11 atualiza `dados/saida/horarios.txt` (data do dia, UTF-8, `Terça` e
   `Sábado` corretos) e não deixa nenhuma linha `Unicode parsing error` no log
@@ -100,8 +102,12 @@ que converteu.
 - [ ] 11. No Linux, apontar o verificador para um arquivo sem permissão de leitura
   (`chmod 000`) registra um erro com o nome do arquivo e **não** registra
   `Arquivo convertido!`. -- verify: `manual`
-- [ ] 12. Num PC Windows, a mesma importação do AC 10 continua funcionando (é a
+- [x] 12. Num PC Windows, a mesma importação do AC 10 continua funcionando (é a
   regressão do caminho que usava o `.exe`). -- verify: `manual`
+  *(relato do dev em 2026-11-18: importou num PC Windows, já sem o `.exe`, e
+  funcionou. Conferido no `godot.log` daquela sessão: zero `Unicode parsing
+  error` e um `Arquivo convertido!`; `dados/saida/horarios.txt` é UTF-8 estrito,
+  com `Terça` e `Sábado` presentes. Só contagens, sem conteúdo.)*
 
 ## Edge cases
 
