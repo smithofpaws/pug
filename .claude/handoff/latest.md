@@ -1,80 +1,79 @@
-# Handoff — 2026-11-17 (fim da fila do card 0010)
+# Handoff — 2026-11-18 10:52 (release v1.1.1 publicada)
 
 ## Onde parei
-A fila rodou o card 0010 na máquina Linux e **passou** numa rodada, com review
-sem findings. Os ACs 1 a 8 (`headless`) estão provados e commitados na branch
-`cards/2026-11-17`. O card continua `in_progress` porque os ACs 9 a 12 são
-`manual` e esperam o relato do dev. A branch **não** foi mesclada na `master` nem
-enviada ao GitHub.
+A versão 1.1.1 está publicada no GitHub como `Latest`. Ela leva o card 0010
+(conversão Windows-1252 → UTF-8 em GDScript, sem o `ansi_to_utf8.exe`). A branch
+`cards/2026-11-17` foi mesclada na `master` por fast-forward, e a `master` está
+sincronizada com o GitHub.
 
 ## Card ativo
-0010-conversao-cp1252-nativa, `in_progress`. Faltam os ACs manuais 9 a 12
-(roteiros R9 a R12 em `Cards/0010-conversao-cp1252-nativa/spec.md`).
+0010-conversao-cp1252-nativa, `in_progress`. ACs 1 a 9 e 12 fechados. Faltam o
+10 e o 11, que são `manual` e pedem a máquina Linux (roteiros R10 e R11 em
+`Cards/0010-conversao-cp1252-nativa/spec.md`).
 
-## Feito nesta sessão (2026-11-17)
-- Diagnóstico do `horarios.txt` novo. O que quebrava era o `ansi_to_utf8.exe`,
-  um executável Windows, falhando no Linux, e não a mudança de formato. Ver o
-  "Contexto" do card 0010.
-- Setup do Linux no host, sem sudo (Godot wrapper, gdtoolkit 4.5.0, lefthook
-  2.2.2) e teste de recusa ok. Documentado no AGENTS.md (Setup por máquina).
-- Commits, em ordem:
-  - `ae3cd02` (master, no GitHub): card 0010 e três itens de Linux no
-    IDEAS.md.
-  - `8fb23c6` (master, **não enviado**): caminho do Godot do Linux no pipeline e
-    nas skills; seção Linux no AGENTS.md.
-  - `c0230b5` (branch): card `in_progress`.
-  - `9ebab01` (branch): a implementação. `CodificacaoTexto` em
-    `standalone_scripts/utils/` (funções puras: detecção UTF-8 estrita e tabela
-    Windows-1252 nos dois sentidos). `convertto_utf8` agora devolve `bool`. Saem
-    as três heurísticas duplicadas, o `.exe` e a fonte dele. Entram 26 testes.
-- O orquestrador refez os portões com código de saída, porque o agente dos
-  portões não os capturou (zsh). Conferiu também que os testes de cada AC
-  existem e que o diff não traz nenhum dos nomes reais de docentes do
-  `horarios.txt` recebido.
+## Feito nesta sessão (2026-11-18, PC Windows)
+- AC 9 aprovado pelo dev sobre a saída do R9: `git grep` vazio e os dois caminhos
+  fora do checkout.
+- AC 12 por relato do dev ("importei aqui, funciona"). Conferido por contagem, sem
+  ler conteúdo:
+  - o `godot.log` da sessão das 10:44 tem zero `Unicode parsing error` e um
+    `Arquivo convertido!`;
+  - `dados/saida/horarios.txt` é UTF-8 estrito, com `Terça` e `Sábado` presentes.
+
+  O passo do VSCodium do R12 não foi feito; a checagem de UTF-8 estrito o
+  substitui.
+- Portões no Windows antes da release: guardrails `EXIT=0` (365 toleradas) ·
+  testes 163/163 · parser `EXIT=0`.
+- Commits:
+  - `77345c5`: card com os ACs 9 e 12.
+  - `901e5fb`: `Versao 1.1.1`, feito pelo script, com a tag `v1.1.1`.
+- Release `v1.1.1` com 4 assets: `PUG_WIN_X64.zip` (140 MB),
+  `PUG_WIN_ARM64.zip` (128 MB) e um `.sha256` de cada. As notas foram escritas à
+  mão para o usuário (não usamos `--generate-notes`).
+  - As 4 conferências de PCK deram "260 arquivos, nenhum proibido".
+  - Layout dos dois ZIPs conferido (33 entradas).
+  - O `base_config.json` de cada pacote aponta para o próprio asset.
 
 ## Pela metade / não verificado
-- **Os ACs 9 a 12 não foram verificados pelo dev.**
-  - O AC 10, o caso real, nunca rodou: ninguém importou o `horarios.txt` real
-    pelo verificador com o código novo.
-  - O AC 9 tem evidência automática (o `git grep` sai vazio e os arquivos
-    saíram do git), mas fecha por relato.
-- O smoke não montou o baseline de log (foi negada a criação de worktree), então
-  o `log_clean` veio de inspeção do log de um boot headless, sem diff contra o
-  baseline. O card não tem AC visual.
-- O `convertto_utf8` mudou de comportamento em três pontos, aceitos no spec
-  ("Riscos de contrato de dados"):
-  - a quebra de linha é preservada byte a byte;
-  - a codificação é sempre Windows-1252, em vez da página ANSI do sistema;
-  - um UTF-8 que contém U+FFFD deixa de ser reconvertido.
-
-  O `hist.csv` e os outros CSVs do GURI só serão exercitados de verdade no uso
-  normal.
-- **O hook nos PCs Windows é agora a versão Linux** (replicado pelo OneDrive).
-  É preciso refazer o teste de recusa lá.
-- Continuam abertos do handoff de 2026-10-03: ninguém viu o atualizador instalar
-  a 1.1.0 do começo ao fim, nem conferiu se o `ppc2023` lia
+- **ACs 10 e 11 (Linux) não verificados.** A release saiu antes deles por
+  decisão do dev. Ela é só para Windows, e o AC 12 cobre o caminho do Windows.
+- **Ninguém viu um PC instalado se atualizar sozinho para a 1.1.1.** O
+  atualizador do começo ao fim segue sem testemunha desde a 1.1.0. O próximo PC
+  que abrir uma instalação 1.1.0 deve oferecer a atualização: vale observar e
+  conferir o `user://atualizacao/log.txt`.
+- O `ansi_to_utf8.exe` continua nas instalações já existentes, porque a
+  atualização copia de forma aditiva. Ninguém mais o referencia. Isso é
+  esperado (AGENTS.md, "Como a troca acontece"), não é defeito.
+- O `hist.csv` e os outros CSVs do GURI passam pela mesma `convertto_utf8` que
+  o `horarios.txt`, mas só o `horarios.txt` foi importado de verdade com o
+  código novo.
+- **Teste de recusa do hook neste PC Windows: não feito.** O lefthook 2.1.10 roda
+  aqui: ele apareceu nos dois commits desta sessão, mas os jobs foram pulados
+  porque não havia `.gd`. Isso mostra que o hook está ligado, mas não que ele
+  recusa.
+- Continua aberto desde 2026-10-03: conferir se o `ppc2023` lê
   `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-Linux, 2026-11-17, depois do card: guardrails `EXIT=0` (365 toleradas; a
-baseline apertou de 370) · testes 163/163 · parser `EXIT=0`. O pre-commit do
-`9ebab01` também passou.
+Windows, 2026-11-18 ~10:30: guardrails `EXIT=0` (365 toleradas) · testes
+163/163 · parser `EXIT=0`.
 
 ## Estado do git
-Branch `cards/2026-11-17` (3 commits à frente de `origin/master`: `8fb23c6`,
-`c0230b5`, `9ebab01`, mais este handoff). `master` local está em `8fb23c6`, à
-frente da `origin/master` (`ae3cd02`). Working tree limpo depois do commit
-deste handoff.
+`master` em `901e5fb` + o commit deste handoff, sincronizada com
+`origin/master`. Tag `v1.1.1` no GitHub. A branch local `cards/2026-11-17` já
+está toda contida na `master` e nunca foi enviada; pode ser apagada com
+`git branch -d cards/2026-11-17`. Working tree limpo depois do commit deste
+handoff.
 
 ## Decisões tomadas que não estão em card nenhum
-Nenhuma pendente. O setup do Linux já está no AGENTS.md.
+Nenhuma.
 
 ## Próximo passo concreto
-O dev roda o R10 (`spec.md` do card 0010): importa o `horarios.txt` real pelo
-verificador no Linux e confere a data, o UTF-8, `Terça`/`Sábado` e zero
-`Unicode parsing error` no `godot.log`.
+Na máquina Linux: `git pull` e rodar o R10 (importar o `horarios.txt` real pelo
+verificador) e o R11 (arquivo com `chmod 000`). Com os dois aprovados, o card
+0010 vira `done`.
 
 ## Em aberto para o dev
-- Relatar os ACs 9 a 12, um a um. O 12 exige um PC Windows.
-- Mesclar `cards/2026-11-17` na `master` e enviar ao GitHub: agora ou depois
-  dos ACs manuais?
+- Relatar os ACs 10 e 11.
+- Teste de recusa do hook neste PC Windows (receita no AGENTS.md, "Setup por
+  máquina").
