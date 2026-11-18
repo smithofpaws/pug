@@ -1,79 +1,91 @@
-# Handoff — 2026-11-18 10:52 (release v1.1.1 publicada)
+# Handoff — 2026-11-18 17:16 (fila do card 0011)
 
 ## Onde parei
-A versão 1.1.1 está publicada no GitHub como `Latest`. Ela leva o card 0010
-(conversão Windows-1252 → UTF-8 em GDScript, sem o `ansi_to_utf8.exe`). A branch
-`cards/2026-11-17` foi mesclada na `master` por fast-forward, e a `master` está
-sincronizada com o GitHub.
+O card 0011 passou pelo pipeline numa rodada e está commitado na branch
+`cards/2026-11-18`, que **não** foi mesclada na `master` nem enviada ao GitHub.
+Os ACs 1 a 12 estão provados. Faltam os ACs 13 e 14, que são `manual` e
+dependem de você com os dados reais.
 
 ## Card ativo
-0010-conversao-cp1252-nativa, `in_progress`. ACs 1 a 9 e 12 fechados. Faltam o
-10 e o 11, que são `manual` e pedem a máquina Linux (roteiros R10 e R11 em
-`Cards/0010-conversao-cp1252-nativa/spec.md`).
+- **0011-compartilhadas-horarios-txt**, `in_progress`. ACs 1 a 12 fechados.
+  Faltam o 13 e o 14 (roteiros R13 e R14 em
+  `Cards/0011-compartilhadas-horarios-txt/smoke/smoke.md`).
+- **0010-conversao-cp1252-nativa** continua `in_progress`, à espera dos ACs 10
+  e 11 na máquina Linux. Nada mudou nele nesta sessão.
 
 ## Feito nesta sessão (2026-11-18, PC Windows)
-- AC 9 aprovado pelo dev sobre a saída do R9: `git grep` vazio e os dois caminhos
-  fora do checkout.
-- AC 12 por relato do dev ("importei aqui, funciona"). Conferido por contagem, sem
-  ler conteúdo:
-  - o `godot.log` da sessão das 10:44 tem zero `Unicode parsing error` e um
-    `Arquivo convertido!`;
-  - `dados/saida/horarios.txt` é UTF-8 estrito, com `Terça` e `Sábado` presentes.
-
-  O passo do VSCodium do R12 não foi feito; a checagem de UTF-8 estrito o
-  substitui.
-- Portões no Windows antes da release: guardrails `EXIT=0` (365 toleradas) ·
-  testes 163/163 · parser `EXIT=0`.
-- Commits:
-  - `77345c5`: card com os ACs 9 e 12.
-  - `901e5fb`: `Versao 1.1.1`, feito pelo script, com a tag `v1.1.1`.
-- Release `v1.1.1` com 4 assets: `PUG_WIN_X64.zip` (140 MB),
-  `PUG_WIN_ARM64.zip` (128 MB) e um `.sha256` de cada. As notas foram escritas à
-  mão para o usuário (não usamos `--generate-notes`).
-  - As 4 conferências de PCK deram "260 arquivos, nenhum proibido".
-  - Layout dos dois ZIPs conferido (33 entradas).
-  - O `base_config.json` de cada pacote aponta para o próprio asset.
+- O dev relatou que AL0015, AL0019, AL0022 e outras não apareciam na grade
+  do Planejamento de horário.
+- **Diagnóstico** com o código real, rodando headless sobre o
+  `planejamento.csv` e o `horarios.txt` reais (só códigos e chaves foram
+  impressos). A causa era o campo de semestre da compartilhada, lido de forma
+  diferente em cada arquivo:
+  - **Chave que não casava.** O CSV gerava `al0015_ec03` e o txt gerava
+    `al0015_ec03;emextra`. Resultado: um card-fantasma, que não era salvo nem
+    enviado.
+  - **Filtro que descartava a linha.** O filtro do txt usava `begins_with` no
+    campo inteiro, então `EE03;EC03` era descartado.
+- **Card 0011** entrevistado e aprovado. Decisões do dev:
+  - com vários cursos carregados, só o card da 1ª parte recebe a alocação;
+  - o Atualizar planejamento entra no card;
+  - a exportação do horarios.txt perder `;EMExtra` não importa.
+- **Fila:** branch `cards/2026-11-18` com 3 commits:
+  - `075ec39`: card aprovado;
+  - `bddbd35`: card `in_progress`;
+  - `0ed8e35`: implementação, 16 testes novos, MANUAL.md e spec/review/smoke.
+- Conferência independente, depois do pipeline, com os dados reais: as 8
+  disciplinas agora resolvem para o card do CSV, sem card órfão. Só ficam
+  pendentes as do non-goal: `al0390_ec07_2` e `al0142_ec09_2` (CH 0, linhas
+  duplicadas do CSV) e `al0375_ecextra` (o txt só tem `EM03`).
 
 ## Pela metade / não verificado
-- **ACs 10 e 11 (Linux) não verificados.** A release saiu antes deles por
-  decisão do dev. Ela é só para Windows, e o AC 12 cobre o caminho do Windows.
-- **Ninguém viu um PC instalado se atualizar sozinho para a 1.1.1.** O
-  atualizador do começo ao fim segue sem testemunha desde a 1.1.0. O próximo PC
-  que abrir uma instalação 1.1.0 deve oferecer a atualização: vale observar e
-  conferir o `user://atualizacao/log.txt`.
-- O `ansi_to_utf8.exe` continua nas instalações já existentes, porque a
-  atualização copia de forma aditiva. Ninguém mais o referencia. Isso é
-  esperado (AGENTS.md, "Como a troca acontece"), não é defeito.
-- O `hist.csv` e os outros CSVs do GURI passam pela mesma `convertto_utf8` que
-  o `horarios.txt`, mas só o `horarios.txt` foi importado de verdade com o
-  código novo.
-- **Teste de recusa do hook neste PC Windows: não feito.** O lefthook 2.1.10 roda
-  aqui: ele apareceu nos dois commits desta sessão, mas os jobs foram pulados
-  porque não havia `.gd`. Isso mostra que o hook está ligado, mas não que ele
-  recusa.
-- Continua aberto desde 2026-10-03: conferir se o `ppc2023` lê
-  `agc`/`unipampa_comunidade`.
+- **ACs 13 e 14 não verificados na tela.** A conferência headless sobre os
+  dados reais é apoio, não substitui o relato. Ela não passa pelo painel, pela
+  contagem de CH dos cards, pelo diálogo "fora do planejamento" nem pelo ciclo
+  Salvar → Abrir planejamento.json.
+- **Dois findings baixos, não bloqueantes, em `review.md`, sem correção:**
+  - falta teste do caminho `removidas`/`entries_removidas` com linha
+    compartilhada no `mesclar_planejamento_com_horarios_txt`;
+  - um comentário de `_chaves_do_txt_pelo_planejamento` promete "campo
+    inteiro" quando o código usa a 1ª parte.
+- **Mudança visível esperada:**
+  - o diálogo "Disciplinas Removidas" do Atualizar planejamento passa a listar
+    a chave da 1ª parte (`al0101_ee01`) e não mais o campo inteiro;
+  - com referência sobreposta, podem surgir avisos novos de compartilhada
+    divergente, porque as compartilhadas agora ficam no card certo.
+- O modo referência foi preservado por uma convenção: `prefixos` vazio
+  significa comportamento legado. O único chamador com prefixos vazios é o
+  `_aplicar_referencia_txt` (o `_on_importar_horarios_button_up` também chama
+  sem prefixos, mas não está ligado a nenhuma cena).
+- Pendências herdadas do handoff anterior, sem mudança:
+  - teste de recusa do hook neste PC;
+  - atualizador automático sem testemunha;
+  - `ppc2023` × `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-Windows, 2026-11-18 ~10:30: guardrails `EXIT=0` (365 toleradas) · testes
-163/163 · parser `EXIT=0`.
+Windows, 2026-11-18 ~17:00, depois do pipeline: guardrails `EXIT=0` (365
+toleradas, sem violação nova) · testes 179/179 · parser `EXIT=0`. O pre-commit
+do commit `0ed8e35` rodou os dois primeiros e passou.
 
 ## Estado do git
-`master` em `901e5fb` + o commit deste handoff, sincronizada com
-`origin/master`. Tag `v1.1.1` no GitHub. A branch local `cards/2026-11-17` já
-está toda contida na `master` e nunca foi enviada; pode ser apagada com
-`git branch -d cards/2026-11-17`. Working tree limpo depois do commit deste
-handoff.
+- Branch `cards/2026-11-18`, 3 commits à frente da `master`, mais o commit
+  deste handoff.
+- Não enviada ao GitHub. A `master` está em `92d9428`, igual a
+  `origin/master`.
+- A branch antiga `cards/2026-11-17` (já contida na `master`) continua
+  podendo ser apagada.
 
 ## Decisões tomadas que não estão em card nenhum
 Nenhuma.
 
 ## Próximo passo concreto
-Na máquina Linux: `git pull` e rodar o R10 (importar o `horarios.txt` real pelo
-verificador) e o R11 (arquivo com `chmod 000`). Com os dois aprovados, o card
-0010 vira `done`.
+Rodar o R13 com os dados reais (Abrir planejamento.csv da EC → Abrir
+horarios.txt da EC) e relatar. Depois o R14 (Salvar → Abrir
+planejamento.json). Com os dois aprovados, o card 0011 vira `done` e a branch
+pode ir para a `master` por fast-forward.
 
 ## Em aberto para o dev
-- Relatar os ACs 10 e 11.
-- Teste de recusa do hook neste PC Windows (receita no AGENTS.md, "Setup por
-  máquina").
+- Relatar os ACs 13 e 14 do card 0011.
+- Decidir se os dois findings baixos viram ajuste agora ou ficam registrados.
+- Mesclar `cards/2026-11-18` na `master` e fazer o push: só quando você
+  pedir.
