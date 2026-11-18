@@ -1,7 +1,7 @@
 ---
 id: 0011-compartilhadas-horarios-txt
 title: Disciplina compartilhada do horarios.txt casa com o card do planejamento
-status: ready
+status: in_progress
 origin: novo (defeito relatado: AL0015, AL0019 e AL0022 não aparecem na grade do Planejamento de horário)
 layers: [standalone_scripts/io/arquivos_planejamento.gd, scenes/Modulos/PlanejamentoHorario]
 interviewed: true
