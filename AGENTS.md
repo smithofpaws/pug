@@ -160,6 +160,13 @@ ainda garante o contrato do ZIP descrito abaixo, do qual o atualizador automáti
 de duplo clique começa mostrando a versão em `project.godot`, a última tag publicada e sugestões de
 numeração (`-Info`), para a próxima versão ser escolhida com as duas informações à vista.
 
+- **Não redirecione a saída do script** (`*>`, `2>&1`, `> arquivo`). Ele roda com
+  `$ErrorActionPreference = "Stop"`, e no PowerShell 5.1 o redirecionamento transforma em erro
+  terminante tudo o que um programa externo escreve em stderr. Isso inclui a moldura que o lefthook
+  imprime no `git commit` da versão. Na 1.1.2 o script parou logo depois desse commit: a versão
+  ficou commitada, mas sem tag, sem push e sem release. Se acontecer, basta rodar o script de novo
+  sem redirecionamento: ele vê que a versão já está commitada e segue.
+
 ### Arquiteturas (x64 e ARM64)
 
 Cada arquitetura tem seu **preset** em `export_presets.cfg` — `PUG` (`x86_64`) e `PUG_ARM64`

@@ -1,91 +1,84 @@
-# Handoff — 2026-11-18 17:16 (fila do card 0011)
+# Handoff — 2026-11-18 17:34 (release v1.1.2 publicada)
 
 ## Onde parei
-O card 0011 passou pelo pipeline numa rodada e está commitado na branch
-`cards/2026-11-18`, que **não** foi mesclada na `master` nem enviada ao GitHub.
-Os ACs 1 a 12 estão provados. Faltam os ACs 13 e 14, que são `manual` e
-dependem de você com os dados reais.
+A versão 1.1.2 está publicada no GitHub como `Latest`. Ela leva o card 0011:
+disciplinas compartilhadas do horarios.txt agora caem no card do planejamento,
+e o Atualizar planejamento deixa de perder a sala e o horário delas. A branch
+`cards/2026-11-18` foi mesclada na `master` por fast-forward, e a `master` está
+sincronizada com o GitHub.
 
 ## Card ativo
-- **0011-compartilhadas-horarios-txt**, `in_progress`. ACs 1 a 12 fechados.
-  Faltam o 13 e o 14 (roteiros R13 e R14 em
-  `Cards/0011-compartilhadas-horarios-txt/smoke/smoke.md`).
-- **0010-conversao-cp1252-nativa** continua `in_progress`, à espera dos ACs 10
-  e 11 na máquina Linux. Nada mudou nele nesta sessão.
+- **0011-compartilhadas-horarios-txt**: `done`. Os 14 ACs estão fechados, e o
+  13 e o 14 foram aprovados pelo dev ("Funcionando").
+- **0010-conversao-cp1252-nativa**: segue `in_progress`, à espera dos ACs 10 e
+  11 na máquina Linux. Nada mudou nele.
 
 ## Feito nesta sessão (2026-11-18, PC Windows)
-- O dev relatou que AL0015, AL0019, AL0022 e outras não apareciam na grade
-  do Planejamento de horário.
-- **Diagnóstico** com o código real, rodando headless sobre o
-  `planejamento.csv` e o `horarios.txt` reais (só códigos e chaves foram
-  impressos). A causa era o campo de semestre da compartilhada, lido de forma
-  diferente em cada arquivo:
-  - **Chave que não casava.** O CSV gerava `al0015_ec03` e o txt gerava
-    `al0015_ec03;emextra`. Resultado: um card-fantasma, que não era salvo nem
-    enviado.
-  - **Filtro que descartava a linha.** O filtro do txt usava `begins_with` no
-    campo inteiro, então `EE03;EC03` era descartado.
-- **Card 0011** entrevistado e aprovado. Decisões do dev:
-  - com vários cursos carregados, só o card da 1ª parte recebe a alocação;
-  - o Atualizar planejamento entra no card;
-  - a exportação do horarios.txt perder `;EMExtra` não importa.
-- **Fila:** branch `cards/2026-11-18` com 3 commits:
-  - `075ec39`: card aprovado;
-  - `bddbd35`: card `in_progress`;
-  - `0ed8e35`: implementação, 16 testes novos, MANUAL.md e spec/review/smoke.
-- Conferência independente, depois do pipeline, com os dados reais: as 8
-  disciplinas agora resolvem para o card do CSV, sem card órfão. Só ficam
-  pendentes as do non-goal: `al0390_ec07_2` e `al0142_ec09_2` (CH 0, linhas
-  duplicadas do CSV) e `al0375_ecextra` (o txt só tem `EM03`).
+- **Card 0011, do diagnóstico até a release.** O registro da fila está em
+  `archive/2026-11-18-1716-fila-0011.md`.
+- **ACs 13 e 14.** Relato do dev, conferido por contagem e sem ler nomes:
+  - o `planejamento.json` foi salvo às 17:29, com backup
+    `.backup/planejamentohorario/2026-11-18_172906_salvar`;
+  - as 8 disciplinas estão lá com todas as alocações, sob a chave do card do
+    CSV.
+- **Conferência extra, headless sobre os dados reais e só leitura.** O
+  Atualizar planejamento mantém dia e horário das 8 disciplinas. As únicas
+  "removidas" com o mesmo código são turmas de outros cursos (`al0022_ea03`,
+  `al0002_ee01`), o que é esperado: o txt traz todos os cursos.
+- **Commits:**
+  - `77cef2d`: card `done`;
+  - `8564f55`: `Versao 1.1.2`, feito pelo script, com a tag `v1.1.2`.
+- **Release `v1.1.2`.** Tem 4 assets: `PUG_WIN_X64.zip` (140 MB),
+  `PUG_WIN_ARM64.zip` (128 MB) e um `.sha256` de cada.
+  - As 4 conferências de PCK deram "260 arquivos, nenhum proibido".
+  - Layout dos dois ZIPs conferido (33 entradas).
+  - O `base_config.json` de cada pacote aponta para o próprio asset.
+  - O SHA-256 dos ZIPs locais bate com os `.sha256`.
+  - As notas foram escritas à mão para o usuário.
+- **Tropeço na publicação.** A 1ª tentativa parou depois do commit da versão,
+  porque redirecionei a saída do script (`*>`) e o stderr do lefthook virou
+  erro terminante. Nada tinha sido publicado. A 2ª tentativa, sem
+  redirecionamento, fechou. A regra foi para o `AGENTS.md`
+  ("Distribuição e atualização").
 
 ## Pela metade / não verificado
-- **ACs 13 e 14 não verificados na tela.** A conferência headless sobre os
-  dados reais é apoio, não substitui o relato. Ela não passa pelo painel, pela
-  contagem de CH dos cards, pelo diálogo "fora do planejamento" nem pelo ciclo
-  Salvar → Abrir planejamento.json.
-- **Dois findings baixos, não bloqueantes, em `review.md`, sem correção:**
+- **Dois findings baixos do card 0011, sem correção** (estão em
+  `Cards/0011-compartilhadas-horarios-txt/review.md`):
   - falta teste do caminho `removidas`/`entries_removidas` com linha
-    compartilhada no `mesclar_planejamento_com_horarios_txt`;
-  - um comentário de `_chaves_do_txt_pelo_planejamento` promete "campo
-    inteiro" quando o código usa a 1ª parte.
-- **Mudança visível esperada:**
-  - o diálogo "Disciplinas Removidas" do Atualizar planejamento passa a listar
-    a chave da 1ª parte (`al0101_ee01`) e não mais o campo inteiro;
-  - com referência sobreposta, podem surgir avisos novos de compartilhada
-    divergente, porque as compartilhadas agora ficam no card certo.
-- O modo referência foi preservado por uma convenção: `prefixos` vazio
-  significa comportamento legado. O único chamador com prefixos vazios é o
-  `_aplicar_referencia_txt` (o `_on_importar_horarios_button_up` também chama
-  sem prefixos, mas não está ligado a nenhuma cena).
-- Pendências herdadas do handoff anterior, sem mudança:
+    compartilhada;
+  - um comentário de `_chaves_do_txt_pelo_planejamento` fala em "campo
+    inteiro", mas o código usa a 1ª parte.
+- **`planejamento.json` antigo não é reparado.** Quem salvou antes da 1.1.2
+  precisa reabrir o CSV e o txt e salvar de novo. Isso está nas notas da
+  release.
+- **Ninguém viu um PC instalado se atualizar sozinho**, nem para a 1.1.1 nem
+  para a 1.1.2. Conferir o `user://atualizacao/log.txt` na próxima vez que uma
+  instalação antiga abrir.
+- Pendências herdadas, sem mudança:
+  - ACs 10 e 11 do card 0010 (Linux);
   - teste de recusa do hook neste PC;
-  - atualizador automático sem testemunha;
   - `ppc2023` × `agc`/`unipampa_comunidade`.
 
 ## Estado dos portões
-Windows, 2026-11-18 ~17:00, depois do pipeline: guardrails `EXIT=0` (365
-toleradas, sem violação nova) · testes 179/179 · parser `EXIT=0`. O pre-commit
-do commit `0ed8e35` rodou os dois primeiros e passou.
+Windows, 2026-11-18 ~17:00: guardrails `EXIT=0` (365 toleradas) · testes
+179/179 · parser `EXIT=0`. A `master` não mudou de código desde então: só o
+card, a versão, o AGENTS.md e este handoff.
 
 ## Estado do git
-- Branch `cards/2026-11-18`, 3 commits à frente da `master`, mais o commit
-  deste handoff.
-- Não enviada ao GitHub. A `master` está em `92d9428`, igual a
-  `origin/master`.
-- A branch antiga `cards/2026-11-17` (já contida na `master`) continua
-  podendo ser apagada.
+- `master` em `8564f55`, mais o commit deste handoff/AGENTS.md. Sincronizada
+  com `origin/master` depois do push. Tag `v1.1.2` no GitHub.
+- As branches locais `cards/2026-11-17` e `cards/2026-11-18` já estão contidas
+  na `master` e nunca foram enviadas. Podem ser apagadas com
+  `git branch -d <nome>`.
 
 ## Decisões tomadas que não estão em card nenhum
-Nenhuma.
+Nenhuma. A regra do redirecionamento já foi para o `AGENTS.md`.
 
 ## Próximo passo concreto
-Rodar o R13 com os dados reais (Abrir planejamento.csv da EC → Abrir
-horarios.txt da EC) e relatar. Depois o R14 (Salvar → Abrir
-planejamento.json). Com os dois aprovados, o card 0011 vira `done` e a branch
-pode ir para a `master` por fast-forward.
+Na máquina Linux: `git pull`, depois rodar os roteiros R10 e R11 do card 0010.
+Com os dois aprovados, o 0010 vira `done`.
 
 ## Em aberto para o dev
-- Relatar os ACs 13 e 14 do card 0011.
-- Decidir se os dois findings baixos viram ajuste agora ou ficam registrados.
-- Mesclar `cards/2026-11-18` na `master` e fazer o push: só quando você
-  pedir.
+- Decidir se os dois findings baixos do 0011 viram ajuste.
+- Relatar os ACs 10 e 11 do card 0010.
+- Apagar as branches locais já mescladas (opcional).
