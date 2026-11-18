@@ -112,4 +112,4 @@ O `pre-commit` do Lefthook roda os dois. Os hooks do Claude Code
 | 0008 | [Verificar carga horária inclui a lista oficial de professores do curso](0008-carga-horaria-lista-oficial-professores/card.md) | done | novo |
 | 0009 | [Busca com Ctrl+F no Terminal](0009-busca-no-terminal/card.md) | done | novo |
 | 0010 | [Conversão de Windows-1252 para UTF-8 em GDScript, sem o ansi_to_utf8.exe](0010-conversao-cp1252-nativa/card.md) | in_progress | novo (defeito relatado: horarios.txt no Linux) |
-| 0011 | [Disciplina compartilhada do horarios.txt casa com o card do planejamento](0011-compartilhadas-horarios-txt/card.md) | in_progress | novo (defeito relatado: compartilhadas fora da grade de horário) |
+| 0011 | [Disciplina compartilhada do horarios.txt casa com o card do planejamento](0011-compartilhadas-horarios-txt/card.md) | done | novo (defeito relatado: compartilhadas fora da grade de horário) |

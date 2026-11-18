@@ -1,7 +1,7 @@
 ---
 id: 0011-compartilhadas-horarios-txt
 title: Disciplina compartilhada do horarios.txt casa com o card do planejamento
-status: in_progress
+status: done
 origin: novo (defeito relatado: AL0015, AL0019 e AL0022 não aparecem na grade do Planejamento de horário)
 layers: [standalone_scripts/io/arquivos_planejamento.gd, scenes/Modulos/PlanejamentoHorario]
 interviewed: true
@@ -9,17 +9,15 @@ interviewed: true
 
 # 0011 - Disciplina compartilhada do horarios.txt casa com o card do planejamento
 
-> Pipeline concluído em 2026-11-18 no PC Windows (fila, branch
+> Concluído. Pipeline em 2026-11-18 no PC Windows (fila, branch
 > `cards/2026-11-18`, uma rodada, review sem finding bloqueante). Os ACs 1 a 12
-> (`headless`) estão provados: o orquestrador refez os portões com código de
-> saída (guardrails `EXIT=0`, 365 toleradas, sem violação nova; suíte 179/179;
-> parser `EXIT=0`). O card **não** é `done`, porque os ACs 13 e 14 são `manual`
-> e só fecham por relato do dev, um a um. Os roteiros estão em `smoke/smoke.md`
-> (R13 e R14). Apoio, que não substitui o relato: o código novo, rodado headless
-> sobre os arquivos reais de 2026-11-18, resolve as 8 disciplinas para o card do
-> CSV, sem card órfão. Só ficam pendentes as do non-goal (`al0390_ec07_2`,
-> `al0142_ec09_2` e `al0375_ecextra`). Dois findings baixos ficaram em
-> `review.md`.
+> (`headless`) foram provados pela suíte (179/179), com guardrails `EXIT=0`
+> (365 toleradas) e parser `EXIT=0`. Os ACs 13 e 14 (`manual`) foram
+> **aprovados pelo dev em 2026-11-18** ("Funcionando"), com os dados reais.
+> Conferido por contagem, sem ler nomes: o `planejamento.json` salvo às 17:29,
+> com backup `2026-11-18_172906_salvar`, traz as 8 disciplinas com todas as
+> alocações sob a chave do card do CSV. Dois findings baixos ficaram em
+> `review.md`, sem correção.
 
 ## Goal
 No **Planejamento de horário**, ao abrir o `planejamento.csv` e depois o
@@ -108,8 +106,8 @@ Uma linha do `horarios.txt` tem o código `C` e o campo de semestre `S`.
 - [x] Ida e volta: depois de aplicar as alocações resolvidas, `exportar_planejamento_json` traz a `al0015` com as 4 alocações -- verify: `headless`
 - [x] Atualizar planejamento: com o card `al0015_ec03` no planejamento e 4 linhas `EC03;EMExtra` no txt (com sala, dia e horário), `mesclar_planejamento_com_horarios_txt` preserva sala/dia/horário nas 4 entradas, e `removidas` não contém a `al0015` -- verify: `headless`
 - [x] A suíte existente (`python .tools/run_tests.py`) continua passando -- verify: `headless`
-- [ ] Com os dados reais (Abrir planejamento.csv da EC e depois Abrir horarios.txt da EC), AL0015, AL0019, AL0022, AL0002, AL0381, AL0394, AL0390 e AL0142 aparecem na grade nas suas células, os cards ficam completos, não surge card duplicado delas e o diálogo "Disciplinas do horarios.txt fora do planejamento" não as lista -- verify: `manual`
-- [ ] Com os dados reais, depois de Salvar e reabrir pelo Abrir planejamento.json, as alocações dessas disciplinas continuam na grade -- verify: `manual`
+- [x] Com os dados reais (Abrir planejamento.csv da EC e depois Abrir horarios.txt da EC), AL0015, AL0019, AL0022, AL0002, AL0381, AL0394, AL0390 e AL0142 aparecem na grade nas suas células, os cards ficam completos, não surge card duplicado delas e o diálogo "Disciplinas do horarios.txt fora do planejamento" não as lista -- verify: `manual`
+- [x] Com os dados reais, depois de Salvar e reabrir pelo Abrir planejamento.json, as alocações dessas disciplinas continuam na grade -- verify: `manual`
 
 ## Edge cases
 - **Ordem diferente entre os arquivos.** O CSV e o txt nem sempre listam as
