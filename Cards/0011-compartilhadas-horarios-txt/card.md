@@ -9,6 +9,18 @@ interviewed: true
 
 # 0011 - Disciplina compartilhada do horarios.txt casa com o card do planejamento
 
+> Pipeline concluído em 2026-11-18 no PC Windows (fila, branch
+> `cards/2026-11-18`, uma rodada, review sem finding bloqueante). Os ACs 1 a 12
+> (`headless`) estão provados: o orquestrador refez os portões com código de
+> saída (guardrails `EXIT=0`, 365 toleradas, sem violação nova; suíte 179/179;
+> parser `EXIT=0`). O card **não** é `done`, porque os ACs 13 e 14 são `manual`
+> e só fecham por relato do dev, um a um. Os roteiros estão em `smoke/smoke.md`
+> (R13 e R14). Apoio, que não substitui o relato: o código novo, rodado headless
+> sobre os arquivos reais de 2026-11-18, resolve as 8 disciplinas para o card do
+> CSV, sem card órfão. Só ficam pendentes as do non-goal (`al0390_ec07_2`,
+> `al0142_ec09_2` e `al0375_ecextra`). Dois findings baixos ficaram em
+> `review.md`.
+
 ## Goal
 No **Planejamento de horário**, ao abrir o `planejamento.csv` e depois o
 `horarios.txt`, a disciplina ofertada para mais de um curso (semestre
@@ -84,18 +96,18 @@ Uma linha do `horarios.txt` tem o código `C` e o campo de semestre `S`.
 - Sem UI nova, sem token de cor novo, sem leitura de arquivo nova.
 
 ## Acceptance criteria
-- [ ] Com card `al0015_ec03` existente e prefixos `["ec"]`, as 4 linhas `EC03;EMExtra` da `AL0015` saem com chave `al0015_ec03`, e `cards_novos` não traz a `al0015` -- verify: `headless`
-- [ ] Com prefixos `["ec"]`, a linha `EE03;EC03` da `AL0022` **não** é descartada e sai com a chave do card `al0022_ec03` -- verify: `headless`
-- [ ] Campo com espaços e caixa mista (`EA09; ee09 ;EC07`) casa com o card `al0390_ec07` -- verify: `headless`
-- [ ] Linha sem nenhuma parte nos prefixos (`EE01;EM01` com `["ec"]`) continua descartada -- verify: `headless`
-- [ ] Vários cursos: com os cards `al0022_ee03` e `al0022_ec03`, prefixos `["ec", "ee"]` e a linha `EE03;EC03`, só `al0022_ee03` recebe a alocação -- verify: `headless`
-- [ ] Chaves duplicadas: com `al0390_ec07` (oferta `EA09;EE09;EC07`) e `al0390_ec07_2` (oferta `EC07`), a linha `EA09;EE09;EC07` vai para `al0390_ec07` e a linha `EC07` vai para `al0390_ec07_2` -- verify: `headless`
-- [ ] Sem card no planejamento: as linhas `EC03;EMExtra` da `AL0015` geram **um** card novo com chave `al0015_ec03`, semestre `EC03`, oferta `EC03;EMExtra` e CH igual ao número de linhas (4) -- verify: `headless`
-- [ ] Não-regressão: a linha não compartilhada `EC07` da `AL0395` continua com chave `al0395_ec07` -- verify: `headless`
-- [ ] Não-regressão do import de referência: chamado como `_aplicar_referencia_txt` o chama e com o card próprio `al0019_ec03` existente, a linha `EC03;EE03;ET03;EM03` **não** se anexa ao card próprio. Ela continua chegando como disciplina nova, para entrar como referência e manter o aviso de compartilhada divergente -- verify: `headless`
-- [ ] Ida e volta: depois de aplicar as alocações resolvidas, `exportar_planejamento_json` traz a `al0015` com as 4 alocações -- verify: `headless`
-- [ ] Atualizar planejamento: com o card `al0015_ec03` no planejamento e 4 linhas `EC03;EMExtra` no txt (com sala, dia e horário), `mesclar_planejamento_com_horarios_txt` preserva sala/dia/horário nas 4 entradas, e `removidas` não contém a `al0015` -- verify: `headless`
-- [ ] A suíte existente (`python .tools/run_tests.py`) continua passando -- verify: `headless`
+- [x] Com card `al0015_ec03` existente e prefixos `["ec"]`, as 4 linhas `EC03;EMExtra` da `AL0015` saem com chave `al0015_ec03`, e `cards_novos` não traz a `al0015` -- verify: `headless`
+- [x] Com prefixos `["ec"]`, a linha `EE03;EC03` da `AL0022` **não** é descartada e sai com a chave do card `al0022_ec03` -- verify: `headless`
+- [x] Campo com espaços e caixa mista (`EA09; ee09 ;EC07`) casa com o card `al0390_ec07` -- verify: `headless`
+- [x] Linha sem nenhuma parte nos prefixos (`EE01;EM01` com `["ec"]`) continua descartada -- verify: `headless`
+- [x] Vários cursos: com os cards `al0022_ee03` e `al0022_ec03`, prefixos `["ec", "ee"]` e a linha `EE03;EC03`, só `al0022_ee03` recebe a alocação -- verify: `headless`
+- [x] Chaves duplicadas: com `al0390_ec07` (oferta `EA09;EE09;EC07`) e `al0390_ec07_2` (oferta `EC07`), a linha `EA09;EE09;EC07` vai para `al0390_ec07` e a linha `EC07` vai para `al0390_ec07_2` -- verify: `headless`
+- [x] Sem card no planejamento: as linhas `EC03;EMExtra` da `AL0015` geram **um** card novo com chave `al0015_ec03`, semestre `EC03`, oferta `EC03;EMExtra` e CH igual ao número de linhas (4) -- verify: `headless`
+- [x] Não-regressão: a linha não compartilhada `EC07` da `AL0395` continua com chave `al0395_ec07` -- verify: `headless`
+- [x] Não-regressão do import de referência: chamado como `_aplicar_referencia_txt` o chama e com o card próprio `al0019_ec03` existente, a linha `EC03;EE03;ET03;EM03` **não** se anexa ao card próprio. Ela continua chegando como disciplina nova, para entrar como referência e manter o aviso de compartilhada divergente -- verify: `headless`
+- [x] Ida e volta: depois de aplicar as alocações resolvidas, `exportar_planejamento_json` traz a `al0015` com as 4 alocações -- verify: `headless`
+- [x] Atualizar planejamento: com o card `al0015_ec03` no planejamento e 4 linhas `EC03;EMExtra` no txt (com sala, dia e horário), `mesclar_planejamento_com_horarios_txt` preserva sala/dia/horário nas 4 entradas, e `removidas` não contém a `al0015` -- verify: `headless`
+- [x] A suíte existente (`python .tools/run_tests.py`) continua passando -- verify: `headless`
 - [ ] Com os dados reais (Abrir planejamento.csv da EC e depois Abrir horarios.txt da EC), AL0015, AL0019, AL0022, AL0002, AL0381, AL0394, AL0390 e AL0142 aparecem na grade nas suas células, os cards ficam completos, não surge card duplicado delas e o diálogo "Disciplinas do horarios.txt fora do planejamento" não as lista -- verify: `manual`
 - [ ] Com os dados reais, depois de Salvar e reabrir pelo Abrir planejamento.json, as alocações dessas disciplinas continuam na grade -- verify: `manual`
 

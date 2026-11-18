@@ -271,18 +271,20 @@ static func dividir_csv(linha: String) -> Array[String]:
 ## [param dias] e [param horas] são os cabeçalhos da grade; [param linhas_grade] e [param colunas_grade] [br]
 ## seus limites; [param chaves_existentes] são as chaves de cards já presentes no painel. [br]
 ## Retorna [code]{ "valido": bool, "cards_novos": Array, "alocacoes": Array, "ignoradas": int }[/code]. [br]
-## Cada item de [param cards_novos] tem [code]codigo, nome, profs, ch_total, sem, chave[/code]; [br]
-## cada item de [param alocacoes] tem [code]linha, coluna, chave, aloc[/code].
+## Cada item de [param cards_novos] tem [code]codigo, nome, profs, ch_total, sem, oferta, chave[/code]; [br]
+## cada item de [param alocacoes] tem [code]linha, coluna, chave, aloc[/code]. [br]
+## [param prefixos] escolhe o modo. [b]Modo curso[/b] (lista não vazia): só entram as linhas em que alguma
+## parte do semestre casa com os prefixos, e a chave sai como a do [code]planejamento.csv[/code], uma por
+## parte ([code]al0015_ec03[/code] para [code]"EC03;EMExtra"[/code]) — ver [method parte_receptora_txt] e
+## [method desempatar_chave_duplicada]. [b]Modo referência[/b] (lista vazia, como no import de outro curso):
+## sem filtro, e a chave é a do campo inteiro, para a disciplina entrar como nova.
 func preparar_alocacoes_do_txt(caminho: String, dias: Array[String], horas: Array[String], linhas_grade: int, colunas_grade: int, chaves_existentes: Array, prefixos: Array[String] = []) -> Dictionary:
 	var dados_txt: Array[Dictionary] = parse_horarios_txt(caminho)
 	if not prefixos.is_empty():
 		var filtrada: Array[Dictionary] = []
 		for entry in dados_txt:
-			var sem: String = str(entry.get("semestre", "")).to_lower()
-			for p in prefixos:
-				if sem.begins_with(str(p).to_lower()):
-					filtrada.append(entry)
-					break
+			if FileHandling.semestre_casa_prefixos(str(entry.get("semestre", "")), prefixos, _delimitadores.get("planejamento", [])):
+				filtrada.append(entry)
 		dados_txt = filtrada
 	if dados_txt.size() <= 1:
 		return {"valido": false, "cards_novos": [], "alocacoes": [], "ignoradas": 0}
@@ -292,30 +294,31 @@ func preparar_alocacoes_do_txt(caminho: String, dias: Array[String], horas: Arra
 	var hora_para_lin: Dictionary = {}
 	for i in horas.size():
 		hora_para_lin[horas[i]] = i + 1
-	var ch_por_chave: Dictionary = _contar_ch_por_chave(dados_txt)
+	var resolvidas: Array[Dictionary] = _resolver_linhas_txt(dados_txt, chaves_existentes, prefixos)
+	var ch_por_chave: Dictionary = _contar_ch_por_chave(resolvidas)
 	var conhecidas: Dictionary = {}
 	for c in chaves_existentes:
 		conhecidas[c] = true
 	var cards_novos: Array[Dictionary] = []
 	var alocacoes: Array[Dictionary] = []
 	var ignoradas: int = 0
-	for entry in dados_txt:
+	for i in dados_txt.size():
+		var resolvida: Dictionary = resolvidas[i]
+		if resolvida.is_empty():
+			continue
+		var entry: Dictionary = dados_txt[i]
 		var disc_str: String = entry.get("disciplina", "")
-		if disc_str == " ":
-			continue
 		var codigo: String = _horarios_exe.extrair_cod_horarios_txt(disc_str).to_lower()
-		if codigo.is_empty():
-			continue
 		var coluna: int = dia_para_col.get(entry.get("dia", "").to_lower(), -1)
 		var linha: int = hora_para_lin.get(entry.get("horario", ""), -1)
 		if linha < 0 or coluna < 0 or linha >= linhas_grade or coluna >= colunas_grade:
 			ignoradas += 1
 			continue
-		var sem: String = entry.get("semestre", "")
-		var chave: String = codigo + "_" + sem.to_lower()
+		var chave: String = resolvida["chave"]
+		var sem: String = resolvida["semestre"]
 		if not conhecidas.has(chave):
 			conhecidas[chave] = true
-			cards_novos.append(_montar_card_novo(entry, codigo, sem, chave, disc_str, ch_por_chave))
+			cards_novos.append(_montar_card_novo(entry, codigo, sem, resolvida["oferta"], chave, disc_str, ch_por_chave))
 		alocacoes.append({
 			"linha": linha,
 			"coluna": coluna,
@@ -336,22 +339,141 @@ func preparar_alocacoes_do_txt(caminho: String, dias: Array[String], horas: Arra
 		})
 	return {"valido": true, "cards_novos": cards_novos, "alocacoes": alocacoes, "ignoradas": ignoradas}
 
-# Conta quantas linhas (horas) cada disciplina+semestre ocupa no [param dados_txt].
-func _contar_ch_por_chave(dados_txt: Array[Dictionary]) -> Dictionary:
-	var ch_por_chave: Dictionary = {}
+## Escolhe qual parte do campo de semestre do [code]horarios.txt[/code] recebe a linha de uma disciplina
+## compartilhada (ex.: [code]"EC03;EMExtra"[/code]). [br]
+## O card que recebe é o da primeira parte, na ordem do campo, que passa no filtro de [param prefixos]
+## e cuja chave [code]<codigo>_<parte>[/code] está em [param chaves_existentes] (só as chaves importam). [br]
+## Sem card em nenhuma parte, vale a primeira parte que passa no filtro. [param prefixos] vazio quer
+## dizer sem filtro: toda parte é candidata. [br]
+## Retorna [code]{ "chave": String, "semestre": String }[/code]: a chave é minúscula e nunca traz o sufixo
+## [code]_N[/code]; o semestre é a parte com a caixa do txt e sem bordas. Sem candidata, ambos vêm vazios.
+static func parte_receptora_txt(codigo: String, semestre_txt: String, chaves_existentes: Dictionary, prefixos: Array = [], delimitadores: Array = []) -> Dictionary:
+	var candidatas: Array[String] = []
+	for parte in FileHandling.dividir_semestres(semestre_txt, delimitadores):
+		var limpa: String = parte.strip_edges()
+		if not limpa.is_empty() and (prefixos.is_empty() or _parte_casa_prefixos(limpa, prefixos)):
+			candidatas.append(limpa)
+	if candidatas.is_empty():
+		return {"chave": "", "semestre": ""}
+	for parte in candidatas:
+		var chave: String = codigo.to_lower() + "_" + parte.to_lower()
+		if chaves_existentes.has(chave):
+			return {"chave": chave, "semestre": parte}
+	return {"chave": codigo.to_lower() + "_" + candidatas[0].to_lower(), "semestre": candidatas[0]}
+
+## Desempata as chaves duplicadas que o [code]planejamento.csv[/code] gera para a mesma disciplina e parte
+## ([code]C_<parte>[/code], [code]C_<parte>_2[/code], [code]_3[/code]...). [br]
+## [param chave_base] é o retorno de [method parte_receptora_txt]; [param ofertas_existentes] mapeia cada
+## chave de card à sua oferta ([code]""[/code] quando não se sabe). [br]
+## Devolve a primeira chave do grupo cuja oferta tem as mesmas partes de [param semestre_txt], sem
+## considerar ordem, espaços nem caixa. Sem nenhuma igual, ou com [param chave_base] ainda sem card,
+## devolve [param chave_base].
+static func desempatar_chave_duplicada(chave_base: String, semestre_txt: String, ofertas_existentes: Dictionary, delimitadores: Array = []) -> String:
+	if not ofertas_existentes.has(chave_base):
+		return chave_base
+	var grupo: Array[String] = [chave_base]
+	var sufixo: int = 2
+	# Mesmo laço que o leitor do CSV usa para gerar as chaves: para na primeira lacuna.
+	while ofertas_existentes.has(chave_base + "_" + str(sufixo)):
+		grupo.append(chave_base + "_" + str(sufixo))
+		sufixo += 1
+	var alvo: Array[String] = _conjunto_partes(semestre_txt, delimitadores)
+	for chave in grupo:
+		if _conjunto_partes(str(ofertas_existentes[chave]), delimitadores) == alvo:
+			return chave
+	return chave_base
+
+# Mesmo teste que o leitor do CSV aplica a cada parte de uma oferta combinada (begins_with, sem
+# quebrar a parte de novo), para a chave do txt sair igual a que o CSV gerou.
+static func _parte_casa_prefixos(parte: String, prefixos: Array) -> bool:
+	var parte_lower: String = parte.strip_edges().to_lower()
+	for prefixo in prefixos:
+		var pref_lower: String = str(prefixo).strip_edges().to_lower()
+		if not pref_lower.is_empty() and parte_lower.begins_with(pref_lower):
+			return true
+	return false
+
+# Conjunto de partes de uma oferta: aparadas, em minúsculas, sem vazias nem repetidas e ordenadas,
+# para a comparação ser um simples ==.
+static func _conjunto_partes(oferta: String, delimitadores: Array) -> Array[String]:
+	var partes: Array[String] = []
+	for parte in FileHandling.dividir_semestres(oferta, delimitadores):
+		var limpa: String = parte.strip_edges().to_lower()
+		if not limpa.is_empty() and not partes.has(limpa):
+			partes.append(limpa)
+	partes.sort()
+	return partes
+
+# Chave de cada linha do [param dados_txt] no planejamento atual, numa lista paralela ([code]""[/code] para
+# cabecalho ou linha sem disciplina). A disciplina compartilhada ([code]"EC03;EMExtra"[/code]) usa a chave da
+# primeira parte que tem card no planejamento, a mesma que o [code]planejamento.csv[/code] gerou. Entradas de
+# referencia (outro curso, somente-leitura) ficam de fora: sem prefixos para filtrar, a linha cairia no card
+# da referencia e o card proprio ficaria sem horario. Sem nenhuma parte com card, vale o campo inteiro.
+func _chaves_do_txt_pelo_planejamento(dados_txt: Array[Dictionary]) -> Array[String]:
+	var bases: Dictionary = {}
+	for dados in _planejamento_csv.values():
+		if not dados.get("referencia", false):
+			bases[str(dados.get("codigo", "")).to_lower() + "_" + str(dados.get("semestre", "")).to_lower()] = true
+	var delimitadores: Array = _delimitadores.get("planejamento", [])
+	var chaves: Array[String] = []
 	for entry in dados_txt:
 		var disc_str: String = entry.get("disciplina", "")
-		if disc_str == " ":
+		if disc_str == " " or disc_str.is_empty():
+			chaves.append("")
 			continue
 		var codigo: String = _horarios_exe.extrair_cod_horarios_txt(disc_str).to_lower()
-		if codigo.is_empty():
+		var sem: String = entry.get("semestre", "")
+		var chave: String = str(parte_receptora_txt(codigo, sem, bases, [], delimitadores)["chave"])
+		chaves.append(chave if not chave.is_empty() else codigo + "_" + sem.to_lower())
+	return chaves
+
+# Resolve, para cada linha de [param dados_txt], a chave do card que a recebe, o semestre desse card e a
+# oferta com que ele nasce. Devolve uma lista paralela a [param dados_txt]; {} marca a linha pulada
+# (cabecalho ou sem codigo). Entram tambem as linhas que cairao fora da grade, para a CH de um card
+# novo cobrir todas as aulas da disciplina.
+func _resolver_linhas_txt(dados_txt: Array[Dictionary], chaves_existentes: Array, prefixos: Array[String]) -> Array[Dictionary]:
+	var modo_curso: bool = not prefixos.is_empty()
+	var delimitadores: Array = _delimitadores.get("planejamento", [])
+	# Oferta de cada card conhecido. O card criado por uma linha entra aqui e vale para as seguintes:
+	# e o que faz as variantes do campo (ex.: "EC03;EMExtra" e "EC03") somarem num card so.
+	var ofertas: Dictionary = {}
+	if modo_curso:
+		for k in chaves_existentes:
+			var dados_csv: Dictionary = _planejamento_csv.get(k, {})
+			ofertas[k] = str(dados_csv.get("oferta", ""))
+	var resolvidas: Array[Dictionary] = []
+	for entry in dados_txt:
+		var disc_str: String = entry.get("disciplina", "")
+		var codigo: String = _horarios_exe.extrair_cod_horarios_txt(disc_str).to_lower()
+		if disc_str == " " or codigo.is_empty():
+			resolvidas.append({})
 			continue
-		var chave: String = codigo + "_" + entry.get("semestre", "").to_lower()
+		var sem_txt: String = entry.get("semestre", "")
+		if not modo_curso:
+			resolvidas.append({"chave": codigo + "_" + sem_txt.to_lower(), "semestre": sem_txt, "oferta": sem_txt})
+			continue
+		var receptora: Dictionary = parte_receptora_txt(codigo, sem_txt, ofertas, prefixos, delimitadores)
+		if str(receptora["chave"]).is_empty():
+			resolvidas.append({})
+			continue
+		var chave: String = desempatar_chave_duplicada(receptora["chave"], sem_txt, ofertas, delimitadores)
+		if not ofertas.has(chave):
+			ofertas[chave] = sem_txt.strip_edges()
+		resolvidas.append({"chave": chave, "semestre": receptora["semestre"], "oferta": ofertas[chave]})
+	return resolvidas
+
+# Conta quantas linhas (horas) cada card ocupa nas linhas ja resolvidas por [method _resolver_linhas_txt].
+func _contar_ch_por_chave(resolvidas: Array[Dictionary]) -> Dictionary:
+	var ch_por_chave: Dictionary = {}
+	for resolvida in resolvidas:
+		if resolvida.is_empty():
+			continue
+		var chave: String = resolvida["chave"]
 		ch_por_chave[chave] = ch_por_chave.get(chave, 0) + 1
 	return ch_por_chave
 
 # Monta os dados de um card extra a partir de uma entrada do txt, usando o planejamento.csv quando disponível.
-func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, chave: String, disc_str: String, ch_por_chave: Dictionary) -> Dictionary:
+func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, oferta: String, chave: String, disc_str: String, ch_por_chave: Dictionary) -> Dictionary:
 	var dados_csv: Dictionary = _planejamento_csv.get(chave, {})
 	var nome: String
 	var profs: Array[String] = []
@@ -377,7 +499,7 @@ func _montar_card_novo(entry: Dictionary, codigo: String, sem: String, chave: St
 		if not prof_str.is_empty() and prof_str != " ":
 			profs.append(prof_str)
 		ch_total = ch_por_chave.get(chave, 1)
-	return {"codigo": codigo, "nome": nome, "profs": profs, "ch_total": ch_total, "sem": sem, "chave": chave}
+	return {"codigo": codigo, "nome": nome, "profs": profs, "ch_total": ch_total, "sem": sem, "oferta": oferta, "chave": chave}
 
 ## Monta o [member _planejamento_csv] a partir dos cards extraidos do horarios.txt ([param cards] no
 ## formato de [method _montar_card_novo]). Usado ao importar um horarios.txt SEM um planejamento.csv/
@@ -404,7 +526,9 @@ func adicionar_planejamento_csv_do_txt(cards: Array) -> void:
 			"semestre": sem,
 			"professor": profs.duplicate(),
 			"ch": [],
-			"oferta": sem,
+			# Preserva a oferta combinada do campo do txt (ex.: "EC03;EMExtra"): o semestre do card e a parte
+			# que o recebeu, e rebaixar a oferta para ela tiraria a compartilhada do filtro de envio e da deteccao.
+			"oferta": str(c.get("oferta", sem)),
 			"ch_disciplina": str(c.get("ch_total", 0)),
 			"nome_csv": str(c.get("nome", "")),
 		}
@@ -575,16 +699,15 @@ static func mesclar_planejamentos(registros: Array, preferir_recente: bool) -> D
 ## via diálogo o que fazer com as disciplinas em [param removidas].
 func mesclar_planejamento_com_horarios_txt(caminho_horarios_txt: String) -> Dictionary:
 	var dados_txt: Array[Dictionary] = parse_horarios_txt(caminho_horarios_txt)
+	var chaves_txt: Array[String] = _chaves_do_txt_pelo_planejamento(dados_txt)
 	# Lookup: chave + professor_normalized → Array[Dictionary] (scheduling data).
 	var lookup: Dictionary = {}
 	var chaves_existentes: Dictionary = {}
-	for entry in dados_txt:
-		var disc_str: String = entry.get("disciplina", "")
-		if disc_str == " " or disc_str.is_empty():
+	for i in dados_txt.size():
+		var chave_txt: String = chaves_txt[i]
+		if chave_txt.is_empty():
 			continue
-		var codigo: String = _horarios_exe.extrair_cod_horarios_txt(disc_str).to_lower()
-		var sem: String = entry.get("semestre", "")
-		var chave_txt: String = codigo + "_" + sem.to_lower()
+		var entry: Dictionary = dados_txt[i]
 		var prof: String = entry.get("professor", "").trim_prefix("\"").trim_suffix("\"").strip_edges()
 		chaves_existentes[chave_txt] = true
 		var key_lookup: String = chave_txt + "_" + prof.to_lower()
@@ -650,14 +773,9 @@ func mesclar_planejamento_com_horarios_txt(caminho_horarios_txt: String) -> Dict
 		if not chaves_novas.has(chave_txt):
 			removidas.append(chave_txt)
 	var entries_removidas: Array[Dictionary] = []
-	for entry in dados_txt:
-		var disc_str: String = entry.get("disciplina", "")
-		if disc_str == " " or disc_str.is_empty():
-			continue
-		var codigo: String = _horarios_exe.extrair_cod_horarios_txt(disc_str).to_lower()
-		var chave_txt: String = codigo + "_" + entry.get("semestre", "").to_lower()
-		if chave_txt in removidas:
-			entries_removidas.append(entry)
+	for i in dados_txt.size():
+		if chaves_txt[i] in removidas:
+			entries_removidas.append(dados_txt[i])
 	return {
 		"entries": novas_entries,
 		"removidas": removidas,
